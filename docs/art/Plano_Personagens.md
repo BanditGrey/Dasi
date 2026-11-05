@@ -1,6 +1,16 @@
 # Preparação — personagens de Dasi
 
-Este documento organiza a próxima etapa; não indica que os personagens estejam concluídos ou aprovados. A direção escolhida continua sendo fantasia sombria clássica com atmosfera nostálgica e identidade própria. Os concepts devem preceder os GLBs, como no fluxo usado para os cenários.
+Este documento organiza a próxima etapa; não indica que os personagens estejam concluídos ou aprovados. A direção é explicitamente baseada no universo e na linguagem visual clássica de MU Online: arquétipos, fantasia de progressão, silhuetas heroicas, armaduras ornamentadas, armas marcantes, asas e efeitos mágicos. Dasi mantém identidade própria, mas não deve se afastar dessa referência para um medieval genérico. Os concepts devem preceder os GLBs, como no fluxo usado para os cenários.
+
+## Direção visual das classes
+
+- **DK:** guerreiro corpo a corpo de armadura pesada, ombreiras imponentes, motivos dracônicos e espada/escudo; progressão visível de equipamento.
+- **DW:** mago arcano com armadura e túnica cerimoniais, cajado, brilho mágico e silhueta claramente diferente do guerreiro.
+- **ELF:** arqueira élfica com arco e equipamento leve ornamental, formas orgânicas e leitura de agilidade e suporte.
+- **MG:** guerreiro-mago híbrido, com armadura heroica e runas/efeitos que comuniquem a combinação de espada e magia.
+- **DL:** soberano de combate e comando, com armadura imperial, cetro, manto e referência ao corvo.
+
+Asas, níveis de refinamento e equipamentos evoluídos fazem parte da fantasia de progressão, mas não precisam aparecer em todas as variações. Os cinco concepts iniciais foram revisados nessa direção; são referências, não vistas técnicas, modelos finais nem aprovação. Preservar legibilidade em escala de jogo.
 
 ## Inventário existente
 

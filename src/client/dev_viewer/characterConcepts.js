@@ -1,9 +1,9 @@
 /** Concepts iniciais, não modelos aprovados nem folhas técnicas completas. */
 export const CHARACTER_CONCEPTS = Object.freeze({
-  DK: { title: 'Cavaleiro do Sangue', description: 'Placas de aço escuro e vermelho, espada e escudo para uma silhueta defensiva.' },
-  DW: { title: 'Arquimago do Caos', description: 'Vestes azuis escuras, cajado e foco arcano ciano em uma silhueta alongada.' },
-  ELF: { title: 'Vigia da Floresta', description: 'Armadura leve verde e bronze, arco e aljava inspirados na floresta de Noria.' },
-  MG: { title: 'Gladiador Rúnico', description: 'Armadura de aço, tecidos escuros e lâmina rúnica violeta para o combatente híbrido.' },
+  DK: { title: 'Cavaleiro do Sangue', description: 'Armadura heroica de aço e vermelho, motivos dracônicos, espada e escudo para uma silhueta defensiva.' },
+  DW: { title: 'Arquimago do Caos', description: 'Túnica e armadura cerimonial azul-violeta, cajado e magia ciano em uma silhueta arcana.' },
+  ELF: { title: 'Vigia da Floresta', description: 'Armadura élfica ornamental verde e dourada, arco e aljava inspirados na floresta de Noria.' },
+  MG: { title: 'Gladiador Rúnico', description: 'Armadura imponente e lâmina rúnica luminosa para o combatente híbrido de espada e magia.' },
   DL: { title: 'Soberano Imperial', description: 'Aço negro, ouro envelhecido, manto bordô e cetro com motivo de corvo.' },
 });
 export function getCharacterConcept(id) {
