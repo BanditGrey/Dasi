@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node --experimental-strip-types src/server/network/GameServer.ts",
-    "test": "node --experimental-strip-types --test src/server/inventory/tests/inventory.test.ts src/server/inventory/tests/chaos_and_economy.test.ts src/server/inventory/tests/armory.test.ts src/server/inventory/tests/expanded_systems.test.ts src/server/network/tests/server.test.ts src/server/combat/tests/combat.test.ts src/client/gameplay/tests/gameplay_action.test.ts src/client/gameplay/tests/idle_combat.test.ts src/server/world/tests/collision.test.ts src/server/world/tests/scenario_parity.test.ts src/server/world/tests/scenario_3d_coverage.test.ts src/server/bosses/tests/bosses.test.ts src/server/events/tests/events.test.ts src/server/dungeons/tests/dungeons.test.ts src/server/guilds/tests/guilds.test.ts src/server/siege/tests/castle_siege.test.ts",
+    "test": "node --experimental-strip-types --test \"src/**/*.test.ts\"",
     "test:bosses": "node --experimental-strip-types --test src/server/bosses/tests/bosses.test.ts",
     "test:events": "node --experimental-strip-types --test src/server/events/tests/events.test.ts",
     "test:dungeons": "node --experimental-strip-types --test src/server/dungeons/tests/dungeons.test.ts src/server/guilds/tests/guilds.test.ts src/server/siege/tests/castle_siege.test.ts",
@@ -43,5 +43,8 @@
     "@types/ws": "^8.18.2",
     "three": "^0.187.0",
     "ws": "^8.22.1"
+  },
+  "engines": {
+    "node": ">=22.18.0"
   }
 }

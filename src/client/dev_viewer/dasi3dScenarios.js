@@ -72,6 +72,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
       );
       wisp.position.set((Math.random() - 0.5) * 20, 1.5 + Math.random() * 2, (Math.random() - 0.5) * 20);
       wisp.userData = {
+        runtimeOnly: true,
         baseX: wisp.position.x,
         baseZ: wisp.position.z,
         seed: Math.random() * 10,
@@ -100,7 +101,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     for (let b = 0; b < 24; b++) {
       const bubble = new THREE.Mesh(new THREE.SphereGeometry(0.12 + Math.random() * 0.15, 8, 8), bubbleMat);
       bubble.position.set((Math.random() - 0.5) * 30, Math.random() * 6.5, (Math.random() - 0.5) * 30);
-      bubble.userData = { speed: 1.2 + Math.random() * 1.1, seed: Math.random() * 10 };
+      bubble.userData = { runtimeOnly: true, speed: 1.2 + Math.random() * 1.1, seed: Math.random() * 10 };
       envGroup.add(bubble);
       animParts.bubbles.push(bubble);
     }
@@ -110,12 +111,18 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     animParts.blizzardSystem = createParticleCloud(500, 0xf8fafc, 0.095, { x: 42, y: 10, z: 42 }, 0.85, false);
   } else if (prefix === 'NOR') {
     animParts.sporeSystem = createParticleCloud(400, 0x86efac, 0.075, { x: 40, y: 7, z: 40 }, 0.8, true);
-  } else if (prefix === 'LOR') {
+  } else if (prefix === 'LOR' && id !== 'LOR_06' && id !== 'LOR_07') {
     animParts.rainSystem = createParticleCloud(450, 0x93c5fd, 0.085, { x: 40, y: 12, z: 40 }, 0.68, false);
   } else if (prefix === 'VOL') {
     animParts.siegeSmoke = createParticleCloud(500, 0xef4444, 0.10, { x: 50, y: 12, z: 50 }, 0.75, true);
   } else if (prefix === 'EVT') {
-    animParts.bloodNebula = createParticleCloud(600, 0xf43f5e, 0.09, { x: 40, y: 15, z: 80 }, 0.85, true);
+    const eventAtmosphere = {
+      EVT_01: { color: 0xf43f5e, x: 40, z: 80 },
+      EVT_02: { color: 0xf97316, x: 45, z: 45 },
+      EVT_03: { color: 0xa78bfa, x: 40, z: 40 },
+      EVT_04: { color: 0xfbbf24, x: 36, z: 36 },
+    }[id] || { color: 0xf43f5e, x: 40, z: 40 };
+    animParts.bloodNebula = createParticleCloud(300, eventAtmosphere.color, 0.09, { x: eventAtmosphere.x, y: 15, z: eventAtmosphere.z }, 0.65, true);
   }
 
   // ==========================================================================
@@ -124,9 +131,30 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   if (id === 'LOR_01') {
     // LOR_01: Citadel Plaza & Fountain (Praça Central, Fonte do Arcanjo e Bazar)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(42, 42, 16, 16), matCobble);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     envGroup.add(floor);
+
+    // Calçamento instanciado baixo: apenas detalhe visual, sem novos obstáculos.
+    const paving = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(1.85, 0.025, 1.0),
+      new THREE.MeshStandardMaterial({ color: 0x65635b, roughness: 0.88, metalness: 0.03 }),
+      780
+    );
+    paving.name = 'lorencia_paving';
+    const tileTransform = new THREE.Object3D();
+    let tileIndex = 0;
+    for (let row = 0; row < 39; row++) {
+      for (let col = 0; col < 20; col++) {
+        tileTransform.position.set(-18.8 + col * 1.95 + (row % 2) * 0.45, 0.02, -19 + row);
+        tileTransform.rotation.y = 0;
+        tileTransform.updateMatrix();
+        paving.setMatrixAt(tileIndex++, tileTransform.matrix);
+      }
+    }
+    paving.receiveShadow = true;
+    envGroup.add(paving);
 
     // Fonte do Arcanjo
     const basin = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.4, 0.9, 24), matStoneDark);
@@ -139,9 +167,26 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     envGroup.add(water);
     animParts.fountainWater = water;
 
-    const statue = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 2.6, 8), matStoneDark);
-    statue.position.y = 2.0;
-    envGroup.add(statue);
+    // Silhueta alada em bronze: todos os volumes ficam dentro da bacia existente.
+    const bronze = new THREE.MeshStandardMaterial({ color: 0x746044, roughness: 0.65, metalness: 0.65 });
+    const angel = new THREE.Group();
+    angel.name = 'lorencia_angel_statue';
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.29, 0.44, 1.45, 8), bronze);
+    body.position.y = 2.05;
+    angel.add(body);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.27, 10, 8), bronze);
+    head.position.y = 3.05;
+    angel.add(head);
+    for (const side of [-1, 1]) {
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(0.20, 1.25, 0.63), bronze);
+      wing.position.set(side * 0.53, 2.45, 0.22);
+      wing.rotation.z = side * 0.65;
+      angel.add(wing);
+    }
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.45, 0.11), bronze);
+    blade.position.set(0.42, 1.7, -0.35);
+    angel.add(blade);
+    envGroup.add(angel);
 
     const halo = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.06, 8, 16), new THREE.MeshBasicMaterial({ color: 0xfacc15 }));
     halo.position.set(0, 3.6, 0);
@@ -166,6 +211,23 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     tavern.position.set(0, 2.25, 13.5);
     envGroup.add(tavern);
 
+    // Detalhes da fachada dentro do volume de colisão da taverna.
+    const facadeDetails = new THREE.Group();
+    facadeDetails.name = 'lorencia_tavern_details';
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(16.1, 0.45, 4.3), matWood);
+    roof.position.set(0, 4.72, 13.5);
+    facadeDetails.add(roof);
+    const warmWindow = new THREE.MeshStandardMaterial({ color: 0x9d692e, emissive: 0x8a4311, emissiveIntensity: 0.8, roughness: 0.7 });
+    for (const x of [-6, -3, 3, 6]) {
+      const window = new THREE.Mesh(new THREE.BoxGeometry(1.05, 1.35, 0.08), warmWindow);
+      window.position.set(x, 2.5, 11.28);
+      facadeDetails.add(window);
+    }
+    const doorway = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2.5, 0.08), matWood);
+    doorway.position.set(0, 1.25, 11.28);
+    facadeDetails.add(doorway);
+    envGroup.add(facadeDetails);
+
     // Muralhas Sul
     const wallL = new THREE.Mesh(new THREE.BoxGeometry(14.0, 4.0, 3.0), matStoneDark);
     wallL.position.set(-11.0, 2.0, -16.0);
@@ -181,6 +243,15 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     const towR = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.4, 6.5, 16), matStoneDark);
     towR.position.set(14.0, 3.25, -16.0);
     envGroup.add(towR);
+
+    // Ameias sobre as muralhas, sem alterar os limites físicos existentes.
+    for (const centerX of [-11, 11]) {
+      for (let i = -3; i <= 3; i++) {
+        const merlon = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.85, 1.0), matStoneDark);
+        merlon.position.set(centerX + i * 1.8, 4.42, -16);
+        envGroup.add(merlon);
+      }
+    }
 
     // 4 Postes de Tocha
     animParts.torches = [];
@@ -202,6 +273,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LOR_02') {
     // LOR_02: East Gate & Plains (Muralha Oriental, Portão de Vigia e Rochas das Bestas)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(52, 52, 16, 16), new THREE.MeshStandardMaterial({ color: 0x2e382d, roughness: 0.9 }));
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -232,9 +304,54 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     boulder.position.set(-2, 1.0, -4);
     envGroup.add(boulder);
 
+    // Caminho de terra é uma superfície plana, sem afetar colisão.
+    const road = new THREE.Mesh(new THREE.PlaneGeometry(48, 4.2), new THREE.MeshStandardMaterial({ color: 0x534b3b, roughness: 0.96 }));
+    road.name = 'lorencia_east_road';
+    road.rotation.x = -Math.PI / 2;
+    road.position.y = 0.025;
+    envGroup.add(road);
+
+    // Ameias estão sobre as muralhas existentes e não obstruem o portão.
+    const gateDetails = new THREE.Group();
+    gateDetails.name = 'lorencia_east_gate_details';
+    for (const centerZ of [-8, 8]) {
+      for (let i = -3; i <= 3; i++) {
+        const merlon = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.8, 1.0), matCobble);
+        merlon.position.set(-15, 5.4, centerZ + i * 1.8);
+        gateDetails.add(merlon);
+      }
+    }
+    for (const z of [-15, 15]) {
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(2.45, 0.22, 6, 24), matCobble);
+      rim.rotation.x = Math.PI / 2;
+      rim.position.set(-15, 7.55, z);
+      gateDetails.add(rim);
+    }
+    envGroup.add(gateDetails);
+
+    // A vegetação é baixa e decorativa: não cria novos bloqueios no terreno.
+    const grass = new THREE.InstancedMesh(
+      new THREE.PlaneGeometry(0.45, 0.32),
+      new THREE.MeshStandardMaterial({ color: 0x526348, roughness: 1, side: THREE.DoubleSide }),
+      72
+    );
+    grass.name = 'lorencia_east_grass';
+    grass.userData.nonBlockingDecoration = true;
+    const blade = new THREE.Object3D();
+    for (let i = 0; i < 72; i++) {
+      const x = -20 + ((i * 31) % 400) / 10;
+      const z = -22 + ((i * 73) % 440) / 10;
+      blade.position.set(x, 0.16, z);
+      blade.rotation.y = (i % 8) * Math.PI / 4;
+      blade.updateMatrix();
+      grass.setMatrixAt(i, blade.matrix);
+    }
+    envGroup.add(grass);
+
   } else if (id === 'LOR_03') {
     // LOR_03: West Gate & Spider Woods (Bosque das Aranhas, Teias e Pântano)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(52, 52, 16, 16), new THREE.MeshStandardMaterial({ color: 0x1c211a, roughness: 0.95 }));
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -267,6 +384,30 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     ruins.position.set(-14, 1.5, 12);
     envGroup.add(ruins);
 
+    // Relevos e teias ficam sobre a ruína já coberta pelo colisor.
+    const ruinDetails = new THREE.Group();
+    ruinDetails.name = 'lorencia_spider_ruin_details';
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.35, 5.7), matCobble);
+    cap.position.set(-14, 3.17, 12);
+    ruinDetails.add(cap);
+    const webVertices = [];
+    const center = [-14, 2.0, 9.01];
+    const rim = [[-16.0, 0.9], [-16.0, 2.9], [-14, 3.0], [-12.0, 2.9], [-12.0, 0.9]];
+    for (const [x, y] of rim) webVertices.push(...center, x, y, 9.01);
+    for (let i = 0; i < rim.length - 1; i++) {
+      const [x1, y1] = rim[i], [x2, y2] = rim[i + 1];
+      webVertices.push(x1, y1, 9.01, x2, y2, 9.01);
+    }
+    const webGeometry = new THREE.BufferGeometry();
+    webGeometry.setAttribute('position', new THREE.Float32BufferAttribute(webVertices, 3));
+    const web = new THREE.LineSegments(webGeometry, new THREE.LineBasicMaterial({ color: 0xb2c0af }));
+    web.name = 'lorencia_spider_web';
+    ruinDetails.add(web);
+    envGroup.add(ruinDetails);
+
+    // Partículas locais dão movimento ao bosque e ficam fora dos GLBs estáticos.
+    animParts.forestMotes = createParticleCloud(100, 0x9ab18a, 0.07, { x: 38, y: 5, z: 38 }, 0.45, false);
+
     // Luzes Esverdeadas do Veneno
     const poisonLight = new THREE.PointLight(0x84cc16, 2.5, 12);
     poisonLight.position.set(0, 2.5, 0);
@@ -276,6 +417,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LOR_04') {
     // LOR_04: North Gate & Castle Bridge (Ponte Levadiça sobre Fosso Abissal)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 50, 16, 16), matStoneDark);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     floor.position.z = -10;
     envGroup.add(floor);
@@ -312,6 +454,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LOR_05') {
     // LOR_05: South Cemetery (Cemitério dos Heróis Caídos)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 46, 16, 16), new THREE.MeshStandardMaterial({ color: 0x181e18, roughness: 0.95 }));
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -351,6 +494,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LOR_06') {
     // LOR_06: Tavern Interior (A Taverna da Lareira)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(24, 20, 8, 8), matWood);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -387,6 +531,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LOR_07') {
     // LOR_07: Blacksmith Forge (A Forja de Hanzo)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(20, 20, 8, 8), matStoneDark);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -423,6 +568,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'NOR_01') {
     // NOR_01: Sanctuary Mother Tree (Árvore Mãe & Praça Élfica)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 46, 16, 16), matFeyMoss);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -433,7 +579,26 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
 
     const canopy = new THREE.Mesh(new THREE.SphereGeometry(10.0, 12, 12), new THREE.MeshStandardMaterial({ color: 0x065f46, roughness: 0.85 }));
     canopy.position.set(0, 14.0, -5);
+    canopy.scale.y = 0.55;
     envGroup.add(canopy);
+
+    // Varandas e lanternas junto ao tronco: detalhe elevado, sem novos bloqueios.
+    const treeDetails = new THREE.Group();
+    treeDetails.name = 'noria_tree_details';
+    const balconyMat = new THREE.MeshStandardMaterial({ color: 0x604a30, roughness: 0.85 });
+    const lanternMat = new THREE.MeshStandardMaterial({ color: 0xb0a663, emissive: 0x65733b, emissiveIntensity: 0.6, roughness: 0.7 });
+    for (const height of [5.6, 7.4]) {
+      const balcony = new THREE.Mesh(new THREE.TorusGeometry(4.55, 0.22, 6, 24), balconyMat);
+      balcony.rotation.x = Math.PI / 2;
+      balcony.position.set(0, height, -5);
+      treeDetails.add(balcony);
+    }
+    for (const angle of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) {
+      const lantern = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), lanternMat);
+      lantern.position.set(Math.cos(angle) * 4.4, 6.05, -5 + Math.sin(angle) * 4.4);
+      treeDetails.add(lantern);
+    }
+    envGroup.add(treeDetails);
 
     // 4 Raízes Ciclópicas
     const rootCoords = [[4.8, -1.5], [-4.8, -1.5], [-4.5, -8.5], [4.5, -8.5]];
@@ -447,6 +612,11 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     const fountain = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.4, 0.8, 16), matNacar);
     fountain.position.set(0, 0.4, 6.5);
     envGroup.add(fountain);
+    const water = new THREE.Mesh(new THREE.CircleGeometry(1.95, 24), new THREE.MeshStandardMaterial({ color: 0x396f68, roughness: 0.22, metalness: 0.35 }));
+    water.name = 'noria_fountain_water';
+    water.rotation.x = -Math.PI / 2;
+    water.position.set(0, 0.81, 6.5);
+    envGroup.add(water);
     const fLight = new THREE.PointLight(0x10b981, 2.5, 10);
     fLight.position.set(0, 1.5, 6.5);
     envGroup.add(fLight);
@@ -460,9 +630,24 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     pavR.position.set(13, 2.0, 2);
     envGroup.add(pavR);
 
+    // Telhados e janelas mantidos dentro das projeções dos pavilhões.
+    const pavilionDetails = new THREE.Group();
+    pavilionDetails.name = 'noria_pavilion_details';
+    for (const x of [-13, 13]) {
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(2.2, 2.0, 4), matWood);
+      roof.rotation.y = Math.PI / 4;
+      roof.position.set(x, 5, 2);
+      pavilionDetails.add(roof);
+      const window = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.2, 0.06), lanternMat);
+      window.position.set(x, 2.2, -1.48);
+      pavilionDetails.add(window);
+    }
+    envGroup.add(pavilionDetails);
+
   } else if (id === 'NOR_02') {
     // NOR_02: Chaos Machine Workshop (Oficina dos Duendes e Chaos Forge)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30, 8, 8), matStoneDark);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -503,6 +688,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'NOR_03') {
     // NOR_03: Queen Lúthien's Altar (Altar Élfico & Lago de Néctar)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(38, 38, 12, 12), matFeyMoss);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -531,6 +717,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'NOR_04') {
     // NOR_04: East Groves (Bosque das Ninfas)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(50, 50, 16, 16), matFeyMoss);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -557,6 +744,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'NOR_05') {
     // NOR_05: Giant Mushroom Glade (Clareira dos Cogumelos Colossais)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(42, 42, 16, 16), new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.9 }));
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -586,6 +774,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'NOR_06') {
     // NOR_06: Deep Canyon & Rope Bridge (Cânion Abissal e Ponte Pênsil)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(32, 58, 12, 16), matFeyMoss);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -613,6 +802,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'NOR_07') {
     // NOR_07: Creeper Hollow (Covil do Stone Golem)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 46, 16, 16), matFeyMoss);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -638,8 +828,19 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DEV_01') {
     // DEV_01: Glacial Citadel & King's Hearth (A Fortaleza & Grande Braseiro do Rei)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 46, 16, 16), matSnow);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
+
+    // Pedra úmida ao redor do braseiro: detalhe plano, sem novos obstáculos.
+    const thawedStone = new THREE.Mesh(
+      new THREE.CircleGeometry(7.2, 40),
+      new THREE.MeshStandardMaterial({ color: 0x4d5354, roughness: 0.34, metalness: 0.12 })
+    );
+    thawedStone.name = 'devias_thawed_stone';
+    thawedStone.rotation.x = -Math.PI / 2;
+    thawedStone.position.y = 0.015;
+    envGroup.add(thawedStone);
 
     // O Grande Braseiro Real
     const brazier = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.8, 1.2, 24), matIron);
@@ -647,12 +848,13 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     envGroup.add(brazier);
 
     // Chama do Braseiro
-    const flame = new THREE.Mesh(new THREE.ConeGeometry(1.6, 2.8, 12), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
+    const flame = new THREE.Mesh(new THREE.ConeGeometry(1.6, 2.8, 12), new THREE.MeshBasicMaterial({ color: 0xf59e0b }));
+    flame.name = 'devias_brazier_flame';
     flame.position.y = 2.2;
     envGroup.add(flame);
     animParts.kingFlame = flame;
 
-    const fireLight = new THREE.PointLight(0x38bdf8, 4.5, 14);
+    const fireLight = new THREE.PointLight(0xf59e0b, 4.5, 14);
     fireLight.position.set(0, 2.5, 0);
     envGroup.add(fireLight);
     dynamicLights.push(fireLight);
@@ -665,6 +867,18 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     wallNE.position.set(14, 2.75, -10);
     envGroup.add(wallNE);
 
+    // Ameias sobre a projeção existente das muralhas.
+    const battlements = new THREE.Group();
+    battlements.name = 'devias_battlements';
+    for (const x of [-14, 14]) {
+      for (let i = -3; i <= 3; i++) {
+        const merlon = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 1.2), matStoneDark);
+        merlon.position.set(x, 5.95, -10 + i * 2.0);
+        battlements.add(merlon);
+      }
+    }
+    envGroup.add(battlements);
+
     // 4 Pilares de Gelo Glacial
     const iceCoords = [[-7, -8], [7, -8], [-7, 6], [7, 6]];
     iceCoords.forEach(([ix, iz]) => {
@@ -676,6 +890,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DEV_02') {
     // DEV_02: Cathedral Facade (Fachada da Basílica Boreal)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(42, 42, 16, 16), matSnow);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -699,6 +914,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DEV_03') {
     // DEV_03: North Snowfields (Campos de Neve do Norte & Naufrágio Congelado)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(54, 54, 16, 16), matSnow);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -724,6 +940,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DEV_04') {
     // DEV_04: Ice Shard Ridge (Crista dos Espinhos de Gelo Perfurantes)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 46, 16, 16), matSnow);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -743,6 +960,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DEV_05') {
     // DEV_05: Frozen Abyss Bridge (Ponte de Gelo sobre o Abismo Congelado)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 54, 12, 16), matSnow);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -770,6 +988,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DEV_06') {
     // DEV_06: Ice Queen Palace (Trono Lapidado da Rainha do Gelo)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(38, 38, 12, 12), matGlacialIce);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -799,6 +1018,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DNG_01') {
     // DNG_01: Entrance & Ossuary (Entrada das Catacumbas & Ossuário)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(38, 38, 12, 12), matStoneDark);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -835,6 +1055,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DNG_02') {
     // DNG_02: Prison Corridors (Celas de Grade e Grilhões)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(42, 42, 12, 12), matStoneDark);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -858,6 +1079,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DNG_03') {
     // DNG_03: Poison Crypts (Criptas Venenosas & Lodo Ácido)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(42, 42, 12, 12), matStoneDark);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -883,6 +1105,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DNG_04') {
     // DNG_04: Torture Pit (Poço de Tortura & Forjas de Sangue)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(38, 38, 12, 12), matStoneDark);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -908,6 +1131,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DNG_05') {
     // DNG_05: Lost Souls Maze (Labirinto das Almas Perdidas)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 46, 16, 16), matStoneDark);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -937,6 +1161,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DNG_06') {
     // DNG_06: Gorgon's Lair (O Covil Abissal da Górgona)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(50, 50, 16, 16), matStoneDark);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -970,6 +1195,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LT_01') {
     // LT_01: Obsidian Gateway (Portal de Obsidiana & Chamas)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(38, 38, 12, 12), matObsidian);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -999,6 +1225,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LT_02') {
     // LT_02: Runed Corridors (Corredores Rúnicos Incandescentes)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(34, 58, 12, 16), matObsidian);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1021,6 +1248,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LT_03') {
     // LT_03: Magma Grates Abyss (Grelhas sobre Mar de Lava)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(42, 42, 12, 12), matIron);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1046,6 +1274,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LT_04') {
     // LT_04: Demon Balcony (Mirante Demoníaco & Gárgulas)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 36, 12, 12), matObsidian);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1065,6 +1294,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LT_05') {
     // LT_05: Spiral Colonnade (Colunata Espiral Ascendente)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(42, 42, 12, 12), matObsidian);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1084,6 +1314,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LT_06') {
     // LT_06: Infernal Ramparts (Muralhas Infernais & Balistas)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 46, 12, 12), matObsidian);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1103,6 +1334,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LT_07') {
     // LT_07: Balrog's Throne (O Trono de Fogo do Balrog)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(50, 50, 16, 16), matObsidian);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1132,6 +1364,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'ATL_01') {
     // ATL_01: Shallows & Caustics (Águas Rasas & Recifes)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 46, 16, 16), new THREE.MeshStandardMaterial({ color: 0x0891b2, roughness: 0.2, metalness: 0.3 }));
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1155,6 +1388,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'ATL_02') {
     // ATL_02: Nacar Sanctuary (Cúpula de Ar Élfica)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(38, 38, 12, 12), matNacar);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1180,6 +1414,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'ATL_03') {
     // ATL_03: Coral Labyrinth (Labirinto de Corais & Anêmonas)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 46, 16, 16), new THREE.MeshStandardMaterial({ color: 0x0e7490, roughness: 0.3 }));
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1202,6 +1437,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'ATL_04') {
     // ATL_04: Slipstream Trench (Trincheira das Correntes & Anéis Marinhos)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(34, 62, 12, 16), new THREE.MeshStandardMaterial({ color: 0x0369a1, roughness: 0.2 }));
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1224,6 +1460,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'ATL_05') {
     // ATL_05: Leviathan Graveyard (Cemitério de Leviatãs & Galeão)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(50, 50, 16, 16), new THREE.MeshStandardMaterial({ color: 0x075985, roughness: 0.4 }));
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1253,6 +1490,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'ATL_06') {
     // ATL_06: Hydrothermal Fissures (Fendas Hidrotermais & Basalto Vulcânico)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(42, 42, 12, 12), matStoneDark);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1277,6 +1515,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'ATL_07') {
     // ATL_07: Hydra's Abyssal Maw (O Fosso Abissal da Grande Hydra)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(50, 50, 16, 16), new THREE.MeshStandardMaterial({ color: 0x022c43, roughness: 0.5 }));
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1300,6 +1539,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'TAR_01') {
     // TAR_01: Crimson Dunes (Dunas de Areia Carmesim & Tempestades)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(52, 52, 16, 16), matSandCrimson);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1325,6 +1565,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'TAR_02') {
     // TAR_02: Boiling Oasis (Oásis Fervilhante & Palmeiras Secas)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 46, 16, 16), matSandCrimson);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1345,6 +1586,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'TAR_03') {
     // TAR_03: Leviathan Spine Ridge (Espinhaço do Grande Verme)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 58, 16, 16), matSandCrimson);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1364,6 +1606,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'TAR_04') {
     // TAR_04: Iron Wheel Scrapyard (Cemitério de Autômatos de Ferro)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(50, 50, 16, 16), matSandCrimson);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1385,6 +1628,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'TAR_05') {
     // TAR_05: Zaikan's Sand Crater (A Cratera de Areia Movediça de Zaikan)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(54, 54, 16, 16), matSandCrimson);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1417,6 +1661,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     // ICA_01: Levitation Citadel (Cidadela da Levitação & Pontes de Luz)
     // Ilha Flutuante Central com Vácuo Cósmico
     const island = new THREE.Mesh(new THREE.CylinderGeometry(9.5, 7.5, 3.0, 20), matNacar);
+    island.name = 'scenario_tile_round_floor';
     island.position.y = -1.5;
     envGroup.add(island);
 
@@ -1448,6 +1693,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'ICA_02') {
     // ICA_02: Dark Phoenix Lotus Nest (Ninho de Lótus do Dark Phoenix)
     const nestIsland = new THREE.Mesh(new THREE.CylinderGeometry(10.5, 8.5, 3.5, 20), matObsidian);
+    nestIsland.name = 'scenario_tile_round_floor';
     nestIsland.position.y = -1.75;
     envGroup.add(nestIsland);
 
@@ -1478,6 +1724,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'VOL_01') {
     // VOL_01: Valley of Loren - O Baluarte do Castle Siege
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 50), matStoneDark);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = 0.01;
     envGroup.add(floor);
@@ -1539,6 +1786,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'EVT_01') {
     // EVT_01: Blood Castle - A Colossal Ponte do Martírio (120m x 18m)
     const bridge = new THREE.Mesh(new THREE.BoxGeometry(16, 2, 70), matStoneDark);
+    bridge.name = 'scenario_tile_box_floor';
     bridge.position.set(0, -1, 0);
     envGroup.add(bridge);
 
@@ -1595,6 +1843,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'VOL_02') {
     // VOL_02: Primeiro Baluarte & Portão Ciclópico de Ferro (25M HP destrutível)
     const floor = new THREE.Mesh(new THREE.BoxGeometry(58, 0.4, 38), matCobble);
+    floor.name = 'scenario_tile_box_floor';
     floor.position.y = -0.2;
     envGroup.add(floor);
 
@@ -1648,6 +1897,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'VOL_03') {
     // VOL_03: Pátio das Estátuas da Vida (4 estátuas com aura de respawn)
     const courtyard = new THREE.Mesh(new THREE.BoxGeometry(68, 0.4, 48), matCobble);
+    courtyard.name = 'scenario_tile_box_floor';
     courtyard.position.y = -0.2;
     envGroup.add(courtyard);
 
@@ -1691,6 +1941,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'VOL_04') {
     // VOL_04: Gargalo da Ponte Levadiça sobre Fosso de Lava (1400°C)
     const bridgeDrum = new THREE.Mesh(new THREE.BoxGeometry(6, 0.5, 24), matWood);
+    bridgeDrum.name = 'scenario_tile_box_floor';
     bridgeDrum.position.set(0, 0.05, 0);
     envGroup.add(bridgeDrum);
 
@@ -1725,6 +1976,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'VOL_05') {
     // VOL_05: Salão do Trono Real & Selo da Coroa (canalização de 30s)
     const hallFloor = new THREE.Mesh(new THREE.BoxGeometry(42, 0.4, 42), matNacar);
+    hallFloor.name = 'scenario_tile_box_floor';
     hallFloor.position.y = -0.2;
     envGroup.add(hallFloor);
 
@@ -1782,13 +2034,14 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'EVT_02') {
     // EVT_02: Devil Square — Praça Circular da Carnificina Pentagramal
     const square = new THREE.Mesh(new THREE.CircleGeometry(24.5, 48), matCobble);
+    square.name = 'scenario_tile_round_floor';
     square.rotation.x = -Math.PI / 2;
     square.position.y = 0.02;
     envGroup.add(square);
 
     // Pentagrama rúnico incandescente no piso de granito
     const pentagramMat = new THREE.MeshStandardMaterial({
-      color: 0xf43f5e, emissive: 0xbe123c, emissiveIntensity: 2.6, roughness: 0.4, side: THREE.DoubleSide,
+      color: 0x78322c, emissive: 0x6f1e16, emissiveIntensity: 0.65, roughness: 0.8, side: THREE.DoubleSide,
     });
     for (let i = 0; i < 5; i++) {
       const a1 = (i / 5) * Math.PI * 2 - Math.PI / 2;
@@ -1818,7 +2071,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
 
     // 4 totens de crânios de 6m expelindo chamas
     for (const [tx, tz] of [[0, 16], [16, 0], [0, -16], [-16, 0]]) {
-      const totem = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.0, 6, 8), matBone);
+      const totem = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.0, 6, 8), matStoneDark);
       totem.position.set(tx, 3, tz);
       envGroup.add(totem);
       const flame = new THREE.Mesh(new THREE.ConeGeometry(1.0, 2.4, 8), matMagma);
@@ -1865,14 +2118,16 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
 
     // Barreira etérea do anonimato absoluto
     const barrier = new THREE.Mesh(new THREE.CylinderGeometry(20.5, 20.5, 9, 32, 1, true), new THREE.MeshBasicMaterial({
-      color: 0xa855f7, transparent: true, opacity: 0.12, side: THREE.DoubleSide,
+      color: 0x77517f, transparent: true, opacity: 0.06, side: THREE.DoubleSide,
     }));
     barrier.position.y = 4.5;
     envGroup.add(barrier);
 
   } else if (id === 'EVT_04') {
     // EVT_04: Coliseu de Duelos — Grande Arena da Glória (octogonal)
-    const octagon = new THREE.Mesh(new THREE.CylinderGeometry(17.5, 17.8, 1.0, 8), matNacar);
+    const arenaStone = new THREE.MeshStandardMaterial({ color: 0x5c574f, roughness: 0.92, metalness: 0.03 });
+    const octagon = new THREE.Mesh(new THREE.CylinderGeometry(17.5, 17.8, 1.0, 8), arenaStone);
+    octagon.name = 'scenario_tile_round_floor';
     octagon.position.y = 0.5;
     envGroup.add(octagon);
 
@@ -1885,21 +2140,21 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
 
     // Cúpula de barreira de força translúcida (r = 17.5m)
     const dome = new THREE.Mesh(new THREE.CylinderGeometry(17.5, 17.5, 12, 24, 1, true), new THREE.MeshBasicMaterial({
-      color: 0x38bdf8, transparent: true, opacity: 0.10, side: THREE.DoubleSide,
+      color: 0xb69a70, transparent: true, opacity: 0.04, side: THREE.DoubleSide,
     }));
     dome.position.y = 6.5;
     envGroup.add(dome);
 
-    // Placar holográfico tridimensional flutuante a 8m
+    // Placar tridimensional flutuante com acabamento de bronze envelhecido
     const scoreboard = new THREE.Mesh(new THREE.BoxGeometry(7, 2.6, 0.3), new THREE.MeshStandardMaterial({
-      color: 0x0ea5e9, emissive: 0x0284c7, emissiveIntensity: 2.2, transparent: true, opacity: 0.85,
-      metalness: 0.4, roughness: 0.2,
+      color: 0x5c4832, emissive: 0x5a3513, emissiveIntensity: 0.35, transparent: true, opacity: 0.85,
+      metalness: 0.35, roughness: 0.75,
     }));
     scoreboard.position.set(0, 9.5, 0);
     envGroup.add(scoreboard);
     animParts.duelScoreboard = scoreboard;
 
-    const boardLight = new THREE.PointLight(0x38bdf8, 4.0, 16);
+    const boardLight = new THREE.PointLight(0xd99749, 2.0, 16);
     boardLight.position.set(0, 8.4, 0);
     envGroup.add(boardLight);
     dynamicLights.push(boardLight);

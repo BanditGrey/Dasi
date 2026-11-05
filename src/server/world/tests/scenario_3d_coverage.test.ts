@@ -55,3 +55,181 @@ describe('4. Cobertura 3D dos 56 Cenários (Dev Viewer)', () => {
     }
   });
 });
+
+it('Lorencia preserva detalhes do concept e não troca cenários por GLB de outro mapa', async () => {
+  // A presença de window simula o caminho antes usado apenas no navegador.
+  // @ts-ignore - módulo JS do visualizador
+  const { createEnvironment } = await import('../../../client/dev_viewer/dasi3dContent.js');
+  // @ts-ignore - GLTFLoader fornecido com o visualizador
+  const { GLTFLoader } = await import('../../../client/dev_viewer/libs/GLTFLoader.js');
+  const originalLoad = GLTFLoader.prototype.load;
+  const oldWindow = (globalThis as any).window;
+  let loadCount = 0;
+  try {
+    (globalThis as any).window = {};
+    GLTFLoader.prototype.load = () => { loadCount++; };
+    const plaza = createEnvironment('LOR_01', THREE);
+    assert.ok(plaza.group.getObjectByName('lorencia_paving'));
+    assert.ok(plaza.group.getObjectByName('lorencia_angel_statue'));
+    assert.ok(plaza.group.getObjectByName('lorencia_tavern_details'));
+    assert.ok((plaza.animParts as any).fountainWater);
+    assert.strictEqual((plaza.animParts as any).torches.length, 4);
+    for (const id of ['LOR_02', 'EVT_02', 'EVT_03', 'EVT_04']) {
+      const env = createEnvironment(id, THREE);
+      assert.ok(env.group.children.length > 0, id);
+    }
+    assert.strictEqual(loadCount, 0, 'GLBs genéricos não devem substituir mapas canônicos');
+  } finally {
+    GLTFLoader.prototype.load = originalLoad;
+    if (oldWindow === undefined) delete (globalThis as any).window;
+    else (globalThis as any).window = oldWindow;
+  }
+});
+
+it('GLB de blockout de Lorencia é carregável e preserva marcos principais', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  const bytes = readFileSync('src/client/dev_viewer/models/scenarios/lor_01.glb');
+  const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  const gltf = await new GLTFLoader().parseAsync(arrayBuffer, '');
+  assert.ok(gltf.scene.getObjectByName('lorencia_angel_statue'));
+  assert.ok(gltf.scene.getObjectByName('lorencia_tavern_details'));
+  const paving = gltf.scene.getObjectByName('lorencia_paving') as THREE.InstancedMesh;
+  assert.ok(paving?.isInstancedMesh);
+  assert.strictEqual(paving.count, 780);
+});
+
+
+it('Os sete blockouts de Lorencia carregam como GLBs distintos sem luzes ou partículas', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  for (let index = 1; index <= 7; index++) {
+    const id = `LOR_${String(index).padStart(2, '0')}`;
+    const bytes = readFileSync(`src/client/dev_viewer/models/scenarios/${id.toLowerCase()}.glb`);
+    const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    const gltf = await new GLTFLoader().parseAsync(buffer, '');
+    assert.ok(gltf.scene.getObjectByName(id), id);
+    let meshes = 0;
+    gltf.scene.traverse((obj: THREE.Object3D) => {
+      if ((obj as THREE.Mesh).isMesh) meshes++;
+      assert.ok(!(obj as THREE.Light).isLight && !(obj as THREE.Points).isPoints, id);
+    });
+    assert.ok(meshes > 0, id);
+  }
+});
+
+
+it('Os sete blockouts de Noria carregam com GLTFLoader e o santuário preserva detalhes', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  for (let index = 1; index <= 7; index++) {
+    const id = `NOR_${String(index).padStart(2, '0')}`;
+    const bytes = readFileSync(`src/client/dev_viewer/models/scenarios/${id.toLowerCase()}.glb`);
+    const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    const gltf = await new GLTFLoader().parseAsync(buffer, '');
+    assert.ok(gltf.scene.getObjectByName(id), id);
+    let meshes = 0;
+    gltf.scene.traverse((obj: THREE.Object3D) => {
+      if ((obj as THREE.Mesh).isMesh) meshes++;
+      assert.ok(!(obj as THREE.Light).isLight && !(obj as THREE.Points).isPoints, id);
+    });
+    assert.ok(meshes > 0, id);
+    if (id === 'NOR_01') {
+      assert.ok(gltf.scene.getObjectByName('noria_tree_details'));
+      assert.ok(gltf.scene.getObjectByName('noria_pavilion_details'));
+      assert.ok(gltf.scene.getObjectByName('noria_fountain_water'));
+    }
+  }
+});
+
+it('Os seis blockouts de Devias carregam e preservam detalhes da cidadela', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  for (let index = 1; index <= 6; index++) {
+    const id = `DEV_${String(index).padStart(2, '0')}`;
+    const bytes = readFileSync(`src/client/dev_viewer/models/scenarios/${id.toLowerCase()}.glb`);
+    const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    const gltf = await new GLTFLoader().parseAsync(buffer, '');
+    assert.ok(gltf.scene.getObjectByName(id), id);
+    let meshes = 0;
+    gltf.scene.traverse((obj: THREE.Object3D) => {
+      if ((obj as THREE.Mesh).isMesh) meshes++;
+      assert.ok(!(obj as THREE.Light).isLight && !(obj as THREE.Points).isPoints, id);
+    });
+    assert.ok(meshes > 0, id);
+    if (id === 'DEV_01') {
+      assert.ok(gltf.scene.getObjectByName('devias_thawed_stone'));
+      assert.ok(gltf.scene.getObjectByName('devias_brazier_flame'));
+      assert.ok(gltf.scene.getObjectByName('devias_battlements'));
+    }
+  }
+});
+
+it('Todos os 56 blockouts carregam e excluem efeitos controlados pelo runtime', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  for (const scenario of CollisionSystem.getAllScenarios()) {
+    const bytes = readFileSync(`src/client/dev_viewer/models/scenarios/${scenario.id.toLowerCase()}.glb`);
+    const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    const gltf = await new GLTFLoader().parseAsync(buffer, '');
+    assert.ok(gltf.scene.getObjectByName(scenario.id), scenario.id);
+    let meshes = 0;
+    gltf.scene.traverse((obj: THREE.Object3D) => {
+      if ((obj as THREE.Mesh).isMesh) meshes++;
+      assert.ok(!(obj as THREE.Light).isLight && !(obj as THREE.Points).isPoints && !obj.userData.runtimeOnly, scenario.id);
+    });
+    assert.ok(meshes > 0, scenario.id);
+  }
+});
+
+it('Atmosfera de cerco e eventos anima; interiores de Lorencia não recebem chuva', async () => {
+  // @ts-ignore - módulo JS usado pelo visualizador
+  const { createEnvironment } = await import('../../../client/dev_viewer/dasi3dContent.js');
+  for (const id of ['LOR_06', 'LOR_07']) {
+    const env = createEnvironment(id, THREE);
+    assert.equal((env.animParts as any).rainSystem, undefined, id);
+  }
+  const colors = new Set<number>();
+  for (const id of ['VOL_01', 'EVT_01', 'EVT_02', 'EVT_03', 'EVT_04']) {
+    const env = createEnvironment(id, THREE);
+    const cloud = (env.animParts as any).siegeSmoke || (env.animParts as any).bloodNebula;
+    assert.ok(cloud, id);
+    if (id.startsWith('EVT_')) colors.add(cloud.material.color.getHex());
+    const before = cloud.geometry.attributes.position.array[1];
+    env.updateAnim(1, 0.05);
+    const after = cloud.geometry.attributes.position.array[1];
+    assert.notStrictEqual(before, after, id);
+    env.updateAnim(1, NaN);
+    assert.ok(Number.isFinite(cloud.geometry.attributes.position.array[1]), id);
+  }
+  assert.strictEqual(colors.size, 4, 'Cada arena tem paleta própria');
+});
+
+it('Lorencia leste e bosque preservam marcos e atmosfera após exportação', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  for (const [id, names] of [
+    ['LOR_02', ['lorencia_east_road', 'lorencia_east_gate_details', 'lorencia_east_grass']],
+    ['LOR_03', ['lorencia_spider_ruin_details', 'lorencia_spider_web']],
+  ] as const) {
+    const bytes = readFileSync(`src/client/dev_viewer/models/scenarios/${id.toLowerCase()}.glb`);
+    const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    const gltf = await new GLTFLoader().parseAsync(buffer, '');
+    for (const name of names) assert.ok(gltf.scene.getObjectByName(name), `${id}: ${name}`);
+    if (id === 'LOR_02') {
+      const grass = gltf.scene.getObjectByName('lorencia_east_grass') as THREE.InstancedMesh;
+      assert.ok(grass.isInstancedMesh);
+      assert.strictEqual(grass.count, 72);
+      assert.strictEqual(grass.userData.nonBlockingDecoration, true);
+    }
+  }
+  // @ts-ignore - módulo JS do visualizador
+  const { createEnvironment } = await import('../../../client/dev_viewer/dasi3dContent.js');
+  const forest = createEnvironment('LOR_03', THREE);
+  const motes = (forest.animParts as any).forestMotes;
+  assert.ok(motes);
+  const positions = motes.geometry.attributes.position.array;
+  const before = positions[1];
+  forest.updateAnim(0.5, 1 / 60);
+  assert.notStrictEqual(positions[1], before);
+});

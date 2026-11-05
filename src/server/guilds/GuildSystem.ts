@@ -554,7 +554,8 @@ export class GuildSystem {
    */
   public applyTerritorialTax(
     biome: ScenarioBiome | string,
-    grossZen: number
+    grossZen: number,
+    commit = true
   ): { tax: number; netZen: number; rate: number; ownerGuildId: string | null } {
     const rate = TERRITORIAL_TAX_BY_BIOME[String(biome).toUpperCase()] ?? GUILD_LIMITS.MIN_TAX_RATE;
     const owner = this.getCastleOwner();
@@ -564,8 +565,10 @@ export class GuildSystem {
     }
 
     const tax = Math.floor(grossZen * rate);
-    owner.treasuryZen += tax;
-    owner.totalTaxCollected += tax;
+    if (commit) {
+      owner.treasuryZen += tax;
+      owner.totalTaxCollected += tax;
+    }
 
     return { tax, netZen: grossZen - tax, rate, ownerGuildId: owner.id };
   }

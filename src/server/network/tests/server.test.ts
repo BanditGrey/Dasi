@@ -25,7 +25,7 @@ describe('Servidor de Jogo Dasi (WebSocket / HTTP Dev Server)', () => {
   let server: GameServer;
 
   before(async () => {
-    server = new GameServer({ port: TEST_PORT });
+    server = new GameServer({ port: TEST_PORT, enableDevControls: true });
     await server.start();
   });
 
@@ -116,6 +116,28 @@ describe('Servidor de Jogo Dasi (WebSocket / HTTP Dev Server)', () => {
     assert.equal(res404.status, 404);
     const errJson = await res404.json();
     assert.ok(errJson.error);
+  });
+
+  test('Módulo TypeScript compartilhado é servido como JavaScript executável', async () => {
+    const res = await fetch(`${HTTP_URL}/src/server/world/CollisionSystem.ts`);
+    assert.equal(res.status, 200);
+    const source = await res.text();
+    const module = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+    assert.equal(module.SCENARIO_CATALOG.length, 56);
+  });
+
+  test('Rejeita corpo HTTP maior que 64 KiB', async () => {
+    const response = await fetch(`${HTTP_URL}/api/bosses/spawn`, {
+      method: 'POST', body: 'x'.repeat(65537),
+    });
+    assert.equal(response.status, 413);
+  });
+
+  test('Comando de jogo antes de login fecha a conexão', async () => {
+    const ws = await createTestClient();
+    const closed = new Promise<number>((resolve) => ws.once('close', resolve));
+    sendPacket(ws, Opcodes.MSG_INVENTORY_SYNC_ALL);
+    assert.equal(await closed, 1008);
   });
 
   // ==========================================
@@ -665,8 +687,9 @@ describe('Servidor de Jogo Dasi (WebSocket / HTTP Dev Server)', () => {
     });
     const attack = await attackPromise;
     assert.equal(attack.success, true);
-    assert.equal(attack.destroyed, true);
-    assert.equal(attack.stage, 'COURTYARD_STATUES');
+    assert.equal(attack.destroyed, false);
+    assert.equal(attack.applied, 80);
+    assert.equal(attack.stage, 'GATE_ASSAULT');
 
     // Salão do Trono ainda selado pelas Estátuas da Vida
     const pedestalPromise = waitForPacket(
@@ -729,5 +752,27 @@ describe('Servidor de Jogo Dasi (WebSocket / HTTP Dev Server)', () => {
         }
       }
     }
+  });
+});
+
+
+describe('Padrões seguros do sandbox', () => {
+  test('rotas e comandos de desenvolvimento vêm desativados', async () => {
+    const server = new GameServer({ port: 8200 });
+    await server.start();
+    try {
+      const response = await fetch('http://127.0.0.1:8200/api/box/open', { method: 'POST', body: '{}' });
+      assert.equal(response.status, 403);
+      const ws = new WebSocket('ws://127.0.0.1:8200');
+      await new Promise<void>((resolve) => ws.once('open', resolve));
+      const login = new Promise<void>((resolve) => ws.on('message', (data) => {
+        if (JSON.parse(data.toString()).opcode === Opcodes.MSG_AUTH_LOGIN_RES.opcode && JSON.parse(data.toString()).subcode === Opcodes.MSG_AUTH_LOGIN_RES.subcode) resolve();
+      }));
+      ws.send(JSON.stringify({ ...Opcodes.MSG_AUTH_LOGIN_REQ, payload: { username: 'test' } }));
+      await login;
+      const closed = new Promise<number>((resolve) => ws.once('close', resolve));
+      ws.send(JSON.stringify({ ...Opcodes.MSG_ITEM_SPAWN_DEV_REQ, payload: { itemDefId: 'jewel_of_blessing' } }));
+      assert.equal(await closed, 1008);
+    } finally { await server.stop(); }
   });
 });

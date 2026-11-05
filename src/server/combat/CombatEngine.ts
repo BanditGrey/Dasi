@@ -114,7 +114,7 @@ export class CombatEngine {
     // Valida alcance máximo de combate (ex: melee 220 unidades, magia/flecha 450)
     const distToMob = Math.hypot(mob.x - playerX, mob.y - playerY);
     const maxRange = 300;
-    if (distToMob > maxRange) {
+    if (!Number.isFinite(distToMob) || distToMob > maxRange) {
       return {
         success: false,
         attackerId: session.sessionId,
@@ -314,7 +314,7 @@ export class CombatEngine {
     }
 
     const distToBoss = Math.hypot(boss.x - playerX, boss.y - playerY);
-    if (distToBoss > 400) {
+    if (!Number.isFinite(distToBoss) || distToBoss > 400) {
       return {
         success: false,
         attackerId: session.sessionId,
@@ -472,7 +472,7 @@ export class CombatEngine {
 
     // Validação de proximidade física (máximo 160 unidades)
     const dist = Math.hypot(drop.x - playerX, drop.y - playerY);
-    if (dist > 180) {
+    if (!Number.isFinite(dist) || dist > 180) {
       return { success: false, dropId, item: null, zen: 0, error: 'Você está muito distante para recolher este item' };
     }
 

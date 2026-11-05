@@ -346,7 +346,7 @@
           </div>
         </div>
 
-        <!-- Painel Comparativo Lado a Lado: Concept Art Oficial vs Modelo 3D Real -->
+        <!-- Painel de referência visual ao lado do cenário existente -->
         <aside class="concept-art-split-panel" id="concept-art-split-panel" style="display: none; width: 380px; min-width: 320px; background: rgba(10, 15, 26, 0.96); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 8px; padding: 14px; flex-direction: column; gap: 10px; box-shadow: -4px 0 24px rgba(0,0,0,0.7); overflow-y: auto;">
           <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 8px;">
             <div style="display: flex; align-items: center; gap: 6px;">
@@ -356,14 +356,15 @@
             <button id="btn-close-art-split" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; padding: 0 4px;" title="Fechar Painel Comparativo">&times;</button>
           </div>
           <div style="border-radius: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.18); box-shadow: 0 4px 16px rgba(0,0,0,0.6); background: #000;">
-            <img id="split-concept-art-img" src="art/lorencia_concept_art.jpg" alt="Arte Conceitual" style="width: 100%; height: auto; display: block; object-fit: cover; max-height: 240px;">
+            <img id="split-concept-art-img" src="art/classic/lorencia.jpg" alt="Arte Conceitual" style="width: 100%; height: auto; display: block; object-fit: contain; max-height: 320px;">
           </div>
+          <a id="scenario-blockout-download" href="models/scenarios/lor_01.glb" download style="display: none; color: #fcd34d; font-size: 12px;">⬇ Baixar blockout GLB (não final)</a>
           <div style="background: rgba(30, 41, 59, 0.7); border-radius: 6px; padding: 10px; border-left: 3px solid #f59e0b;">
             <h5 id="split-concept-art-title" style="margin: 0 0 4px 0; color: #fbbf24; font-family: 'Cinzel', serif; font-size: 13px;">Lorencia Citadel</h5>
             <p id="split-concept-art-desc" style="margin: 0; font-size: 11.5px; color: #cbd5e1; line-height: 1.45;">Melancolia medieval gótica sob chuva fria contínua. Fonte octogonal de pedra com estátua em bronze do Arcanjo de Loren, ladeada pelo Bazar com tendas coloridas, a Taverna e a muralha fortificada.</p>
           </div>
           <div style="background: rgba(15, 23, 42, 0.85); border-radius: 6px; padding: 10px; border: 1px solid rgba(255,255,255,0.08);">
-            <strong style="color: #4ade80; font-size: 11.5px; display: block; margin-bottom: 6px;">🏛️ RECONSTRUÇÃO 3D REAL (BLENDER 5.2 & WEBGL):</strong>
+            <strong style="color: #4ade80; font-size: 11.5px; display: block; margin-bottom: 6px;">🏛️ ELEMENTOS PREVISTOS PARA O CENÁRIO:</strong>
             <ul id="split-concept-art-features" style="margin: 0; padding-left: 16px; font-size: 11px; color: #94a3b8; line-height: 1.6;">
               <li><strong style="color: #f1f5f9;">Calçamento Gótico:</strong> Textura PBR com juntas de argamassa e poças reflexivas.</li>
               <li><strong style="color: #f1f5f9;">Fonte do Arcanjo:</strong> Bacia octogonal com bronze sagrado e halo dourado.</li>
@@ -447,6 +448,18 @@
               <button class="btn-sub-entity" data-cat="HERO" data-id="MG">⚡ Magic Gladiator</button>
               <button class="btn-sub-entity" data-cat="HERO" data-id="DL">👑 Dark Lord</button>
             </div>
+            <fieldset style="border:1px solid #475569; border-radius:6px; padding:8px; margin:8px 0;">
+              <legend style="color:#a7f3d0;">Herói modular (protótipo)</legend>
+              <label><input type="checkbox" id="hero-modular-mode"> Visualizar blockout modular</label>
+              <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;">
+                <select id="hero-armor-slot" aria-label="Peça de armadura"><option value="helmet">Elmo</option><option value="chest">Peitoral</option><option value="shoulders">Ombreiras</option><option value="gloves">Luvas</option><option value="legs">Calças e grevas</option><option value="boots">Botas</option></select>
+                <select id="hero-armor-variant" aria-label="Variante de armadura"><option value="base">Base</option><option value="elite">Elite</option></select>
+                <button type="button" id="hero-armor-apply">Trocar peça</button>
+              </div>
+              <p id="hero-modular-status" style="font-size:11px;color:#94a3b8;">Peças visuais simples; sem rig esquelético ou atributos de jogo.</p>
+              <a id="hero-modular-download" href="models/modular_heroes/hero_dk_modular.glb" download>Baixar GLB do blockout base</a>
+              <span> · </span><a id="hero-armor-download" href="models/modular_heroes/dk_helmet_base.glb" download>Baixar módulo selecionado</a>
+            </fieldset>
             <label class="control-label" style="margin-top: 6px;">SET DE ARMADURA:</label>
             <div class="tier-buttons-row">
               <button class="btn-set-tier active" data-tier="DRAGON">Dragon</button>
@@ -550,6 +563,22 @@
                 <option value="EVT_04">EVT_04: Coliseu de Duelos (Arena da Glória) (6 colisores)</option>
               </optgroup>
             </select>
+            <fieldset style="border:1px solid #475569; border-radius:6px; padding:8px; margin:8px 0;">
+              <legend style="color:#a7f3d0;">Tiles visuais (experimental)</legend>
+              <p id="tile-floor-status" style="font-size:12px;color:#cbd5e1;">Selecione um cenário.</p>
+              <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+                <label>Coluna <input id="tile-col" type="number" value="0" min="0" style="width:52px;"></label>
+                <label>Linha <input id="tile-row" type="number" value="0" min="0" style="width:52px;"></label>
+                <select id="tile-variant" aria-label="Variante visual"><option value="original">Original</option><option value="escuro">Escuro</option><option value="claro">Claro</option><option value="musgo">Musgo</option><option value="terra">Terra</option><option value="laje">Laje 3D</option><option value="pedra">Pedra 3D</option><option value="muro_x">Muro 3D horizontal</option><option value="muro_y">Muro 3D vertical</option><option value="arbusto">Arbusto 3D</option><option value="remover_objeto">Remover objeto</option></select>
+                <button type="button" id="tile-apply">Aplicar</button>
+                <button type="button" id="tile-reset">Limpar</button>
+                <button type="button" id="tile-export">Exportar JSON</button>
+                <button type="button" id="tile-export-glb">Exportar GLB visual</button>
+                <button type="button" id="tile-export-all">Exportar 56 GLBs (ZIP)</button>
+                <label>Importar JSON <input id="tile-import" type="file" accept=".json,application/json" style="max-width:140px;"></label>
+              </div>
+              <p style="font-size:11px;color:#94a3b8;">Duplo clique no piso para aplicar. Piso e objeto são camadas separadas; somente visual, salvo neste navegador. Muros e arbustos não criam colisões nem alteram GLBs.</p>
+            </fieldset>
             <div class="sub-buttons-grid">
               <button class="btn-sub-entity active" data-cat="ENVIRONMENT" data-id="LORENCIA">🏰 Lorencia (7 Cenários)</button>
               <button class="btn-sub-entity" data-cat="ENVIRONMENT" data-id="NORIA">🌿 Noria (7 Cenários)</button>
@@ -1399,13 +1428,13 @@
     </div>
   </div>
 
-  <!-- 4. Modal de Galeria de Concept Art Oficial (5 Biomas Canônicos) -->
+  <!-- Galeria de referências conceituais -->
   <div class="dasi-modal-overlay" id="modal-concept-art" style="display: none;">
     <div class="dasi-modal-card concept-art-card" style="max-width: 960px;">
       <div class="dasi-modal-header">
         <div class="modal-title-wrap">
           <span class="modal-icon">🖼️</span>
-          <h3>GALERIA OFICIAL DE CONCEPT ART (10 CENÁRIOS & 5 CLASSES AAA)</h3>
+          <h3>GALERIA DE CONCEPT ART — REFERÊNCIAS VISUAIS</h3>
         </div>
         <button class="btn-close-modal" data-close="modal-concept-art">&times;</button>
       </div>
@@ -1421,6 +1450,9 @@
           <button class="btn-art-tab" data-biome="ICARUS" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(192, 132, 252, 0.1); color: #cbd5e1; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">🪽 Icarus</button>
           <button class="btn-art-tab" data-biome="VALLEY_OF_LOREN" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(239, 68, 68, 0.15); color: #cbd5e1; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">⚔️ Valley of Loren</button>
           <button class="btn-art-tab" data-biome="BLOOD_CASTLE" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(185, 28, 28, 0.15); color: #cbd5e1; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">🩸 Blood Castle</button>
+          <button class="btn-art-tab" data-biome="DEVIL_SQUARE" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(153,27,27,0.15); color: #cbd5e1; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">🔥 Devil Square</button>
+          <button class="btn-art-tab" data-biome="CHAOS_CASTLE" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(126,34,206,0.15); color: #cbd5e1; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">🌌 Chaos Castle</button>
+          <button class="btn-art-tab" data-biome="DUEL_COLISEUM" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(161,98,7,0.15); color: #cbd5e1; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">⚔️ Coliseu de Duelos</button>
           <!-- 5 Classes Canônicas de Heróis -->
           <button class="btn-art-tab" data-biome="HERO_DK" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.15); color: #fca5a5; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">🛡️ Dark Knight</button>
           <button class="btn-art-tab" data-biome="HERO_DW" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.15); color: #7dd3fc; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">🔮 Dark Wizard</button>
@@ -1429,7 +1461,7 @@
           <button class="btn-art-tab" data-biome="HERO_DL" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.15); color: #fcd34d; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">👑 Dark Lord</button>
         </div>
         <div class="art-viewer-display" style="border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; overflow: hidden; background: #000; box-shadow: 0 8px 32px rgba(0,0,0,0.6); text-align: center;">
-          <img id="concept-art-img" src="art/lorencia_concept_art.jpg" alt="Concept Art" style="width: 100%; height: auto; display: block; object-fit: contain; max-height: 520px;">
+          <img id="concept-art-img" src="art/classic/lorencia.jpg" alt="Concept Art" style="width: 100%; height: auto; display: block; object-fit: contain; max-height: 520px;">
         </div>
         <div class="art-info-box" style="margin-top: 10px; padding: 12px; background: rgba(15, 23, 42, 0.7); border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
           <h4 id="concept-art-title" style="margin: 0 0 4px 0; color: #fbbf24; font-family: 'Cinzel', serif;">Lorencia Citadel — Praça Central & Fonte do Arcanjo</h4>

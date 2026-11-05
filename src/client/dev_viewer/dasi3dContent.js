@@ -13,6 +13,7 @@
 // PALETAS DE MATERIAIS & CORES GÓTICAS PBR
 // ============================================================================
 import { buildScenario3D } from './dasi3dScenarios.js';
+import { createTiledFloor, createTiledBoxTop, createTiledRoundTop, createTiledSlabGrid, loadTileEdits } from './tileFloor.js';
 import { GLTFLoader } from './libs/GLTFLoader.js';
 
 // ============================================================================
@@ -1677,19 +1678,37 @@ export function createEnvironment(envType, THREE) {
     const dynamicLights = [];
     const animParts = {};
     buildScenario3D(envType, THREE, envGroup, dynamicLights, animParts);
-    // Dispara carregamento assíncrono do GLB real compilado do Blender 5.2
-    loadBiomeGLB(envType, THREE, envGroup, (model) => {
-      animParts.realSceneryModel = model;
-    });
+    // Blocos sólidos mantêm sua geometria e recebem apenas uma grade no topo.
+    const originalFloor = envGroup.getObjectByName('scenario_base_floor');
+    const boxFloor = envGroup.getObjectByName('scenario_tile_box_floor');
+    const roundFloor = envGroup.getObjectByName('scenario_tile_round_floor');
+    const tileFloor = originalFloor ? createTiledFloor(THREE, originalFloor) : boxFloor ? createTiledBoxTop(THREE, boxFloor) : roundFloor ? createTiledRoundTop(THREE, roundFloor) : createTiledSlabGrid(THREE, animParts.chaosTiles);
+    if (tileFloor) {
+      const edits = loadTileEdits(envType, tileFloor);
+      tileFloor.applyEdits(edits.floor);
+      tileFloor.applyEdits(edits.objects, 'objects');
+      if (originalFloor) {
+        envGroup.remove(originalFloor);
+        originalFloor.geometry.dispose();
+      }
+      if (!tileFloor.attached) envGroup.add(tileFloor.mesh);
+    }
+    // A geometria específica do cenário deve permanecer visível. O GLB de bioma
+    // é genérico e sua substituição assíncrona apagava mapas e colisores distintos.
+    // Os GLBs continuam disponíveis via loadBiomeGLB para usos explícitos.
     return {
       group: envGroup,
       dynamicLights,
       animParts,
+      tileFloor,
       updateAnim: (...args) => {
         let time = 0, dt = 0.016;
         if (args.length >= 3) { time = typeof args[1] === 'number' ? args[1] : 0; dt = typeof args[2] === 'number' ? args[2] : 0.016; }
         else if (args.length === 2) { time = typeof args[0] === 'number' ? args[0] : 0; dt = typeof args[1] === 'number' ? args[1] : 0.016; }
         else if (args.length === 1) { time = typeof args[0] === 'number' ? args[0] : 0; }
+        // Evita saltos após abas em segundo plano ou valores inválidos de relógio.
+        dt = Number.isFinite(dt) ? Math.max(0, Math.min(dt, 0.1)) : 0;
+        time = Number.isFinite(time) ? time : 0;
         if (animParts.fountainWater) animParts.fountainWater.rotation.z = time * 0.2;
         if (animParts.archangelHalo) { animParts.archangelHalo.rotation.z = time * 0.8; }
         if (animParts.chaosGear) animParts.chaosGear.rotation.y = time * 1.5;
@@ -1719,8 +1738,8 @@ export function createEnvironment(envType, THREE) {
           const sPos = animParts.sporeSystem.geometry.attributes.position.array;
           const count = sPos.length / 3;
           for (let i = 0; i < count; i++) {
-            sPos[i * 3 + 1] += Math.sin(time * 1.5 + i) * 0.015;
-            sPos[i * 3 + 0] += Math.cos(time * 0.8 + i) * 0.012;
+            sPos[i * 3 + 1] += Math.sin(time * 1.5 + i) * 0.015 * dt * 60;
+            sPos[i * 3 + 0] += Math.cos(time * 0.8 + i) * 0.012 * dt * 60;
           }
           animParts.sporeSystem.geometry.attributes.position.needsUpdate = true;
         }
@@ -1731,7 +1750,7 @@ export function createEnvironment(envType, THREE) {
           for (let i = 0; i < count; i++) {
             snPos[i * 3 + 0] -= dt * 12.5;
             snPos[i * 3 + 1] -= dt * 1.6;
-            snPos[i * 3 + 2] += Math.sin(time * 3.0 + i) * 0.035;
+            snPos[i * 3 + 2] += Math.sin(time * 3.0 + i) * 0.035 * dt * 60;
             if (snPos[i * 3 + 0] < -20.0) {
               snPos[i * 3 + 0] = 20.0;
               snPos[i * 3 + 1] = Math.random() * 10.0;
@@ -1745,7 +1764,7 @@ export function createEnvironment(envType, THREE) {
           const count = aPos.length / 3;
           for (let i = 0; i < count; i++) {
             aPos[i * 3 + 1] += dt * 1.4;
-            aPos[i * 3 + 0] += Math.sin(time * 1.8 + i) * 0.012;
+            aPos[i * 3 + 0] += Math.sin(time * 1.8 + i) * 0.012 * dt * 60;
             if (aPos[i * 3 + 1] > 6.0) {
               aPos[i * 3 + 1] = 0.1;
               aPos[i * 3 + 0] = (Math.random() - 0.5) * 36.0;
@@ -1768,8 +1787,8 @@ export function createEnvironment(envType, THREE) {
           const count = ePos.length / 3;
           for (let i = 0; i < count; i++) {
             ePos[i * 3 + 1] += dt * 3.2;
-            ePos[i * 3 + 0] += Math.sin(time * 2.2 + i) * 0.02;
-            ePos[i * 3 + 2] += Math.cos(time * 1.7 + i) * 0.02;
+            ePos[i * 3 + 0] += Math.sin(time * 2.2 + i) * 0.02 * dt * 60;
+            ePos[i * 3 + 2] += Math.cos(time * 1.7 + i) * 0.02 * dt * 60;
             if (ePos[i * 3 + 1] > 9.0) {
               ePos[i * 3 + 1] = 0.2;
               ePos[i * 3 + 0] = (Math.random() - 0.5) * 38.0;
@@ -1784,8 +1803,8 @@ export function createEnvironment(envType, THREE) {
           const count = tPos.length / 3;
           for (let i = 0; i < count; i++) {
             tPos[i * 3 + 0] -= dt * 14.0;
-            tPos[i * 3 + 1] += Math.sin(time * 3.5 + i) * 0.015;
-            tPos[i * 3 + 2] += Math.cos(time * 2.5 + i) * 0.025;
+            tPos[i * 3 + 1] += Math.sin(time * 3.5 + i) * 0.015 * dt * 60;
+            tPos[i * 3 + 2] += Math.cos(time * 2.5 + i) * 0.025 * dt * 60;
             if (tPos[i * 3 + 0] < -25.0) {
               tPos[i * 3 + 0] = 25.0;
               tPos[i * 3 + 1] = Math.random() * 4.0;
@@ -1799,9 +1818,9 @@ export function createEnvironment(envType, THREE) {
           const pPos = animParts.abyssalPlankton.geometry.attributes.position.array;
           const count = pPos.length / 3;
           for (let i = 0; i < count; i++) {
-            pPos[i * 3 + 1] += Math.sin(time * 1.2 + i) * 0.01;
-            pPos[i * 3 + 0] += Math.cos(time * 0.9 + i) * 0.015;
-            pPos[i * 3 + 2] += Math.sin(time * 0.7 + i) * 0.01;
+            pPos[i * 3 + 1] += Math.sin(time * 1.2 + i) * 0.01 * dt * 60;
+            pPos[i * 3 + 0] += Math.cos(time * 0.9 + i) * 0.015 * dt * 60;
+            pPos[i * 3 + 2] += Math.sin(time * 0.7 + i) * 0.01 * dt * 60;
           }
           animParts.abyssalPlankton.geometry.attributes.position.needsUpdate = true;
         }
@@ -1809,13 +1828,37 @@ export function createEnvironment(envType, THREE) {
         if (animParts.bubbles) {
           animParts.bubbles.forEach((b) => {
             b.position.y += dt * b.userData.speed;
-            b.position.x += Math.sin(time * 2.5 + b.userData.seed) * 0.015;
+            b.position.x += Math.sin(time * 2.5 + b.userData.seed) * 0.015 * dt * 60;
             if (b.position.y > 7.0) {
               b.position.y = 0.2;
               b.position.x = (Math.random() - 0.5) * 30.0;
               b.position.z = (Math.random() - 0.5) * 30.0;
             }
           });
+        }
+
+        if (animParts.forestMotes) {
+          const positions = animParts.forestMotes.geometry.attributes.position.array;
+          for (let i = 0; i < positions.length; i += 3) {
+            positions[i] += Math.sin(time * 0.7 + i) * dt * 0.12;
+            positions[i + 1] += Math.cos(time * 0.9 + i) * dt * 0.08;
+          }
+          animParts.forestMotes.geometry.attributes.position.needsUpdate = true;
+        }
+
+        // Fumaça de guerra sobe lentamente; partículas de cada arena têm cor própria.
+        for (const [cloud, speed, ceiling] of [
+          [animParts.siegeSmoke, 0.8, 12],
+          [animParts.bloodNebula, 0.35, 15],
+        ]) {
+          if (!cloud) continue;
+          const positions = cloud.geometry.attributes.position.array;
+          for (let i = 0; i < positions.length; i += 3) {
+            positions[i + 1] += dt * speed;
+            positions[i] += dt * Math.sin(time * 0.7 + i) * 0.25;
+            if (positions[i + 1] > ceiling) positions[i + 1] = 0;
+          }
+          cloud.geometry.attributes.position.needsUpdate = true;
         }
 
         if (animParts.starSystem) {

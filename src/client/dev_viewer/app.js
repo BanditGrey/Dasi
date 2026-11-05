@@ -3,8 +3,17 @@
  * WebSocket Client, Drag & Drop Handler, Audio Synthesizer & Canvas Glow Shader Engine.
  */
 
+import * as THREE from './libs/three.module.js';
+import { GLTFExporter } from './libs/GLTFExporter.js';
+import { buildEditedScenarioSnapshot } from './exportEditedScenario.js';
+import { exportScenarioBatch } from './exportScenarioBatch.js';
+import { createEnvironment } from './dasi3dContent.js';
 import { Dasi3DFeatureViewer } from './dasi3dViewer.js';
 import { ARMORY_METADATA } from './dasi3dArmory.js';
+import { ARMOR_SLOTS, ARMOR_VARIANTS } from './modularHero.js';
+import { CHARACTER_CONCEPTS, getCharacterConcept } from './characterConcepts.js';
+import { CLASSIC_CONCEPTS, SCENARIO_BLOCKOUTS, conceptKeyForScenario, getScenarioConcept, getScenarioBlockout } from './classicConcepts.js';
+import { canonicalTileScenario, saveTileEdits, validateTileDocument, makeTileDocument, tileDocumentLayers, OBJECT_VARIANTS } from './tileFloor.js';
 import { Dasi3DAvatarRenderer, DasiHeroClassModal, CLASS_DEFINITIONS } from './dasi3dAvatar.js';
 import { Dasi3DRealtimeArena } from './dasi3dRealtimeArena.js';
 import {
@@ -2116,15 +2125,64 @@ class DevClientApp {
       }
     };
 
-        artData.DK = artData.HERO_DK;
+    Object.assign(artData, {
+      DEVIL_SQUARE: {
+        title: 'Devil Square — Praça das Sombras', color: '#fca5a5', border: '#991b1b',
+        features: ['Arena circular: Piso de pedra com espaço aberto para combate.', 'Pentagrama: Inscrição infernal sob luz de brasas.', 'Totens: Quatro marcos de pedra com fogo.'],
+      },
+      CHAOS_CASTLE: {
+        title: 'Chaos Castle — Coliseu sobre o Abismo', color: '#d8b4fe', border: '#7e22ce',
+        features: ['Lajes: Plataforma modular suspensa sobre o vazio.', 'Abismo: Névoa e luz violeta discreta.', 'Perímetro: Ruínas e bordas ameaçadoras.'],
+      },
+      DUEL_COLISEUM: {
+        title: 'Coliseu de Duelos — Arena da Glória', color: '#fde68a', border: '#a16207',
+        features: ['Arena octogonal: Área aberta para duelos.', 'Arquibancadas: Pedra escura e formas monumentais.', 'Iluminação: Tochas e detalhes em bronze envelhecido.'],
+      },
+    });
+
+    // Artes de referência por família; os conceitos não são plantas exatas dos mapas.
+    for (const [key, concept] of Object.entries(CLASSIC_CONCEPTS)) {
+      artData[key].src = `art/classic/${concept.file}.jpg`;
+      artData[key].desc = `Referência visual do bioma: ${concept.description}`;
+    }
+    const pendingConcept = {
+      title: 'Concept específico em preparação',
+      desc: 'Não há referência visual disponível para esta seleção.',
+      src: '', color: '#cbd5e1', border: '#64748b', features: [],
+    };
+
+    // Os novos concepts são referências iniciais, não uma garantia de que os GLBs existentes correspondem.
+    for (const id of Object.keys(CHARACTER_CONCEPTS)) {
+      const concept = getCharacterConcept(id);
+      Object.assign(artData[`HERO_${id}`], {
+        src: concept.src,
+        title: `${id} — ${concept.title}`,
+        desc: `Concept inicial: ${concept.description} O modelo 3D existente ainda precisa de revisão.`,
+        features: [],
+      });
+    }
+
+    artData.DK = artData.HERO_DK;
     artData.DW = artData.HERO_DW;
     artData.ELF = artData.HERO_ELF;
     artData.MG = artData.HERO_MG;
     artData.DL = artData.HERO_DL;
 
+    const resolveArtDisplay = (id) => {
+      const family = conceptKeyForScenario(id);
+      const base = artData[family] || pendingConcept;
+      const specific = getScenarioConcept(id);
+      if (specific) return { ...base, ...specific, title: `${id} — ${specific.title}`, desc: `Concept individual: ${specific.description}`, features: [] };
+      if (/^(LOR|NOR|DEV|DNG|LT|ATL|TAR|ICA|VOL|EVT)_\d+$/.test(id || '')) {
+        return { ...base, title: `${id} — ${base.title}`, desc: `Referência de família (concept individual pendente). ${base.desc}`, features: [] };
+      }
+      return base;
+    };
+
     const updateArtDisplay = (biome) => {
-      const data = artData[biome] || artData.LORENCIA;
-      if (conceptImg) conceptImg.src = data.src;
+      const canonicalBiome = conceptKeyForScenario(biome);
+      const data = resolveArtDisplay(biome);
+      if (conceptImg) { conceptImg.style.display = data.src ? 'block' : 'none'; if (data.src) conceptImg.src = data.src; }
       if (conceptTitle) {
         conceptTitle.textContent = data.title;
         conceptTitle.style.color = data.color;
@@ -2132,7 +2190,7 @@ class DevClientApp {
       if (conceptDesc) conceptDesc.textContent = data.desc;
 
       document.querySelectorAll('.btn-art-tab').forEach((tab) => {
-        const isSelected = tab.getAttribute('data-biome') === biome;
+        const isSelected = tab.getAttribute('data-biome') === canonicalBiome;
         tab.classList.toggle('active', isSelected);
         tab.style.borderColor = isSelected ? data.border : 'rgba(255,255,255,0.15)';
         tab.style.background = isSelected ? `${data.border}40` : 'rgba(255,255,255,0.05)';
@@ -2148,24 +2206,24 @@ class DevClientApp {
     const splitTitle = document.getElementById('split-concept-art-title');
     const splitDesc = document.getElementById('split-concept-art-desc');
     const splitFeatures = document.getElementById('split-concept-art-features');
+    const blockoutLink = document.getElementById('scenario-blockout-download');
     const viewerBody = document.querySelector('.viewer-3d-body');
 
     this.updateSplitArtDisplay = (biome) => {
-      const canonicalBiome = artData[biome] ? biome : (biome && biome.includes('_') ? {
-        LOR: 'LORENCIA', NOR: 'NORIA', DEV: 'DEVIAS', DNG: 'DUNGEON',
-        LT: 'LOST_TOWER', ATL: 'ATLANS', TAR: 'TARKAN', ICA: 'ICARUS',
-        VOL: 'VALLEY_OF_LOREN', EVT: 'BLOOD_CASTLE',
-        HERO: biome
-      }[biome.split('_')[0]] || biome : (biome || 'LORENCIA'));
-
-      const data = artData[canonicalBiome] || artData.LORENCIA;
-      if (splitImg) splitImg.src = data.src;
+      const data = resolveArtDisplay(biome);
+      const blockoutPath = getScenarioBlockout(biome);
+      if (blockoutLink) {
+        blockoutLink.style.display = blockoutPath ? 'block' : 'none';
+        if (blockoutPath) blockoutLink.href = blockoutPath;
+      }
+      if (splitImg) { splitImg.style.display = data.src ? 'block' : 'none'; if (data.src) splitImg.src = data.src; }
       if (splitTitle) {
         splitTitle.textContent = data.title;
         splitTitle.style.color = data.color;
       }
       if (splitDesc) splitDesc.textContent = data.desc;
       if (splitFeatures && data.features) {
+        if (splitFeatures.parentElement) splitFeatures.parentElement.style.display = data.features.length ? '' : 'none';
         splitFeatures.innerHTML = data.features.map(f => {
           const parts = f.split(':');
           return `<li><strong style="color: #f1f5f9;">${parts[0]}:</strong>${parts.slice(1).join(':')}</li>`;
@@ -2186,7 +2244,7 @@ class DevClientApp {
             this.updateSplitArtDisplay('HERO_' + currentHero);
           } else {
             const activeSubBtn = document.querySelector('.btn-sub-entity.active[data-cat="ENVIRONMENT"]');
-            const currentBiome = (activeSubBtn && activeSubBtn.getAttribute('data-id')) || 'LORENCIA';
+            const currentBiome = currentEnv || (activeSubBtn && activeSubBtn.getAttribute('data-id')) || 'LORENCIA';
             this.updateSplitArtDisplay(currentBiome);
           }
         }
@@ -2210,7 +2268,7 @@ class DevClientApp {
     if (btnOpenArt && modalArt) {
       btnOpenArt.addEventListener('click', () => {
         const activeSubBtn = document.querySelector('.btn-sub-entity.active[data-cat="ENVIRONMENT"]');
-        const currentBiome = (activeSubBtn && activeSubBtn.getAttribute('data-id')) || 'LORENCIA';
+        const currentBiome = currentCategory === 'HERO' ? 'HERO_' + currentHero : (currentEnv || (activeSubBtn && activeSubBtn.getAttribute('data-id')) || 'LORENCIA');
         updateArtDisplay(currentBiome);
         modalArt.style.display = 'flex';
       });
@@ -2383,6 +2441,139 @@ class DevClientApp {
     let currentArmorySub = 'WEAPON';
     let currentArmoryItem = 'DRAGON_BLADE';
 
+    const tileStatus = document.getElementById('tile-floor-status');
+    const tileCol = document.getElementById('tile-col');
+    const tileRow = document.getElementById('tile-row');
+    const tileVariant = document.getElementById('tile-variant');
+    const updateTileStatus = (controller, id) => {
+      if (!tileStatus) return;
+      tileStatus.textContent = controller
+        ? `${canonicalTileScenario(id)}: ${controller.cols} colunas × ${controller.rows} linhas (tiles de até ${controller.tileSize} m).`
+        : 'Este cenário ainda não possui piso plano modular.';
+      if (tileCol) { tileCol.max = controller ? String(controller.cols - 1) : '0'; tileCol.value = '0'; }
+      if (tileRow) { tileRow.max = controller ? String(controller.rows - 1) : '0'; tileRow.value = '0'; }
+    };
+    this.viewer3DInstance.onTileFloorChanged = updateTileStatus;
+    updateTileStatus(this.viewer3DInstance.activeEntity?.tileFloor, initialEnv);
+    const applyTile = (col, row) => {
+      const viewer = this.viewer3DInstance;
+      const controller = viewer?.currentCategory === 'ENVIRONMENT' && viewer.activeEntity?.tileFloor;
+      if (!controller) { updateTileStatus(null, viewer?.currentSubId); return; }
+      const value = tileVariant?.value;
+      const ok = value === 'remover_objeto' ? controller.setObject(col, row, 'original') : OBJECT_VARIANTS.includes(value) ? controller.setObject(col, row, value) : controller.setTile(col, row, value);
+      if (!ok) {
+        tileStatus.textContent = 'Coluna, linha ou variante inválida, ou célula fora da área editável.'; return;
+      }
+      const saved = saveTileEdits(viewer.currentSubId, controller);
+      tileStatus.textContent = saved ? `Tile ${col}, ${row} atualizado e salvo neste navegador.` : `Tile ${col}, ${row} atualizado, mas não foi possível salvar.`;
+    };
+    document.getElementById('tile-apply')?.addEventListener('click', () => {
+      if (tileCol?.value === '' || tileRow?.value === '') { tileStatus.textContent = 'Informe coluna e linha.'; return; }
+      applyTile(Number(tileCol?.value), Number(tileRow?.value));
+    });
+    this.viewer3DInstance.renderer.domElement.addEventListener('dblclick', (event) => {
+      const viewer = this.viewer3DInstance;
+      const controller = viewer?.currentCategory === 'ENVIRONMENT' && viewer.activeEntity?.tileFloor;
+      if (!controller) return;
+      const rect = viewer.renderer.domElement.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const pointer = new THREE.Vector2((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
+      const ray = new THREE.Raycaster();
+      ray.setFromCamera(pointer, viewer.camera);
+      let cell = controller.pickCell?.(ray);
+      if (!controller.pickCell) {
+        const hit = ray.intersectObject(controller.mesh)[0];
+        if (hit?.instanceId === undefined) return;
+        cell = { col: hit.instanceId % controller.cols, row: Math.floor(hit.instanceId / controller.cols) };
+      }
+      if (!cell) return;
+      const { col, row } = cell;
+      if (tileCol) tileCol.value = String(col);
+      if (tileRow) tileRow.value = String(row);
+      applyTile(col, row);
+    });
+    document.getElementById('tile-reset')?.addEventListener('click', () => {
+      const viewer = this.viewer3DInstance;
+      const controller = viewer?.currentCategory === 'ENVIRONMENT' && viewer.activeEntity?.tileFloor;
+      if (!controller) return;
+      controller.clearEdits();
+      const saved = saveTileEdits(viewer.currentSubId, controller);
+      tileStatus.textContent = saved ? 'Alterações locais removidas.' : 'Alterações removidas da tela, mas não foi possível salvar.';
+    });
+    document.getElementById('tile-export')?.addEventListener('click', () => {
+      const viewer = this.viewer3DInstance;
+      const controller = viewer?.currentCategory === 'ENVIRONMENT' && viewer.activeEntity?.tileFloor;
+      if (!controller) return;
+      const scenarioId = canonicalTileScenario(viewer.currentSubId);
+      const payload = makeTileDocument(scenarioId, controller);
+      const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
+      const link = document.createElement('a');
+      link.href = url; link.download = `${scenarioId.toLowerCase()}-tiles.json`; link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+
+    document.getElementById('tile-export-glb')?.addEventListener('click', async (event) => {
+      const viewer = this.viewer3DInstance;
+      if (viewer?.currentCategory !== 'ENVIRONMENT' || !viewer.activeEntity?.tileFloor) return;
+      const scenarioId = canonicalTileScenario(viewer.currentSubId);
+      const button = event.currentTarget;
+      button.disabled = true;
+      try {
+        // Snapshot sincronizado antes da exportação assíncrona: não altera a cena viva.
+        const snapshot = buildEditedScenarioSnapshot(THREE, viewer.activeEntity.group);
+        const buffer = await new GLTFExporter().parseAsync(snapshot, { binary: true, onlyVisible: true });
+        const url = URL.createObjectURL(new Blob([buffer], { type: 'model/gltf-binary' }));
+        const link = document.createElement('a');
+        link.href = url; link.download = `${scenarioId.toLowerCase()}-editado.glb`; link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        tileStatus.textContent = 'GLB visual exportado; colisões e efeitos dinâmicos não estão incluídos.';
+      } catch (error) {
+        console.error('Falha ao exportar GLB visual', error);
+        tileStatus.textContent = 'Não foi possível exportar o GLB visual.';
+      } finally { button.disabled = false; }
+    });
+
+    document.getElementById('tile-export-all')?.addEventListener('click', async (event) => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      try {
+        const zip = await exportScenarioBatch({
+          THREE, scenarioIds: SCENARIO_BLOCKOUTS, storage: globalThis.localStorage,
+          createEnvironment, Exporter: GLTFExporter,
+          onProgress: ({ id, completed, total }) => { tileStatus.textContent = id ? `Gerando ${id}: ${completed + 1}/${total}…` : `Gerados ${total} cenários.`; },
+        });
+        const url = URL.createObjectURL(zip);
+        const link = document.createElement('a');
+        link.href = url; link.download = 'dasi-cenarios-editados.zip'; link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        tileStatus.textContent = 'Lote exportado com as edições salvas neste navegador; sem colisões.';
+      } catch (error) {
+        console.error('Falha na exportação em lote', error);
+        tileStatus.textContent = `Lote não exportado: ${error.message || 'erro inesperado'}.`;
+      } finally { button.disabled = false; }
+    });
+
+    document.getElementById('tile-import')?.addEventListener('change', async (event) => {
+      const input = event.target;
+      const viewer = this.viewer3DInstance;
+      const controller = viewer?.currentCategory === 'ENVIRONMENT' && viewer.activeEntity?.tileFloor;
+      const file = input.files?.[0];
+      if (!controller || !file) return;
+      if (file.size > 200000) { tileStatus.textContent = 'Arquivo de tiles muito grande.'; input.value = ''; return; }
+      try {
+        const data = JSON.parse(await file.text());
+        // A seleção pode mudar enquanto o arquivo é lido.
+        if (viewer.activeEntity?.tileFloor !== controller || !validateTileDocument(data, viewer.currentSubId, controller)) throw new Error('Documento inválido');
+        const layers = tileDocumentLayers(data);
+        controller.clearEdits();
+        controller.applyEdits(layers.floor);
+        controller.applyEdits(layers.objects, 'objects');
+        tileStatus.textContent = saveTileEdits(viewer.currentSubId, controller) ? 'Tiles importados e salvos neste navegador.' : 'Tiles importados, mas não foi possível salvar.';
+      } catch {
+        tileStatus.textContent = 'Arquivo inválido ou incompatível com este cenário; nada foi alterado.';
+      } finally { input.value = ''; }
+    });
+
     const glowDescriptions = {
       0: 'Metal PBR fosco/polido sem emissão arcana (+0 a +6).',
       7: 'Pulso rúnico ciano suave correndo pelas bordas e runas.',
@@ -2479,6 +2670,32 @@ class DevClientApp {
       this.log(`⚔️ [ARMARIA 3D] Visualizando modelo PBR: ${meta ? meta.name : currentArmoryItem} (${currentArmorySub})`, 'success');
     };
 
+    const modularMode = document.getElementById('hero-modular-mode');
+    const armorSlot = document.getElementById('hero-armor-slot');
+    const armorVariant = document.getElementById('hero-armor-variant');
+    const modularStatus = document.getElementById('hero-modular-status');
+    const refreshModularLinks = () => {
+      if (!Object.hasOwn(CHARACTER_CONCEPTS, currentHero) || !ARMOR_SLOTS.includes(armorSlot.value) || !ARMOR_VARIANTS.includes(armorVariant.value)) return;
+      document.getElementById('hero-modular-download').href = `models/modular_heroes/hero_${currentHero.toLowerCase()}_modular.glb`;
+      document.getElementById('hero-armor-download').href = `models/modular_heroes/${currentHero.toLowerCase()}_${armorSlot.value}_${armorVariant.value}.glb`;
+    };
+    modularMode?.addEventListener('change', () => {
+      this.viewer3DInstance.modularHeroMode = modularMode.checked;
+      if (currentCategory === 'HERO') this.viewer3DInstance.selectEntity('HERO', currentHero, { setTier: currentSetTier });
+      modularStatus.textContent = modularMode.checked ? 'Blockout modular ativo; trocas são apenas visuais e temporárias.' : 'Modelo anterior ativo; blockout modular desativado.';
+    });
+    armorSlot?.addEventListener('change', refreshModularLinks);
+    armorVariant?.addEventListener('change', refreshModularLinks);
+    document.getElementById('hero-armor-apply')?.addEventListener('click', () => {
+      const viewer = this.viewer3DInstance;
+      if (viewer.currentCategory !== 'HERO' || !viewer.modularHeroMode || !viewer.activeEntity?.setArmor) {
+        modularStatus.textContent = 'Ative o blockout modular para trocar peças.'; return;
+      }
+      const changed = viewer.activeEntity.setArmor(armorSlot.value, armorVariant.value);
+      modularStatus.textContent = changed ? 'Peça trocada nesta prévia; não afeta inventário ou servidor.' : 'Peça ou variante inválida.';
+    });
+    refreshModularLinks();
+
     // 1. Alternador de Categoria
     const catButtons = document.querySelectorAll('.btn-3d-cat');
     catButtons.forEach((btn) => {
@@ -2527,6 +2744,7 @@ class DevClientApp {
 
         if (cat === 'HERO') {
           currentHero = id;
+          refreshModularLinks();
           this.viewer3DInstance.selectEntity('HERO', currentHero, { setTier: currentSetTier });
           if (badgeMode) badgeMode.textContent = `MODO: HERÓI (${currentHero})`;
           updateAnimButtons('HERO', currentHero);

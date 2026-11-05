@@ -109,13 +109,15 @@ export const NPC_SHOPS: Record<string, NPCShopDefinition> = {
 /**
  * Coletor opcional de **Imposto Territorial** injetado pelo servidor.
  * Recebe o bioma da loja e o valor bruto movimentado; devolve o imposto e o
- * valor líquido. Sem coletor (testes/economia isolada) a taxa é zero.
+ * valor líquido. Com commit=false apenas calcula, sem alterar o tesouro;
+ * com commit=true (padrão) credita o imposto. Sem coletor a taxa é zero.
  *
  * Ver `GuildSystem.applyTerritorialTax` e `docs/PVP_and_Castle_Siege.md` §3.2.
  */
 export type TerritorialTaxCollector = (
   biome: string,
-  grossZen: number
+  grossZen: number,
+  commit?: boolean
 ) => { tax: number; netZen: number; rate?: number };
 
 export class NPCShopSystem {
@@ -174,7 +176,7 @@ export class NPCShopSystem {
 
     // Imposto Territorial: cobrado sobre o valor movimentado na loja
     const biome = this.getBiomeForShop(shop);
-    const taxInfo = taxCollector ? taxCollector(biome, listing.priceZen) : { tax: 0, netZen: listing.priceZen };
+    const taxInfo = taxCollector ? taxCollector(biome, listing.priceZen, false) : { tax: 0, netZen: listing.priceZen };
     const totalCost = listing.priceZen + Math.max(0, taxInfo.tax);
 
     const currentZen = session.character.zen ?? 0;
@@ -213,7 +215,8 @@ export class NPCShopSystem {
       };
     }
 
-    // Debita o Zen (preço de tabela + Imposto Territorial, quando houver)
+    // Só credita o imposto após todas as validações e a alocação do item.
+    if (taxCollector) taxCollector(biome, listing.priceZen, true);
     session.character.zen = currentZen - totalCost;
 
     const inventoryState = getInventoryState(session);

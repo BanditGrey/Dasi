@@ -12,6 +12,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import { stripTypeScriptTypes } from 'node:module';
 import { WebSocketServer, WebSocket } from 'ws';
 import {
   Opcodes,
@@ -59,6 +60,7 @@ export interface GameServerConfig {
   host?: string;
   staticDir?: string;
   heartbeatIntervalMs?: number;
+  enableDevControls?: boolean;
 }
 
 export class GameServer {
@@ -66,6 +68,8 @@ export class GameServer {
   public readonly host: string;
   private staticDir: string;
   private heartbeatIntervalMs: number;
+  private readonly enableDevControls: boolean;
+  private readonly lastSiegeAttack = new Map<string, number>();
 
   private httpServer: http.Server | null = null;
   private wss: WebSocketServer | null = null;
@@ -82,9 +86,10 @@ export class GameServer {
 
   constructor(config: GameServerConfig = {}) {
     this.port = config.port ?? 8080;
-    this.host = config.host ?? '0.0.0.0';
+    this.host = config.host ?? '127.0.0.1';
     this.staticDir = config.staticDir ?? path.resolve(process.cwd(), 'src/client/dev_viewer');
     this.heartbeatIntervalMs = config.heartbeatIntervalMs ?? 15000;
+    this.enableDevControls = config.enableDevControls ?? false;
     this.sessionManager = new SessionManager();
     this.bossManager = new BossManager();
     this.eventManager = new EventManager();
@@ -105,7 +110,7 @@ export class GameServer {
         this.handleHttpRequest(req, res);
       });
 
-      this.wss = new WebSocketServer({ server: this.httpServer });
+      this.wss = new WebSocketServer({ server: this.httpServer, maxPayload: 64 * 1024 });
 
       this.wss.on('connection', (ws: WebSocket, req) => {
         this.handleWebSocketConnection(ws, req);
@@ -313,11 +318,15 @@ export class GameServer {
       return;
     }
 
+    if (req.method === 'POST' && ['/api/bosses/spawn', '/api/events/trigger', '/api/castle-siege/control', '/api/box/open'].includes(pathname) && !this.enableDevControls) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Developer controls disabled' }));
+      return;
+    }
+
     // Spawn manual de Chefes via API POST
     if (pathname === '/api/bosses/spawn' && req.method === 'POST') {
-      let body = '';
-      req.on('data', (chunk) => { body += chunk; });
-      req.on('end', () => {
+      this.readLimitedBody(req, res, (body) => {
         try {
           const data = body ? JSON.parse(body) : {};
           const type = data.type || 'boss_gorgon';
@@ -344,9 +353,7 @@ export class GameServer {
 
     // Disparo manual de eventos via API POST
     if (pathname === '/api/events/trigger' && req.method === 'POST') {
-      let body = '';
-      req.on('data', (chunk) => { body += chunk; });
-      req.on('end', () => {
+      this.readLimitedBody(req, res, (body) => {
         try {
           const data = body ? JSON.parse(body) : {};
           const eventType = data.type;
@@ -393,9 +400,7 @@ export class GameServer {
 
     // Controle do Cerco via API POST (abrir inscrições / iniciar batalha)
     if (pathname === '/api/castle-siege/control' && req.method === 'POST') {
-      let body = '';
-      req.on('data', (chunk) => { body += chunk; });
-      req.on('end', () => {
+      this.readLimitedBody(req, res, (body) => {
         try {
           const data = body ? JSON.parse(body) : {};
           const action = data.action;
@@ -437,9 +442,7 @@ export class GameServer {
 
     // Rota da API para abertura da Box of Kundun
     if (pathname === '/api/box/open' && req.method === 'POST') {
-      let body = '';
-      req.on('data', (chunk) => { body += chunk; });
-      req.on('end', () => {
+      this.readLimitedBody(req, res, (body) => {
         try {
           const data = body ? JSON.parse(body) : {};
           const boxId = data.boxId || 'box_of_kundun_1';
@@ -527,6 +530,20 @@ export class GameServer {
         '.woff2': 'font/woff2',
       };
 
+      // Browsers do not understand TypeScript even when its MIME type is JavaScript.
+      if (isSharedSource && ext === '.ts') {
+        fs.readFile(filePath, 'utf8', (readError, source) => {
+          if (readError) { res.writeHead(500); res.end(); return; }
+          try {
+            const js = stripTypeScriptTypes(source, { mode: 'strip' });
+            res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Content-Length': Buffer.byteLength(js) });
+            res.end(req.method === 'HEAD' ? undefined : js);
+          } catch {
+            res.writeHead(500); res.end('Could not compile shared module');
+          }
+        });
+        return;
+      }
       const contentType = mimeTypes[ext] || 'application/octet-stream';
       res.writeHead(200, {
         'Content-Type': contentType,
@@ -546,6 +563,19 @@ export class GameServer {
   /**
    * Manipula nova conexão WebSocket
    */
+  private readLimitedBody(req: http.IncomingMessage, res: http.ServerResponse, done: (body: string) => void): void {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    let rejected = false;
+    req.on('data', (chunk: Buffer) => {
+      size += chunk.length;
+      if (size > 64 * 1024) {
+        if (!rejected) { rejected = true; res.writeHead(413); res.end('Request body too large'); }
+      } else if (!rejected) chunks.push(chunk);
+    });
+    req.on('end', () => { if (!rejected) done(Buffer.concat(chunks).toString('utf8')); });
+  }
+
   private handleWebSocketConnection(ws: WebSocket, req: http.IncomingMessage): void {
     const session = this.sessionManager.createSession(ws);
     // Auto-detect IP or connection info
@@ -559,6 +589,9 @@ export class GameServer {
 
     ws.on('close', (code, reason) => {
       console.log(`[GameServer] Sessão desconectada: Session=${session.sessionId} Code=${code} Motivo=${reason}`);
+      this.castleSiege.releasePedestal(session.sessionId);
+      if (this.castleSiege.crownSeal.masterSessionId === session.sessionId) this.castleSiege.interruptCrownSeal('jogador desconectado');
+      this.lastSiegeAttack.delete(session.sessionId);
       this.sessionManager.removeSessionBySocket(ws);
     });
 
@@ -629,6 +662,12 @@ export class GameServer {
       return;
     }
 
+    // Login é provisório para o sandbox, mas comandos de jogo exigem sessão iniciada.
+    if (session.state !== 'AUTHENTICATED') {
+      (session.socket as WebSocket).close(1008, 'Login required');
+      return;
+    }
+
     // 3. Sincronização de Inventário
     if (opcode === Opcodes.MSG_INVENTORY_SYNC_ALL.opcode && subcode === Opcodes.MSG_INVENTORY_SYNC_ALL.subcode) {
       this.sendInventorySync(session);
@@ -646,6 +685,12 @@ export class GameServer {
       this.handleItemUseJewelReq(session, payload as ItemUseJewelReqPayload);
       return;
     }
+
+    if (!this.enableDevControls && (
+      (opcode === Opcodes.MSG_ITEM_SPAWN_DEV_REQ.opcode && subcode === Opcodes.MSG_ITEM_SPAWN_DEV_REQ.subcode) ||
+      (opcode === Opcodes.MSG_BOSS_SPAWN_REQ.opcode && subcode === Opcodes.MSG_BOSS_SPAWN_REQ.subcode) ||
+      (opcode === Opcodes.MSG_GOLDEN_INVASION_REQ.opcode && subcode === Opcodes.MSG_GOLDEN_INVASION_REQ.subcode)
+    )) { (session.socket as WebSocket).close(1008, 'Developer controls disabled'); return; }
 
     // 6. Spawn de Itens (Dev Helper)
     if (opcode === Opcodes.MSG_ITEM_SPAWN_DEV_REQ.opcode && subcode === Opcodes.MSG_ITEM_SPAWN_DEV_REQ.subcode) {
@@ -1707,7 +1752,7 @@ export class GameServer {
    * o castelo. A alíquota vem do bioma da loja (`TERRITORIAL_TAX_BY_BIOME`).
    */
   private get territorialTaxCollector() {
-    return (biome: string, grossZen: number) => this.guildSystem.applyTerritorialTax(biome, grossZen);
+    return (biome: string, grossZen: number, commit = true) => this.guildSystem.applyTerritorialTax(biome, grossZen, commit);
   }
 
   /** Bioma associado à sessão — hoje, Lorencia como praça central do servidor. */
@@ -1884,7 +1929,11 @@ export class GameServer {
       return;
     }
 
-    const hit = this.castleSiege.damageStructure(guild.id, payload?.structureId ?? '', payload?.damage ?? 0);
+    const now = Date.now();
+    const last = this.lastSiegeAttack.get(session.sessionId) ?? 0;
+    const damage = now - last >= 500 ? Math.max(1, Math.floor(session.character.strength / 4)) : 0;
+    if (damage) this.lastSiegeAttack.set(session.sessionId, now);
+    const hit = this.castleSiege.damageStructure(guild.id, payload?.structureId ?? '', damage);
     this.broadcastPacket(
       Opcodes.MSG_SIEGE_ATTACK_STRUCTURE_RES.opcode,
       Opcodes.MSG_SIEGE_ATTACK_STRUCTURE_RES.subcode,
@@ -1921,7 +1970,9 @@ export class GameServer {
 
   private handleSiegeCrownSealReq(session: ClientSession, payload: { action?: 'BEGIN' | 'INTERRUPT' }): void {
     const result = payload?.action === 'INTERRUPT'
-      ? { success: true, ...this.castleSiege.interruptCrownSeal('interrompido manualmente') }
+      ? session.sessionId === this.castleSiege.crownSeal.masterSessionId
+        ? { success: true, ...this.castleSiege.interruptCrownSeal('interrompido manualmente') }
+        : { success: false, error: 'Apenas o Mestre canalizando pode interromper.' }
       : this.castleSiege.beginCrownSeal(session.sessionId);
 
     this.broadcastPacket(
@@ -2063,7 +2114,7 @@ const isMainModule = process.argv[1] && (
 
 if (isMainModule) {
   const port = parseInt(process.env.PORT || '8080', 10);
-  const server = new GameServer({ port });
+  const server = new GameServer({ port, host: process.env.HOST ?? '127.0.0.1', enableDevControls: process.env.DASI_DEV_CONTROLS === '1' });
   server.start().catch((err) => {
     console.error('Falha ao iniciar o GameServer:', err);
     process.exit(1);
