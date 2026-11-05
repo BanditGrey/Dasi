@@ -12,8 +12,8 @@ Este plano acompanha a evolução dos 56 cenários. A cobertura do editor **não
 ## Lista ordenada
 
 1. **Confiabilidade do editor e da exportação**
-   - [x] Exercitar todos os 56 cenários com edições de piso e objeto e verificar os snapshots exportáveis, mantendo cobertura dos formatos especiais. O teste completo de serialização e leitura de GLB atualmente cobre LOR_01; ampliar para os demais cenários continua pendente.
-   - [ ] Serializar e recarregar GLBs editados dos demais cenários, incluindo superfícies especiais.
+   - [x] Exercitar todos os 56 cenários com edições de piso e objeto e verificar os snapshots exportáveis, mantendo cobertura dos formatos especiais.
+   - [x] Serializar e recarregar GLBs editados dos 56 cenários, incluindo superfícies especiais; verificar peças, cores e transformações. Teste automatizado não substitui revisão visual.
    - [ ] Testar os fluxos de edição, importação, exportação e troca de cenário no navegador; registrar capturas e defeitos.
    - [ ] Medir tempo de geração, tamanho dos arquivos, memória e quadros por segundo em cenários representativos, especialmente EVT_03 e pisos grandes.
 2. **Bordas e superfícies especiais**

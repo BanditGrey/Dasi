@@ -92,3 +92,49 @@ it('produz snapshots editados nos 56 cenários sem incluir instâncias ou efeito
     assert.deepEqual(controller.getEdits(), original, scenario.id);
   }
 });
+
+it('serializa e recarrega GLBs editados dos 56 cenários, inclusive superfícies especiais', async () => {
+  const originalFileReader = (globalThis as any).FileReader;
+  (globalThis as any).FileReader = class {
+    result: any; onloadend?: () => void; onerror?: (err: unknown) => void;
+    readAsArrayBuffer(blob: Blob) { blob.arrayBuffer().then(value => { this.result = value; this.onloadend?.(); }).catch(this.onerror); }
+    readAsDataURL(blob: Blob) { blob.arrayBuffer().then(value => { this.result = `data:${blob.type};base64,${Buffer.from(value).toString('base64')}`; this.onloadend?.(); }).catch(this.onerror); }
+  };
+  try {
+    for (const scenario of SCENARIO_CATALOG) {
+      const env = createEnvironment(scenario.id, THREE);
+      const controller = env.tileFloor as any;
+      let col = -1, row = -1;
+      outer: for (let r = 0; r < controller.rows; r++) for (let c = 0; c < controller.cols; c++) {
+        if (controller.isValidCell(c, r)) { col = c; row = r; break outer; }
+      }
+      assert.ok(col >= 0, scenario.id);
+      assert.ok(controller.setTile(col, row, 'musgo'), scenario.id);
+      assert.ok(controller.setObject(col, row, 'muro_x'), scenario.id);
+      const snapshot = buildEditedScenarioSnapshot(THREE, env.group);
+      const index = scenario.id === 'EVT_03' ? 0 : row * controller.cols + col;
+      const tileName = `scenario_tiled_floor_${index}`;
+      const wallName = `scenario_tile_muro_x_${index}`;
+      const expected = snapshot.getObjectByName(tileName);
+      const glb = await new GLTFExporter().parseAsync(snapshot, { binary: true }) as ArrayBuffer;
+      assert.ok(glb.byteLength > 20, scenario.id);
+      const loaded = await new GLTFLoader().parseAsync(glb, '');
+      const tile = loaded.scene.getObjectByName(tileName) as THREE.Mesh;
+      assert.ok(tile?.isMesh, `${scenario.id}: piso`);
+      const wall = loaded.scene.getObjectByName(wallName);
+      assert.ok(wall, `${scenario.id}: objeto`);
+      snapshot.updateMatrixWorld(true);
+      loaded.scene.updateMatrixWorld(true);
+      for (const [actual, original] of [[tile, expected], [wall, snapshot.getObjectByName(wallName)]]) {
+        for (let i = 0; i < 16; i++) assert.ok(Math.abs(actual.matrixWorld.elements[i] - original.matrixWorld.elements[i]) < 1e-4, `${scenario.id}: transformação ${i}`);
+      }
+      const material = tile.material as THREE.MeshStandardMaterial;
+      for (const channel of ['r', 'g', 'b'] as const) {
+        assert.ok(Math.abs(material.color[channel] - expected.material.color[channel]) < 1e-5, `${scenario.id}: cor ${channel}`);
+      }
+    }
+  } finally {
+    if (originalFileReader === undefined) delete (globalThis as any).FileReader;
+    else (globalThis as any).FileReader = originalFileReader;
+  }
+});
