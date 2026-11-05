@@ -7,7 +7,7 @@ import * as THREE from './libs/three.module.js';
 import { Dasi3DFeatureViewer } from './dasi3dViewer.js';
 import { ARMORY_METADATA } from './dasi3dArmory.js';
 import { CLASSIC_CONCEPTS, conceptKeyForScenario, getScenarioConcept, getScenarioBlockout } from './classicConcepts.js';
-import { canonicalTileScenario, saveTileEdits, validateTileDocument } from './tileFloor.js';
+import { canonicalTileScenario, saveTileEdits, validateTileDocument, makeTileDocument, tileDocumentLayers, OBJECT_VARIANTS } from './tileFloor.js';
 import { Dasi3DAvatarRenderer, DasiHeroClassModal, CLASS_DEFINITIONS } from './dasi3dAvatar.js';
 import { Dasi3DRealtimeArena } from './dasi3dRealtimeArena.js';
 import {
@@ -2442,7 +2442,9 @@ class DevClientApp {
       const viewer = this.viewer3DInstance;
       const controller = viewer?.currentCategory === 'ENVIRONMENT' && viewer.activeEntity?.tileFloor;
       if (!controller) { updateTileStatus(null, viewer?.currentSubId); return; }
-      if (!controller.setTile(col, row, tileVariant?.value)) {
+      const value = tileVariant?.value;
+      const ok = value === 'remover_objeto' ? controller.setObject(col, row, 'original') : OBJECT_VARIANTS.includes(value) ? controller.setObject(col, row, value) : controller.setTile(col, row, value);
+      if (!ok) {
         tileStatus.textContent = 'Coluna, linha ou variante inválida.'; return;
       }
       const saved = saveTileEdits(viewer.currentSubId, controller);
@@ -2473,10 +2475,7 @@ class DevClientApp {
       const viewer = this.viewer3DInstance;
       const controller = viewer?.currentCategory === 'ENVIRONMENT' && viewer.activeEntity?.tileFloor;
       if (!controller) return;
-      for (const key of Object.keys(controller.getEdits())) {
-        const [col, row] = key.split(',').map(Number);
-        controller.setTile(col, row, 'original');
-      }
+      controller.clearEdits();
       const saved = saveTileEdits(viewer.currentSubId, controller);
       tileStatus.textContent = saved ? 'Alterações locais removidas.' : 'Alterações removidas da tela, mas não foi possível salvar.';
     });
@@ -2485,7 +2484,7 @@ class DevClientApp {
       const controller = viewer?.currentCategory === 'ENVIRONMENT' && viewer.activeEntity?.tileFloor;
       if (!controller) return;
       const scenarioId = canonicalTileScenario(viewer.currentSubId);
-      const payload = { version: 1, scenarioId, tileSize: 4, cols: controller.cols, rows: controller.rows, edits: controller.getEdits() };
+      const payload = makeTileDocument(scenarioId, controller);
       const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
       const link = document.createElement('a');
       link.href = url; link.download = `${scenarioId.toLowerCase()}-tiles.json`; link.click();
@@ -2503,11 +2502,10 @@ class DevClientApp {
         const data = JSON.parse(await file.text());
         // A seleção pode mudar enquanto o arquivo é lido.
         if (viewer.activeEntity?.tileFloor !== controller || !validateTileDocument(data, viewer.currentSubId, controller)) throw new Error('Documento inválido');
-        for (const key of Object.keys(controller.getEdits())) {
-          const [col, row] = key.split(',').map(Number);
-          controller.setTile(col, row, 'original');
-        }
-        controller.applyEdits(data.edits);
+        const layers = tileDocumentLayers(data);
+        controller.clearEdits();
+        controller.applyEdits(layers.floor);
+        controller.applyEdits(layers.objects, 'objects');
         tileStatus.textContent = saveTileEdits(viewer.currentSubId, controller) ? 'Tiles importados e salvos neste navegador.' : 'Tiles importados, mas não foi possível salvar.';
       } catch {
         tileStatus.textContent = 'Arquivo inválido ou incompatível com este cenário; nada foi alterado.';

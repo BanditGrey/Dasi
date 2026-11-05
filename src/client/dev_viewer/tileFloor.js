@@ -13,6 +13,9 @@ export const TILE_VARIANTS = Object.freeze({
   arbusto: 0xffffff,
 });
 
+export const OBJECT_VARIANTS = Object.freeze(['muro_x', 'muro_y', 'arbusto']);
+const isObjectVariant = variant => OBJECT_VARIANTS.includes(variant);
+
 const ALIASES = { LORENCIA: 'LOR_01', NORIA: 'NOR_01', DEVIAS: 'DEV_01', DUNGEON: 'DNG_01', LOST_TOWER: 'LT_01', ATLANS: 'ATL_01', TARKAN: 'TAR_01', ICARUS: 'ICA_01', VALLEY_OF_LOREN: 'VOL_01', BLOOD_CASTLE: 'EVT_01' };
 export function canonicalTileScenario(id) { return ALIASES[id] || id; }
 
@@ -56,6 +59,7 @@ export function createTiledFloor(THREE, floor) {
   const matrix = new THREE.Object3D();
   const color = new THREE.Color();
   const variants = {};
+  const objects = {};
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
       const w = Math.min(TILE_SIZE, width - col * TILE_SIZE);
@@ -70,14 +74,24 @@ export function createTiledFloor(THREE, floor) {
     }
   }
   function setTile(col, row, variant) {
-    if (!Number.isInteger(col) || !Number.isInteger(row) || col < 0 || row < 0 || col >= cols || row >= rows || typeof variant !== 'string' || !Object.hasOwn(TILE_VARIANTS, variant)) return false;
+    return setLayer(col, row, variant, 'floor');
+  }
+  function setObject(col, row, variant) {
+    return setLayer(col, row, variant, 'objects');
+  }
+  function setLayer(col, row, variant, layer) {
+    if (!Number.isInteger(col) || !Number.isInteger(row) || col < 0 || row < 0 || col >= cols || row >= rows || typeof variant !== 'string' || !Object.hasOwn(TILE_VARIANTS, variant) || (variant !== 'original' && isObjectVariant(variant) !== (layer === 'objects'))) return false;
     const index = row * cols + col;
-    const previous = variants[`${col},${row}`];
-    mesh.setColorAt(index, color.setHex(TILE_VARIANTS[variant]));
-    mesh.instanceColor.needsUpdate = true;
+    const edits = layer === 'objects' ? objects : variants;
+    const previous = edits[`${col},${row}`];
+    if (layer === 'floor') {
+      mesh.setColorAt(index, color.setHex(TILE_VARIANTS[variant]));
+      mesh.instanceColor.needsUpdate = true;
+    }
     const w = Math.min(TILE_SIZE, width - col * TILE_SIZE);
     const h = Math.min(TILE_SIZE, height - row * TILE_SIZE);
     for (const [name, module] of Object.entries(modules)) {
+      if (isObjectVariant(name) !== (layer === 'objects')) continue;
       if (variant === name) {
         const elevation = name === 'laje' ? 0.11 : name === 'pedra' ? 0.13 : name === 'arbusto' ? 0.65 : 0.85;
         matrix.position.set(-width / 2 + col * TILE_SIZE + w / 2, -height / 2 + row * TILE_SIZE + h / 2, elevation);
@@ -94,52 +108,81 @@ export function createTiledFloor(THREE, floor) {
       module.instanceMatrix.needsUpdate = true;
     }
     // O tile alterado aparece acima de detalhes planos (como o calçamento), sem alterar física.
-    const transform = new THREE.Matrix4();
-    mesh.getMatrixAt(index, transform);
-    transform.elements[14] = variant === 'original' ? 0 : 0.05;
-    mesh.setMatrixAt(index, transform);
-    mesh.instanceMatrix.needsUpdate = true;
-    if (variant === 'original') delete variants[`${col},${row}`];
-    else variants[`${col},${row}`] = variant;
+    if (layer === 'floor') {
+      const transform = new THREE.Matrix4();
+      mesh.getMatrixAt(index, transform);
+      transform.elements[14] = variant === 'original' ? 0 : 0.05;
+      mesh.setMatrixAt(index, transform);
+      mesh.instanceMatrix.needsUpdate = true;
+    }
+    if (variant === 'original') delete edits[`${col},${row}`];
+    else edits[`${col},${row}`] = variant;
     return true;
   }
-  function applyEdits(edits) {
+  function applyEdits(edits, layer = 'floor') {
     if (!edits || typeof edits !== 'object' || Array.isArray(edits)) return;
     for (const [key, variant] of Object.entries(edits)) {
       if (!/^\d+,\d+$/.test(key)) continue;
       const [col, row] = key.split(',').map(Number);
-      setTile(col, row, variant);
+      (layer === 'objects' ? setObject : setTile)(col, row, variant);
     }
   }
-  return { mesh, cols, rows, width, height, setTile, applyEdits, getEdits: () => ({ ...variants }) };
+  function clearEdits() {
+    for (const [layer, setter] of [[variants, setTile], [objects, setObject]]) {
+      for (const key of Object.keys(layer)) {
+        const [col, row] = key.split(',').map(Number);
+        setter(col, row, 'original');
+      }
+    }
+  }
+  return { mesh, cols, rows, width, height, setTile, setObject, applyEdits, clearEdits, getEdits: () => ({ ...variants }), getObjects: () => ({ ...objects }) };
 }
 
-export function loadTileEdits(id) {
+/** Migra documentos antigos com uma única camada sem modificar os dados originais. */
+export function tileDocumentLayers(data) {
+  if (data?.version === 2) return { floor: data.floor, objects: data.objects };
+  const floor = {}, objects = {};
+  for (const [key, value] of Object.entries(data?.edits || {})) {
+    (isObjectVariant(value) ? objects : floor)[key] = value;
+  }
+  return { floor, objects };
+}
+
+export function makeTileDocument(id, controller) {
+  return { version: 2, scenarioId: canonicalTileScenario(id), tileSize: TILE_SIZE, cols: controller.cols, rows: controller.rows, floor: controller.getEdits(), objects: controller.getObjects() };
+}
+
+export function loadTileEdits(id, controller) {
   try {
     const data = JSON.parse(globalThis.localStorage?.getItem(`dasi:tiles:v1:${canonicalTileScenario(id)}`) || 'null');
-    return data?.version === 1 && data.scenarioId === canonicalTileScenario(id) ? data.edits : {};
-  } catch { return {}; }
+    // Arquivos locais v1 anteriores não incluíam dimensões.
+    if (data?.version === 1 && data.tileSize === undefined) data.tileSize = TILE_SIZE, data.cols = controller.cols, data.rows = controller.rows;
+    return validateTileDocument(data, id, controller) ? tileDocumentLayers(data) : { floor: {}, objects: {} };
+  } catch { return { floor: {}, objects: {} }; }
 }
 
 export function saveTileEdits(id, controller) {
   try {
     if (!globalThis.localStorage) return false;
-    const scenarioId = canonicalTileScenario(id);
-    globalThis.localStorage.setItem(`dasi:tiles:v1:${scenarioId}`, JSON.stringify({ version: 1, scenarioId, edits: controller.getEdits() }));
+    globalThis.localStorage.setItem(`dasi:tiles:v1:${canonicalTileScenario(id)}`, JSON.stringify(makeTileDocument(id, controller)));
     return true;
   } catch { return false; }
 }
 
-/** Valida arquivo antes de modificar o estado atual; limita o tamanho à grade. */
+/** Valida integralmente antes de modificar qualquer camada. */
 export function validateTileDocument(data, scenarioId, controller) {
-  if (!data || data.version !== 1 || data.scenarioId !== canonicalTileScenario(scenarioId) ||
-      data.tileSize !== TILE_SIZE || data.cols !== controller.cols || data.rows !== controller.rows ||
-      !data.edits || typeof data.edits !== 'object' || Array.isArray(data.edits)) return false;
-  const entries = Object.entries(data.edits);
-  if (entries.length > controller.cols * controller.rows) return false;
-  return entries.every(([key, variant]) => {
-    if (!/^\d+,\d+$/.test(key) || typeof variant !== 'string' || !Object.hasOwn(TILE_VARIANTS, variant)) return false;
-    const [col, row] = key.split(',').map(Number);
-    return Number.isSafeInteger(col) && Number.isSafeInteger(row) && col < controller.cols && row < controller.rows;
-  });
+  if (!data || ![1, 2].includes(data.version) || data.scenarioId !== canonicalTileScenario(scenarioId) ||
+      data.tileSize !== TILE_SIZE || data.cols !== controller.cols || data.rows !== controller.rows) return false;
+  const validEntries = (edits, layer) => {
+    if (!edits || typeof edits !== 'object' || Array.isArray(edits)) return false;
+    const entries = Object.entries(edits);
+    if (entries.length > controller.cols * controller.rows) return false;
+    return entries.every(([key, variant]) => {
+      if (!/^(0|[1-9]\d*),(0|[1-9]\d*)$/.test(key) || typeof variant !== 'string' || !Object.hasOwn(TILE_VARIANTS, variant)) return false;
+      if (variant !== 'original' && layer !== 'legacy' && isObjectVariant(variant) !== (layer === 'objects')) return false;
+      const [col, row] = key.split(',').map(Number);
+      return Number.isSafeInteger(col) && Number.isSafeInteger(row) && col < controller.cols && row < controller.rows;
+    });
+  };
+  return data.version === 1 ? validEntries(data.edits, 'legacy') : validEntries(data.floor, 'floor') && validEntries(data.objects, 'objects');
 }

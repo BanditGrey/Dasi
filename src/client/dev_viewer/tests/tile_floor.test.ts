@@ -5,7 +5,7 @@ import { SCENARIO_CATALOG } from '../../../server/world/CollisionSystem.ts';
 // @ts-ignore - módulos do visualizador
 import { createEnvironment } from '../dasi3dContent.js';
 // @ts-ignore - módulo JS compartilhado com o browser
-import { createTiledFloor, loadTileEdits, saveTileEdits, validateTileDocument } from '../tileFloor.js';
+import { createTiledFloor, loadTileEdits, saveTileEdits, validateTileDocument, tileDocumentLayers, makeTileDocument } from '../tileFloor.js';
 
 describe('Piso modular visual', () => {
   it('subdivide pisos sem ampliar bordas e troca apenas a célula escolhida', () => {
@@ -62,29 +62,29 @@ describe('Piso modular visual', () => {
     const wallY = tiles.mesh.getObjectByName('scenario_tile_muro_y') as THREE.InstancedMesh;
     const bush = tiles.mesh.getObjectByName('scenario_tile_arbusto') as THREE.InstancedMesh;
     assert.equal(wallX.visible, false);
-    assert.ok(tiles.setTile(0, 0, 'muro_x'));
-    assert.ok(tiles.setTile(1, 0, 'muro_x'));
-    assert.ok(tiles.setTile(1, 0, 'muro_x')); // reaplicar não altera a contagem
-    assert.ok(tiles.setTile(0, 0, 'arbusto'));
+    assert.ok(tiles.setObject(0, 0, 'muro_x'));
+    assert.ok(tiles.setObject(1, 0, 'muro_x'));
+    assert.ok(tiles.setObject(1, 0, 'muro_x')); // reaplicar não altera a contagem
+    assert.ok(tiles.setObject(0, 0, 'arbusto'));
     assert.equal(wallX.visible, true);
     assert.equal(bush.visible, true);
-    assert.ok(tiles.setTile(1, 0, 'muro_y'));
+    assert.ok(tiles.setObject(1, 0, 'muro_y'));
     assert.equal(wallX.visible, false);
     assert.equal(wallY.visible, true);
-    assert.deepEqual(tiles.getEdits(), { '0,0': 'arbusto', '1,0': 'muro_y' });
+    assert.deepEqual(tiles.getObjects(), { '0,0': 'arbusto', '1,0': 'muro_y' });
     const matrix = new THREE.Matrix4();
     bush.getMatrixAt(0, matrix);
     assert.equal(matrix.elements[0], 2);
     wallY.getMatrixAt(1, matrix);
     assert.equal(matrix.elements[0], 4);
-    assert.ok(tiles.setTile(0, 0, 'original'));
+    assert.ok(tiles.setObject(0, 0, 'original'));
     assert.equal(bush.visible, false);
     assert.equal(wallY.visible, true);
-    const document = { version: 1, scenarioId: 'LOR_01', tileSize: 4, cols: 2, rows: 2, edits: tiles.getEdits() };
+    const document = { version: 1, scenarioId: 'LOR_01', tileSize: 4, cols: 2, rows: 2, edits: tiles.getObjects() };
     assert.equal(validateTileDocument(document, 'LOR_01', tiles), true);
     const restored = createTiledFloor(THREE, floor)!;
-    restored.applyEdits(document.edits);
-    assert.deepEqual(restored.getEdits(), { '1,0': 'muro_y' });
+    restored.applyEdits(document.edits, 'objects');
+    assert.deepEqual(restored.getObjects(), { '1,0': 'muro_y' });
     assert.equal(restored.mesh.getObjectByName('scenario_tile_muro_y')!.visible, true);
   });
 
@@ -107,12 +107,14 @@ describe('Piso modular visual', () => {
       const tiles = createTiledFloor(THREE, new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.MeshStandardMaterial()))!;
       assert.ok(tiles.setTile(1, 1, 'terra'));
       assert.equal(saveTileEdits('LORENCIA', tiles), true);
-      assert.deepEqual(loadTileEdits('LOR_01'), { '1,1': 'terra' });
-      assert.deepEqual(loadTileEdits('LOR_02'), {});
+      assert.deepEqual(loadTileEdits('LOR_01', tiles), { floor: { '1,1': 'terra' }, objects: {} });
+      assert.deepEqual(loadTileEdits('LOR_02', tiles), { floor: {}, objects: {} });
       tiles.applyEdits({ '-1,0': 'terra', '99,99': 'terra', '0,0': 'inexistente' });
       assert.deepEqual(tiles.getEdits(), { '1,1': 'terra' });
+      saved.set('dasi:tiles:v1:LOR_01', JSON.stringify({ version: 1, scenarioId: 'LOR_01', edits: { '0,0': 'muro_y', '1,1': 'terra' } }));
+      assert.deepEqual(loadTileEdits('LOR_01', tiles), { floor: { '1,1': 'terra' }, objects: { '0,0': 'muro_y' } });
       saved.set('dasi:tiles:v1:LOR_01', '{');
-      assert.deepEqual(loadTileEdits('LOR_01'), {});
+      assert.deepEqual(loadTileEdits('LOR_01', tiles), { floor: {}, objects: {} });
     } finally {
       if (original === undefined) delete (globalThis as any).localStorage;
       else (globalThis as any).localStorage = original;
@@ -127,6 +129,31 @@ describe('Piso modular visual', () => {
     assert.equal(validateTileDocument({ ...document, edits: { '2,0': 'musgo' } }, 'LOR_01', tiles), false);
     assert.equal(validateTileDocument({ ...document, edits: { '0,0': 'inválido' } }, 'LOR_01', tiles), false);
     assert.equal(validateTileDocument({ ...document, edits: [] }, 'LOR_01', tiles), false);
+  });
+
+  it('preserva piso e objeto por camada e migra dados antigos', () => {
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.MeshStandardMaterial());
+    const tiles = createTiledFloor(THREE, floor)!;
+    assert.ok(tiles.setTile(0, 0, 'laje'));
+    assert.ok(tiles.setObject(0, 0, 'muro_x'));
+    assert.equal(tiles.mesh.getObjectByName('scenario_tile_laje')!.visible, true);
+    assert.equal(tiles.mesh.getObjectByName('scenario_tile_muro_x')!.visible, true);
+    assert.equal(tiles.setTile(0, 1, 'muro_x'), false);
+    assert.equal(tiles.setObject(0, 1, 'laje'), false);
+    const data = makeTileDocument('LORENCIA', tiles);
+    assert.equal(validateTileDocument(data, 'LOR_01', tiles), true);
+    assert.equal(validateTileDocument({ ...data, floor: { '0,0': 'arbusto' } }, 'LOR_01', tiles), false);
+    assert.equal(validateTileDocument({ ...data, objects: { '00,0': 'arbusto' } }, 'LOR_01', tiles), false);
+    tiles.setObject(0, 0, 'original');
+    assert.deepEqual(tiles.getEdits(), { '0,0': 'laje' });
+    tiles.clearEdits();
+    assert.deepEqual(tiles.getEdits(), {});
+    const migrated = tileDocumentLayers({ version: 1, edits: { '0,0': 'terra', '1,0': 'muro_y' } });
+    assert.deepEqual(migrated, { floor: { '0,0': 'terra' }, objects: { '1,0': 'muro_y' } });
+    tiles.applyEdits(data.floor);
+    tiles.applyEdits(data.objects, 'objects');
+    assert.deepEqual(tiles.getEdits(), { '0,0': 'laje' });
+    assert.deepEqual(tiles.getObjects(), { '0,0': 'muro_x' });
   });
 
   it('converte apenas pisos planos marcados e mantém arenas especiais intactas', () => {

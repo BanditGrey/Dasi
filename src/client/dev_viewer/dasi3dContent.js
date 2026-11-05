@@ -1682,7 +1682,9 @@ export function createEnvironment(envType, THREE) {
     const originalFloor = envGroup.getObjectByName('scenario_base_floor');
     const tileFloor = createTiledFloor(THREE, originalFloor);
     if (tileFloor) {
-      tileFloor.applyEdits(loadTileEdits(envType));
+      const edits = loadTileEdits(envType, tileFloor);
+      tileFloor.applyEdits(edits.floor);
+      tileFloor.applyEdits(edits.objects, 'objects');
       envGroup.remove(originalFloor);
       originalFloor.geometry.dispose();
       envGroup.add(tileFloor.mesh);
