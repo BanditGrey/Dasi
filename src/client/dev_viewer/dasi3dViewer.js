@@ -13,6 +13,7 @@
 import * as THREE from './libs/three.module.js';
 import { OrbitControls } from './libs/OrbitControls.js';
 import { createHero, createMonster, createEnvironment } from './dasi3dContent.js';
+import { createModularHero } from './modularHero.js';
 import { buildArmoryShowcase, ARMORY_METADATA } from './dasi3dArmory.js';
 import { DasiCollisionEngine } from './dasiCollisionEngine.js';
 import { ChaosMachineVFX, HarmonicAudioSynthesizer } from './dasiActionGameplay.js';
@@ -296,7 +297,7 @@ export class Dasi3DFeatureViewer {
     }
 
     if (category === 'HERO') {
-      const hero = createHero(id, { setTier: this.currentSetTier }, THREE);
+      const hero = this.modularHeroMode ? createModularHero(THREE, id) : createHero(id, { setTier: this.currentSetTier }, THREE);
       this.activeEntity = hero;
       this.scene.add(hero.group);
 

@@ -10,6 +10,7 @@ import { exportScenarioBatch } from './exportScenarioBatch.js';
 import { createEnvironment } from './dasi3dContent.js';
 import { Dasi3DFeatureViewer } from './dasi3dViewer.js';
 import { ARMORY_METADATA } from './dasi3dArmory.js';
+import { ARMOR_SLOTS, ARMOR_VARIANTS } from './modularHero.js';
 import { CHARACTER_CONCEPTS, getCharacterConcept } from './characterConcepts.js';
 import { CLASSIC_CONCEPTS, SCENARIO_BLOCKOUTS, conceptKeyForScenario, getScenarioConcept, getScenarioBlockout } from './classicConcepts.js';
 import { canonicalTileScenario, saveTileEdits, validateTileDocument, makeTileDocument, tileDocumentLayers, OBJECT_VARIANTS } from './tileFloor.js';
@@ -2669,6 +2670,32 @@ class DevClientApp {
       this.log(`⚔️ [ARMARIA 3D] Visualizando modelo PBR: ${meta ? meta.name : currentArmoryItem} (${currentArmorySub})`, 'success');
     };
 
+    const modularMode = document.getElementById('hero-modular-mode');
+    const armorSlot = document.getElementById('hero-armor-slot');
+    const armorVariant = document.getElementById('hero-armor-variant');
+    const modularStatus = document.getElementById('hero-modular-status');
+    const refreshModularLinks = () => {
+      if (!Object.hasOwn(CHARACTER_CONCEPTS, currentHero) || !ARMOR_SLOTS.includes(armorSlot.value) || !ARMOR_VARIANTS.includes(armorVariant.value)) return;
+      document.getElementById('hero-modular-download').href = `models/modular_heroes/hero_${currentHero.toLowerCase()}_modular.glb`;
+      document.getElementById('hero-armor-download').href = `models/modular_heroes/${currentHero.toLowerCase()}_${armorSlot.value}_${armorVariant.value}.glb`;
+    };
+    modularMode?.addEventListener('change', () => {
+      this.viewer3DInstance.modularHeroMode = modularMode.checked;
+      if (currentCategory === 'HERO') this.viewer3DInstance.selectEntity('HERO', currentHero, { setTier: currentSetTier });
+      modularStatus.textContent = modularMode.checked ? 'Blockout modular ativo; trocas são apenas visuais e temporárias.' : 'Modelo anterior ativo; blockout modular desativado.';
+    });
+    armorSlot?.addEventListener('change', refreshModularLinks);
+    armorVariant?.addEventListener('change', refreshModularLinks);
+    document.getElementById('hero-armor-apply')?.addEventListener('click', () => {
+      const viewer = this.viewer3DInstance;
+      if (viewer.currentCategory !== 'HERO' || !viewer.modularHeroMode || !viewer.activeEntity?.setArmor) {
+        modularStatus.textContent = 'Ative o blockout modular para trocar peças.'; return;
+      }
+      const changed = viewer.activeEntity.setArmor(armorSlot.value, armorVariant.value);
+      modularStatus.textContent = changed ? 'Peça trocada nesta prévia; não afeta inventário ou servidor.' : 'Peça ou variante inválida.';
+    });
+    refreshModularLinks();
+
     // 1. Alternador de Categoria
     const catButtons = document.querySelectorAll('.btn-3d-cat');
     catButtons.forEach((btn) => {
@@ -2717,6 +2744,7 @@ class DevClientApp {
 
         if (cat === 'HERO') {
           currentHero = id;
+          refreshModularLinks();
           this.viewer3DInstance.selectEntity('HERO', currentHero, { setTier: currentSetTier });
           if (badgeMode) badgeMode.textContent = `MODO: HERÓI (${currentHero})`;
           updateAnimButtons('HERO', currentHero);

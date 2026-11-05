@@ -448,6 +448,18 @@
               <button class="btn-sub-entity" data-cat="HERO" data-id="MG">⚡ Magic Gladiator</button>
               <button class="btn-sub-entity" data-cat="HERO" data-id="DL">👑 Dark Lord</button>
             </div>
+            <fieldset style="border:1px solid #475569; border-radius:6px; padding:8px; margin:8px 0;">
+              <legend style="color:#a7f3d0;">Herói modular (protótipo)</legend>
+              <label><input type="checkbox" id="hero-modular-mode"> Visualizar blockout modular</label>
+              <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;">
+                <select id="hero-armor-slot" aria-label="Peça de armadura"><option value="helmet">Elmo</option><option value="chest">Peitoral</option><option value="shoulders">Ombreiras</option><option value="gloves">Luvas</option><option value="legs">Calças e grevas</option><option value="boots">Botas</option></select>
+                <select id="hero-armor-variant" aria-label="Variante de armadura"><option value="base">Base</option><option value="elite">Elite</option></select>
+                <button type="button" id="hero-armor-apply">Trocar peça</button>
+              </div>
+              <p id="hero-modular-status" style="font-size:11px;color:#94a3b8;">Peças visuais simples; sem rig esquelético ou atributos de jogo.</p>
+              <a id="hero-modular-download" href="models/modular_heroes/hero_dk_modular.glb" download>Baixar GLB do blockout base</a>
+              <span> · </span><a id="hero-armor-download" href="models/modular_heroes/dk_helmet_base.glb" download>Baixar módulo selecionado</a>
+            </fieldset>
             <label class="control-label" style="margin-top: 6px;">SET DE ARMADURA:</label>
             <div class="tier-buttons-row">
               <button class="btn-set-tier active" data-tier="DRAGON">Dragon</button>
