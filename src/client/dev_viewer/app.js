@@ -5,6 +5,7 @@
 
 import { Dasi3DFeatureViewer } from './dasi3dViewer.js';
 import { ARMORY_METADATA } from './dasi3dArmory.js';
+import { CLASSIC_CONCEPTS, conceptKeyForScenario, getScenarioConcept } from './classicConcepts.js';
 import { Dasi3DAvatarRenderer, DasiHeroClassModal, CLASS_DEFINITIONS } from './dasi3dAvatar.js';
 import { Dasi3DRealtimeArena } from './dasi3dRealtimeArena.js';
 import {
@@ -2116,15 +2117,53 @@ class DevClientApp {
       }
     };
 
-        artData.DK = artData.HERO_DK;
+    Object.assign(artData, {
+      DEVIL_SQUARE: {
+        title: 'Devil Square — Praça das Sombras', color: '#fca5a5', border: '#991b1b',
+        features: ['Arena circular: Piso de pedra com espaço aberto para combate.', 'Pentagrama: Inscrição infernal sob luz de brasas.', 'Totens: Quatro marcos de pedra com fogo.'],
+      },
+      CHAOS_CASTLE: {
+        title: 'Chaos Castle — Coliseu sobre o Abismo', color: '#d8b4fe', border: '#7e22ce',
+        features: ['Lajes: Plataforma modular suspensa sobre o vazio.', 'Abismo: Névoa e luz violeta discreta.', 'Perímetro: Ruínas e bordas ameaçadoras.'],
+      },
+      DUEL_COLISEUM: {
+        title: 'Coliseu de Duelos — Arena da Glória', color: '#fde68a', border: '#a16207',
+        features: ['Arena octogonal: Área aberta para duelos.', 'Arquibancadas: Pedra escura e formas monumentais.', 'Iluminação: Tochas e detalhes em bronze envelhecido.'],
+      },
+    });
+
+    // Artes de referência por família; os conceitos não são plantas exatas dos mapas.
+    for (const [key, concept] of Object.entries(CLASSIC_CONCEPTS)) {
+      artData[key].src = `art/classic/${concept.file}.jpg`;
+      artData[key].desc = `Referência visual do bioma: ${concept.description}`;
+    }
+    const pendingConcept = {
+      title: 'Concept específico em preparação',
+      desc: 'Não há referência visual disponível para esta seleção.',
+      src: '', color: '#cbd5e1', border: '#64748b', features: [],
+    };
+
+    artData.DK = artData.HERO_DK;
     artData.DW = artData.HERO_DW;
     artData.ELF = artData.HERO_ELF;
     artData.MG = artData.HERO_MG;
     artData.DL = artData.HERO_DL;
 
+    const resolveArtDisplay = (id) => {
+      const family = conceptKeyForScenario(id);
+      const base = artData[family] || pendingConcept;
+      const specific = getScenarioConcept(id);
+      if (specific) return { ...base, ...specific, title: `${id} — ${specific.title}`, desc: `Concept individual: ${specific.description}`, features: [] };
+      if (/^(LOR|NOR|DEV|DNG|LT|ATL|TAR|ICA|VOL|EVT)_\d+$/.test(id || '')) {
+        return { ...base, title: `${id} — ${base.title}`, desc: `Referência de família (concept individual pendente). ${base.desc}`, features: [] };
+      }
+      return base;
+    };
+
     const updateArtDisplay = (biome) => {
-      const data = artData[biome] || artData.LORENCIA;
-      if (conceptImg) conceptImg.src = data.src;
+      const canonicalBiome = conceptKeyForScenario(biome);
+      const data = resolveArtDisplay(biome);
+      if (conceptImg) { conceptImg.style.display = data.src ? 'block' : 'none'; if (data.src) conceptImg.src = data.src; }
       if (conceptTitle) {
         conceptTitle.textContent = data.title;
         conceptTitle.style.color = data.color;
@@ -2132,7 +2171,7 @@ class DevClientApp {
       if (conceptDesc) conceptDesc.textContent = data.desc;
 
       document.querySelectorAll('.btn-art-tab').forEach((tab) => {
-        const isSelected = tab.getAttribute('data-biome') === biome;
+        const isSelected = tab.getAttribute('data-biome') === canonicalBiome;
         tab.classList.toggle('active', isSelected);
         tab.style.borderColor = isSelected ? data.border : 'rgba(255,255,255,0.15)';
         tab.style.background = isSelected ? `${data.border}40` : 'rgba(255,255,255,0.05)';
@@ -2151,21 +2190,15 @@ class DevClientApp {
     const viewerBody = document.querySelector('.viewer-3d-body');
 
     this.updateSplitArtDisplay = (biome) => {
-      const canonicalBiome = artData[biome] ? biome : (biome && biome.includes('_') ? {
-        LOR: 'LORENCIA', NOR: 'NORIA', DEV: 'DEVIAS', DNG: 'DUNGEON',
-        LT: 'LOST_TOWER', ATL: 'ATLANS', TAR: 'TARKAN', ICA: 'ICARUS',
-        VOL: 'VALLEY_OF_LOREN', EVT: 'BLOOD_CASTLE',
-        HERO: biome
-      }[biome.split('_')[0]] || biome : (biome || 'LORENCIA'));
-
-      const data = artData[canonicalBiome] || artData.LORENCIA;
-      if (splitImg) splitImg.src = data.src;
+      const data = resolveArtDisplay(biome);
+      if (splitImg) { splitImg.style.display = data.src ? 'block' : 'none'; if (data.src) splitImg.src = data.src; }
       if (splitTitle) {
         splitTitle.textContent = data.title;
         splitTitle.style.color = data.color;
       }
       if (splitDesc) splitDesc.textContent = data.desc;
       if (splitFeatures && data.features) {
+        if (splitFeatures.parentElement) splitFeatures.parentElement.style.display = data.features.length ? '' : 'none';
         splitFeatures.innerHTML = data.features.map(f => {
           const parts = f.split(':');
           return `<li><strong style="color: #f1f5f9;">${parts[0]}:</strong>${parts.slice(1).join(':')}</li>`;
@@ -2186,7 +2219,7 @@ class DevClientApp {
             this.updateSplitArtDisplay('HERO_' + currentHero);
           } else {
             const activeSubBtn = document.querySelector('.btn-sub-entity.active[data-cat="ENVIRONMENT"]');
-            const currentBiome = (activeSubBtn && activeSubBtn.getAttribute('data-id')) || 'LORENCIA';
+            const currentBiome = currentEnv || (activeSubBtn && activeSubBtn.getAttribute('data-id')) || 'LORENCIA';
             this.updateSplitArtDisplay(currentBiome);
           }
         }
@@ -2210,7 +2243,7 @@ class DevClientApp {
     if (btnOpenArt && modalArt) {
       btnOpenArt.addEventListener('click', () => {
         const activeSubBtn = document.querySelector('.btn-sub-entity.active[data-cat="ENVIRONMENT"]');
-        const currentBiome = (activeSubBtn && activeSubBtn.getAttribute('data-id')) || 'LORENCIA';
+        const currentBiome = currentCategory === 'HERO' ? 'HERO_' + currentHero : (currentEnv || (activeSubBtn && activeSubBtn.getAttribute('data-id')) || 'LORENCIA');
         updateArtDisplay(currentBiome);
         modalArt.style.display = 'flex';
       });

@@ -79,16 +79,33 @@ Dasi/
 ## 🚀 Como Iniciar o Servidor e Visualizar os Mundos 3D
 
 ```bash
-# Iniciar o Servidor de Jogo e Dev Viewer Web
+# Requer Node.js 22.18+ e npm
+npm ci
+# Iniciar o Servidor de Jogo e Dev Viewer Web (somente localhost)
 npm start
 ```
 
 Abra no navegador:
-👉 **`http://localhost:8299`**
+👉 **`http://localhost:8080`**
 
 - **Navegação pelos 10 Cenários Mestre:** Selecione qualquer um dos reinos no menu superior para carregar instantaneamente o modelo 3D real correspondente com partículas dinâmicas e iluminação PBR.
 - **Comparador Split-Screen:** Clique em **"Comparar com Concept Art"** para visualizar a tela dividida lado a lado (3D ao vivo vs Concept Art original).
 - **Inspeção de Colisão:** Ative o botão de colisão para visualizar os colisores físicos em tempo real.
+
+### Limitações de segurança e persistência
+
+Este servidor é um **protótipo local**, não um servidor de produção. O login aceita
+qualquer nome, não verifica credenciais e não emite um JWT real. Personagens,
+inventários, guildas e eventos vivem em memória; desconectar ou reiniciar pode
+perder dados. Não exponha o servidor a redes não confiáveis: posição, cadência e
+autorização de várias ações ainda precisam de validação autoritativa, além de
+autenticação real, TLS, limites de taxa e armazenamento persistente.
+
+O padrão é `127.0.0.1:8080`. `PORT=...` e `HOST=...` alteram endereço e porta.
+Para testar recursos destrutivos de desenvolvimento **somente localmente**, use
+`DASI_DEV_CONTROLS=1 npm start`. Isso habilita comandos de criação de itens e
+chefes e rotas de controle, sem autenticação administrativa; nunca combine essa
+opção com exposição pública. Sem ela, esses comandos estão desativados.
 
 ---
 
@@ -112,7 +129,7 @@ Os **56 cenários canônicos** vivem em uma **única fonte de verdade**:
 
 ```bash
 npm start          # Servidor autoritativo + Dev Viewer em http://localhost:8080
-npm test           # 133 testes / 41 suítes
-npm run typecheck  # tsc --noEmit (strict, 0 erros)
+npm test           # todos os arquivos src/**/*.test.ts
+npm run typecheck  # tsc --noEmit (strict)
 npm run test:parity # paridade do catálogo servidor ⇄ cliente
 ```

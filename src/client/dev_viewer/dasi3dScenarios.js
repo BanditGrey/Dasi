@@ -128,6 +128,26 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     floor.receiveShadow = true;
     envGroup.add(floor);
 
+    // Calçamento instanciado baixo: apenas detalhe visual, sem novos obstáculos.
+    const paving = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(1.85, 0.025, 1.0),
+      new THREE.MeshStandardMaterial({ color: 0x65635b, roughness: 0.88, metalness: 0.03 }),
+      780
+    );
+    paving.name = 'lorencia_paving';
+    const tileTransform = new THREE.Object3D();
+    let tileIndex = 0;
+    for (let row = 0; row < 39; row++) {
+      for (let col = 0; col < 20; col++) {
+        tileTransform.position.set(-18.8 + col * 1.95 + (row % 2) * 0.45, 0.02, -19 + row);
+        tileTransform.rotation.y = 0;
+        tileTransform.updateMatrix();
+        paving.setMatrixAt(tileIndex++, tileTransform.matrix);
+      }
+    }
+    paving.receiveShadow = true;
+    envGroup.add(paving);
+
     // Fonte do Arcanjo
     const basin = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.4, 0.9, 24), matStoneDark);
     basin.position.y = 0.45;
@@ -139,9 +159,26 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     envGroup.add(water);
     animParts.fountainWater = water;
 
-    const statue = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 2.6, 8), matStoneDark);
-    statue.position.y = 2.0;
-    envGroup.add(statue);
+    // Silhueta alada em bronze: todos os volumes ficam dentro da bacia existente.
+    const bronze = new THREE.MeshStandardMaterial({ color: 0x746044, roughness: 0.65, metalness: 0.65 });
+    const angel = new THREE.Group();
+    angel.name = 'lorencia_angel_statue';
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.29, 0.44, 1.45, 8), bronze);
+    body.position.y = 2.05;
+    angel.add(body);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.27, 10, 8), bronze);
+    head.position.y = 3.05;
+    angel.add(head);
+    for (const side of [-1, 1]) {
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(0.20, 1.25, 0.63), bronze);
+      wing.position.set(side * 0.53, 2.45, 0.22);
+      wing.rotation.z = side * 0.65;
+      angel.add(wing);
+    }
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.45, 0.11), bronze);
+    blade.position.set(0.42, 1.7, -0.35);
+    angel.add(blade);
+    envGroup.add(angel);
 
     const halo = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.06, 8, 16), new THREE.MeshBasicMaterial({ color: 0xfacc15 }));
     halo.position.set(0, 3.6, 0);
@@ -166,6 +203,23 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     tavern.position.set(0, 2.25, 13.5);
     envGroup.add(tavern);
 
+    // Detalhes da fachada dentro do volume de colisão da taverna.
+    const facadeDetails = new THREE.Group();
+    facadeDetails.name = 'lorencia_tavern_details';
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(16.1, 0.45, 4.3), matWood);
+    roof.position.set(0, 4.72, 13.5);
+    facadeDetails.add(roof);
+    const warmWindow = new THREE.MeshStandardMaterial({ color: 0x9d692e, emissive: 0x8a4311, emissiveIntensity: 0.8, roughness: 0.7 });
+    for (const x of [-6, -3, 3, 6]) {
+      const window = new THREE.Mesh(new THREE.BoxGeometry(1.05, 1.35, 0.08), warmWindow);
+      window.position.set(x, 2.5, 11.28);
+      facadeDetails.add(window);
+    }
+    const doorway = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2.5, 0.08), matWood);
+    doorway.position.set(0, 1.25, 11.28);
+    facadeDetails.add(doorway);
+    envGroup.add(facadeDetails);
+
     // Muralhas Sul
     const wallL = new THREE.Mesh(new THREE.BoxGeometry(14.0, 4.0, 3.0), matStoneDark);
     wallL.position.set(-11.0, 2.0, -16.0);
@@ -181,6 +235,15 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     const towR = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.4, 6.5, 16), matStoneDark);
     towR.position.set(14.0, 3.25, -16.0);
     envGroup.add(towR);
+
+    // Ameias sobre as muralhas, sem alterar os limites físicos existentes.
+    for (const centerX of [-11, 11]) {
+      for (let i = -3; i <= 3; i++) {
+        const merlon = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.85, 1.0), matStoneDark);
+        merlon.position.set(centerX + i * 1.8, 4.42, -16);
+        envGroup.add(merlon);
+      }
+    }
 
     // 4 Postes de Tocha
     animParts.torches = [];
@@ -1788,7 +1851,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
 
     // Pentagrama rúnico incandescente no piso de granito
     const pentagramMat = new THREE.MeshStandardMaterial({
-      color: 0xf43f5e, emissive: 0xbe123c, emissiveIntensity: 2.6, roughness: 0.4, side: THREE.DoubleSide,
+      color: 0x78322c, emissive: 0x6f1e16, emissiveIntensity: 0.65, roughness: 0.8, side: THREE.DoubleSide,
     });
     for (let i = 0; i < 5; i++) {
       const a1 = (i / 5) * Math.PI * 2 - Math.PI / 2;
@@ -1818,7 +1881,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
 
     // 4 totens de crânios de 6m expelindo chamas
     for (const [tx, tz] of [[0, 16], [16, 0], [0, -16], [-16, 0]]) {
-      const totem = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.0, 6, 8), matBone);
+      const totem = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.0, 6, 8), matStoneDark);
       totem.position.set(tx, 3, tz);
       envGroup.add(totem);
       const flame = new THREE.Mesh(new THREE.ConeGeometry(1.0, 2.4, 8), matMagma);
@@ -1865,14 +1928,15 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
 
     // Barreira etérea do anonimato absoluto
     const barrier = new THREE.Mesh(new THREE.CylinderGeometry(20.5, 20.5, 9, 32, 1, true), new THREE.MeshBasicMaterial({
-      color: 0xa855f7, transparent: true, opacity: 0.12, side: THREE.DoubleSide,
+      color: 0x77517f, transparent: true, opacity: 0.06, side: THREE.DoubleSide,
     }));
     barrier.position.y = 4.5;
     envGroup.add(barrier);
 
   } else if (id === 'EVT_04') {
     // EVT_04: Coliseu de Duelos — Grande Arena da Glória (octogonal)
-    const octagon = new THREE.Mesh(new THREE.CylinderGeometry(17.5, 17.8, 1.0, 8), matNacar);
+    const arenaStone = new THREE.MeshStandardMaterial({ color: 0x5c574f, roughness: 0.92, metalness: 0.03 });
+    const octagon = new THREE.Mesh(new THREE.CylinderGeometry(17.5, 17.8, 1.0, 8), arenaStone);
     octagon.position.y = 0.5;
     envGroup.add(octagon);
 
@@ -1885,21 +1949,21 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
 
     // Cúpula de barreira de força translúcida (r = 17.5m)
     const dome = new THREE.Mesh(new THREE.CylinderGeometry(17.5, 17.5, 12, 24, 1, true), new THREE.MeshBasicMaterial({
-      color: 0x38bdf8, transparent: true, opacity: 0.10, side: THREE.DoubleSide,
+      color: 0xb69a70, transparent: true, opacity: 0.04, side: THREE.DoubleSide,
     }));
     dome.position.y = 6.5;
     envGroup.add(dome);
 
-    // Placar holográfico tridimensional flutuante a 8m
+    // Placar tridimensional flutuante com acabamento de bronze envelhecido
     const scoreboard = new THREE.Mesh(new THREE.BoxGeometry(7, 2.6, 0.3), new THREE.MeshStandardMaterial({
-      color: 0x0ea5e9, emissive: 0x0284c7, emissiveIntensity: 2.2, transparent: true, opacity: 0.85,
-      metalness: 0.4, roughness: 0.2,
+      color: 0x5c4832, emissive: 0x5a3513, emissiveIntensity: 0.35, transparent: true, opacity: 0.85,
+      metalness: 0.35, roughness: 0.75,
     }));
     scoreboard.position.set(0, 9.5, 0);
     envGroup.add(scoreboard);
     animParts.duelScoreboard = scoreboard;
 
-    const boardLight = new THREE.PointLight(0x38bdf8, 4.0, 16);
+    const boardLight = new THREE.PointLight(0xd99749, 2.0, 16);
     boardLight.position.set(0, 8.4, 0);
     envGroup.add(boardLight);
     dynamicLights.push(boardLight);

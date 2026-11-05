@@ -163,6 +163,20 @@ describe('2. Spawner de Monstros para Zonas de Lorencia (MobSpawner.ts)', () => 
 });
 
 describe('3. Motor de Combate Autoritativo & Cálculo de Cores (CombatEngine.ts)', () => {
+  it('Rejeita coordenadas não finitas em ataques e coleta', () => {
+    const engine = new CombatEngine();
+    const session = new SessionManager().createSession({});
+    const mob = engine.spawner.getAllMonsters()[0];
+    const hp = mob.currentHp;
+    const result = engine.processPlayerAttack(session, { targetMobId: mob.id, playerX: NaN, playerY: mob.y });
+    assert.equal(result.success, false);
+    assert.equal(mob.currentHp, hp);
+    const drop = mob.rollDrops(session.sessionId)[0];
+    engine.registerExternalGroundDrop(drop);
+    assert.equal(engine.pickupGroundItem(session, drop.dropId, NaN, drop.y).success, false);
+    assert.ok(engine.getGroundDrop(drop.dropId));
+  });
+
   it('Processa ataque com arma equipada calculando dano correto', () => {
     const engine = new CombatEngine();
     const sessionManager = new SessionManager();

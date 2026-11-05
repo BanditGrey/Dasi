@@ -357,3 +357,31 @@ describe('3. Level Up e Distribuição de Atributos (5 Pontos por Nível)', () =
     assert.equal(session.character.statPoints, initialPoints + 15, 'Deve receber 3 * 5 = 15 pontos livres');
   });
 });
+
+
+test('Imposto de compra só é creditado após uma transação bem-sucedida', () => {
+  const sm = new SessionManager();
+  const session = sm.createSession({});
+  let treasury = 0;
+  const collector = (_biome: string, gross: number, commit = true) => {
+    const tax = Math.floor(gross * 0.05);
+    if (commit) treasury += tax;
+    return { tax, netZen: gross - tax };
+  };
+  const buy = () => NPCShopSystem.processBuy(session,
+    { npcId: 'han_blacksmith', itemDefId: 'small_dagger' },
+    (s) => sm.getSerializedInventoryState(s), collector);
+  session.character.zen = 0;
+  assert.equal(buy().success, false);
+  assert.equal(treasury, 0);
+  session.character.zen = 10000;
+  for (let x = 0; x < 8; x++) for (let y = 0; y < 8; y++)
+    session.inventory.addItem(Item.create('jewel_of_blessing'), x, y);
+  assert.equal(buy().success, false);
+  assert.equal(treasury, 0);
+  const placed = session.inventory.getAllGridItems()[0];
+  session.inventory.removeItem(placed.item.uuid);
+  assert.equal(buy().success, true);
+  assert.equal(treasury, 25);
+  assert.equal(session.character.zen, 9475);
+});

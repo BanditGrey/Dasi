@@ -55,3 +55,33 @@ describe('4. Cobertura 3D dos 56 Cenários (Dev Viewer)', () => {
     }
   });
 });
+
+it('Lorencia preserva detalhes do concept e não troca cenários por GLB de outro mapa', async () => {
+  // A presença de window simula o caminho antes usado apenas no navegador.
+  // @ts-ignore - módulo JS do visualizador
+  const { createEnvironment } = await import('../../../client/dev_viewer/dasi3dContent.js');
+  // @ts-ignore - GLTFLoader fornecido com o visualizador
+  const { GLTFLoader } = await import('../../../client/dev_viewer/libs/GLTFLoader.js');
+  const originalLoad = GLTFLoader.prototype.load;
+  const oldWindow = (globalThis as any).window;
+  let loadCount = 0;
+  try {
+    (globalThis as any).window = {};
+    GLTFLoader.prototype.load = () => { loadCount++; };
+    const plaza = createEnvironment('LOR_01', THREE);
+    assert.ok(plaza.group.getObjectByName('lorencia_paving'));
+    assert.ok(plaza.group.getObjectByName('lorencia_angel_statue'));
+    assert.ok(plaza.group.getObjectByName('lorencia_tavern_details'));
+    assert.ok((plaza.animParts as any).fountainWater);
+    assert.strictEqual((plaza.animParts as any).torches.length, 4);
+    for (const id of ['LOR_02', 'EVT_02', 'EVT_03', 'EVT_04']) {
+      const env = createEnvironment(id, THREE);
+      assert.ok(env.group.children.length > 0, id);
+    }
+    assert.strictEqual(loadCount, 0, 'GLBs genéricos não devem substituir mapas canônicos');
+  } finally {
+    GLTFLoader.prototype.load = originalLoad;
+    if (oldWindow === undefined) delete (globalThis as any).window;
+    else (globalThis as any).window = oldWindow;
+  }
+});

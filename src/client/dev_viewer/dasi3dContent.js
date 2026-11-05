@@ -1677,10 +1677,9 @@ export function createEnvironment(envType, THREE) {
     const dynamicLights = [];
     const animParts = {};
     buildScenario3D(envType, THREE, envGroup, dynamicLights, animParts);
-    // Dispara carregamento assíncrono do GLB real compilado do Blender 5.2
-    loadBiomeGLB(envType, THREE, envGroup, (model) => {
-      animParts.realSceneryModel = model;
-    });
+    // A geometria específica do cenário deve permanecer visível. O GLB de bioma
+    // é genérico e sua substituição assíncrona apagava mapas e colisores distintos.
+    // Os GLBs continuam disponíveis via loadBiomeGLB para usos explícitos.
     return {
       group: envGroup,
       dynamicLights,
