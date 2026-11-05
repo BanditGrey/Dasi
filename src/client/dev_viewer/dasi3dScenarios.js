@@ -302,6 +302,50 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     boulder.position.set(-2, 1.0, -4);
     envGroup.add(boulder);
 
+    // Caminho de terra é uma superfície plana, sem afetar colisão.
+    const road = new THREE.Mesh(new THREE.PlaneGeometry(48, 4.2), new THREE.MeshStandardMaterial({ color: 0x534b3b, roughness: 0.96 }));
+    road.name = 'lorencia_east_road';
+    road.rotation.x = -Math.PI / 2;
+    road.position.y = 0.025;
+    envGroup.add(road);
+
+    // Ameias estão sobre as muralhas existentes e não obstruem o portão.
+    const gateDetails = new THREE.Group();
+    gateDetails.name = 'lorencia_east_gate_details';
+    for (const centerZ of [-8, 8]) {
+      for (let i = -3; i <= 3; i++) {
+        const merlon = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.8, 1.0), matCobble);
+        merlon.position.set(-15, 5.4, centerZ + i * 1.8);
+        gateDetails.add(merlon);
+      }
+    }
+    for (const z of [-15, 15]) {
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(2.45, 0.22, 6, 24), matCobble);
+      rim.rotation.x = Math.PI / 2;
+      rim.position.set(-15, 7.55, z);
+      gateDetails.add(rim);
+    }
+    envGroup.add(gateDetails);
+
+    // A vegetação é baixa e decorativa: não cria novos bloqueios no terreno.
+    const grass = new THREE.InstancedMesh(
+      new THREE.PlaneGeometry(0.45, 0.32),
+      new THREE.MeshStandardMaterial({ color: 0x526348, roughness: 1, side: THREE.DoubleSide }),
+      72
+    );
+    grass.name = 'lorencia_east_grass';
+    grass.userData.nonBlockingDecoration = true;
+    const blade = new THREE.Object3D();
+    for (let i = 0; i < 72; i++) {
+      const x = -20 + ((i * 31) % 400) / 10;
+      const z = -22 + ((i * 73) % 440) / 10;
+      blade.position.set(x, 0.16, z);
+      blade.rotation.y = (i % 8) * Math.PI / 4;
+      blade.updateMatrix();
+      grass.setMatrixAt(i, blade.matrix);
+    }
+    envGroup.add(grass);
+
   } else if (id === 'LOR_03') {
     // LOR_03: West Gate & Spider Woods (Bosque das Aranhas, Teias e Pântano)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(52, 52, 16, 16), new THREE.MeshStandardMaterial({ color: 0x1c211a, roughness: 0.95 }));
@@ -336,6 +380,30 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     const ruins = new THREE.Mesh(new THREE.BoxGeometry(5.5, 3.0, 6.0), matStoneDark);
     ruins.position.set(-14, 1.5, 12);
     envGroup.add(ruins);
+
+    // Relevos e teias ficam sobre a ruína já coberta pelo colisor.
+    const ruinDetails = new THREE.Group();
+    ruinDetails.name = 'lorencia_spider_ruin_details';
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.35, 5.7), matCobble);
+    cap.position.set(-14, 3.17, 12);
+    ruinDetails.add(cap);
+    const webVertices = [];
+    const center = [-14, 2.0, 9.01];
+    const rim = [[-16.0, 0.9], [-16.0, 2.9], [-14, 3.0], [-12.0, 2.9], [-12.0, 0.9]];
+    for (const [x, y] of rim) webVertices.push(...center, x, y, 9.01);
+    for (let i = 0; i < rim.length - 1; i++) {
+      const [x1, y1] = rim[i], [x2, y2] = rim[i + 1];
+      webVertices.push(x1, y1, 9.01, x2, y2, 9.01);
+    }
+    const webGeometry = new THREE.BufferGeometry();
+    webGeometry.setAttribute('position', new THREE.Float32BufferAttribute(webVertices, 3));
+    const web = new THREE.LineSegments(webGeometry, new THREE.LineBasicMaterial({ color: 0xb2c0af }));
+    web.name = 'lorencia_spider_web';
+    ruinDetails.add(web);
+    envGroup.add(ruinDetails);
+
+    // Partículas locais dão movimento ao bosque e ficam fora dos GLBs estáticos.
+    animParts.forestMotes = createParticleCloud(100, 0x9ab18a, 0.07, { x: 38, y: 5, z: 38 }, 0.45, false);
 
     // Luzes Esverdeadas do Veneno
     const poisonLight = new THREE.PointLight(0x84cc16, 2.5, 12);

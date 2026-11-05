@@ -1820,6 +1820,15 @@ export function createEnvironment(envType, THREE) {
           });
         }
 
+        if (animParts.forestMotes) {
+          const positions = animParts.forestMotes.geometry.attributes.position.array;
+          for (let i = 0; i < positions.length; i += 3) {
+            positions[i] += Math.sin(time * 0.7 + i) * dt * 0.12;
+            positions[i + 1] += Math.cos(time * 0.9 + i) * dt * 0.08;
+          }
+          animParts.forestMotes.geometry.attributes.position.needsUpdate = true;
+        }
+
         // Fumaça de guerra sobe lentamente; partículas de cada arena têm cor própria.
         for (const [cloud, speed, ceiling] of [
           [animParts.siegeSmoke, 0.8, 12],

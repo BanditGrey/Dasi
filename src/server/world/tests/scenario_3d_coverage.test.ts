@@ -204,3 +204,32 @@ it('Atmosfera de cerco e eventos anima; interiores de Lorencia não recebem chuv
   }
   assert.strictEqual(colors.size, 4, 'Cada arena tem paleta própria');
 });
+
+it('Lorencia leste e bosque preservam marcos e atmosfera após exportação', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  for (const [id, names] of [
+    ['LOR_02', ['lorencia_east_road', 'lorencia_east_gate_details', 'lorencia_east_grass']],
+    ['LOR_03', ['lorencia_spider_ruin_details', 'lorencia_spider_web']],
+  ] as const) {
+    const bytes = readFileSync(`src/client/dev_viewer/models/scenarios/${id.toLowerCase()}.glb`);
+    const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    const gltf = await new GLTFLoader().parseAsync(buffer, '');
+    for (const name of names) assert.ok(gltf.scene.getObjectByName(name), `${id}: ${name}`);
+    if (id === 'LOR_02') {
+      const grass = gltf.scene.getObjectByName('lorencia_east_grass') as THREE.InstancedMesh;
+      assert.ok(grass.isInstancedMesh);
+      assert.strictEqual(grass.count, 72);
+      assert.strictEqual(grass.userData.nonBlockingDecoration, true);
+    }
+  }
+  // @ts-ignore - módulo JS do visualizador
+  const { createEnvironment } = await import('../../../client/dev_viewer/dasi3dContent.js');
+  const forest = createEnvironment('LOR_03', THREE);
+  const motes = (forest.animParts as any).forestMotes;
+  assert.ok(motes);
+  const positions = motes.geometry.attributes.position.array;
+  const before = positions[1];
+  forest.updateAnim(0.5, 1 / 60);
+  assert.notStrictEqual(positions[1], before);
+});
