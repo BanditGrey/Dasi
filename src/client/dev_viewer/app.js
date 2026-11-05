@@ -10,6 +10,7 @@ import { exportScenarioBatch } from './exportScenarioBatch.js';
 import { createEnvironment } from './dasi3dContent.js';
 import { Dasi3DFeatureViewer } from './dasi3dViewer.js';
 import { ARMORY_METADATA } from './dasi3dArmory.js';
+import { CHARACTER_CONCEPTS, getCharacterConcept } from './characterConcepts.js';
 import { CLASSIC_CONCEPTS, SCENARIO_BLOCKOUTS, conceptKeyForScenario, getScenarioConcept, getScenarioBlockout } from './classicConcepts.js';
 import { canonicalTileScenario, saveTileEdits, validateTileDocument, makeTileDocument, tileDocumentLayers, OBJECT_VARIANTS } from './tileFloor.js';
 import { Dasi3DAvatarRenderer, DasiHeroClassModal, CLASS_DEFINITIONS } from './dasi3dAvatar.js';
@@ -2148,6 +2149,17 @@ class DevClientApp {
       desc: 'Não há referência visual disponível para esta seleção.',
       src: '', color: '#cbd5e1', border: '#64748b', features: [],
     };
+
+    // Os novos concepts são referências iniciais, não uma garantia de que os GLBs existentes correspondem.
+    for (const id of Object.keys(CHARACTER_CONCEPTS)) {
+      const concept = getCharacterConcept(id);
+      Object.assign(artData[`HERO_${id}`], {
+        src: concept.src,
+        title: `${id} — ${concept.title}`,
+        desc: `Concept inicial: ${concept.description} O modelo 3D existente ainda precisa de revisão.`,
+        features: [],
+      });
+    }
 
     artData.DK = artData.HERO_DK;
     artData.DW = artData.HERO_DW;
