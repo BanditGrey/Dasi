@@ -72,6 +72,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
       );
       wisp.position.set((Math.random() - 0.5) * 20, 1.5 + Math.random() * 2, (Math.random() - 0.5) * 20);
       wisp.userData = {
+        runtimeOnly: true,
         baseX: wisp.position.x,
         baseZ: wisp.position.z,
         seed: Math.random() * 10,
@@ -100,7 +101,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     for (let b = 0; b < 24; b++) {
       const bubble = new THREE.Mesh(new THREE.SphereGeometry(0.12 + Math.random() * 0.15, 8, 8), bubbleMat);
       bubble.position.set((Math.random() - 0.5) * 30, Math.random() * 6.5, (Math.random() - 0.5) * 30);
-      bubble.userData = { speed: 1.2 + Math.random() * 1.1, seed: Math.random() * 10 };
+      bubble.userData = { runtimeOnly: true, speed: 1.2 + Math.random() * 1.1, seed: Math.random() * 10 };
       envGroup.add(bubble);
       animParts.bubbles.push(bubble);
     }
@@ -110,12 +111,18 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     animParts.blizzardSystem = createParticleCloud(500, 0xf8fafc, 0.095, { x: 42, y: 10, z: 42 }, 0.85, false);
   } else if (prefix === 'NOR') {
     animParts.sporeSystem = createParticleCloud(400, 0x86efac, 0.075, { x: 40, y: 7, z: 40 }, 0.8, true);
-  } else if (prefix === 'LOR') {
+  } else if (prefix === 'LOR' && id !== 'LOR_06' && id !== 'LOR_07') {
     animParts.rainSystem = createParticleCloud(450, 0x93c5fd, 0.085, { x: 40, y: 12, z: 40 }, 0.68, false);
   } else if (prefix === 'VOL') {
     animParts.siegeSmoke = createParticleCloud(500, 0xef4444, 0.10, { x: 50, y: 12, z: 50 }, 0.75, true);
   } else if (prefix === 'EVT') {
-    animParts.bloodNebula = createParticleCloud(600, 0xf43f5e, 0.09, { x: 40, y: 15, z: 80 }, 0.85, true);
+    const eventAtmosphere = {
+      EVT_01: { color: 0xf43f5e, x: 40, z: 80 },
+      EVT_02: { color: 0xf97316, x: 45, z: 45 },
+      EVT_03: { color: 0xa78bfa, x: 40, z: 40 },
+      EVT_04: { color: 0xfbbf24, x: 36, z: 36 },
+    }[id] || { color: 0xf43f5e, x: 40, z: 40 };
+    animParts.bloodNebula = createParticleCloud(300, eventAtmosphere.color, 0.09, { x: eventAtmosphere.x, y: 15, z: eventAtmosphere.z }, 0.65, true);
   }
 
   // ==========================================================================

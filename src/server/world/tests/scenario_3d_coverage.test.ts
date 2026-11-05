@@ -164,3 +164,43 @@ it('Os seis blockouts de Devias carregam e preservam detalhes da cidadela', asyn
     }
   }
 });
+
+it('Todos os 56 blockouts carregam e excluem efeitos controlados pelo runtime', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  for (const scenario of CollisionSystem.getAllScenarios()) {
+    const bytes = readFileSync(`src/client/dev_viewer/models/scenarios/${scenario.id.toLowerCase()}.glb`);
+    const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    const gltf = await new GLTFLoader().parseAsync(buffer, '');
+    assert.ok(gltf.scene.getObjectByName(scenario.id), scenario.id);
+    let meshes = 0;
+    gltf.scene.traverse((obj: THREE.Object3D) => {
+      if ((obj as THREE.Mesh).isMesh) meshes++;
+      assert.ok(!(obj as THREE.Light).isLight && !(obj as THREE.Points).isPoints && !obj.userData.runtimeOnly, scenario.id);
+    });
+    assert.ok(meshes > 0, scenario.id);
+  }
+});
+
+it('Atmosfera de cerco e eventos anima; interiores de Lorencia não recebem chuva', async () => {
+  // @ts-ignore - módulo JS usado pelo visualizador
+  const { createEnvironment } = await import('../../../client/dev_viewer/dasi3dContent.js');
+  for (const id of ['LOR_06', 'LOR_07']) {
+    const env = createEnvironment(id, THREE);
+    assert.equal((env.animParts as any).rainSystem, undefined, id);
+  }
+  const colors = new Set<number>();
+  for (const id of ['VOL_01', 'EVT_01', 'EVT_02', 'EVT_03', 'EVT_04']) {
+    const env = createEnvironment(id, THREE);
+    const cloud = (env.animParts as any).siegeSmoke || (env.animParts as any).bloodNebula;
+    assert.ok(cloud, id);
+    if (id.startsWith('EVT_')) colors.add(cloud.material.color.getHex());
+    const before = cloud.geometry.attributes.position.array[1];
+    env.updateAnim(1, 0.05);
+    const after = cloud.geometry.attributes.position.array[1];
+    assert.notStrictEqual(before, after, id);
+    env.updateAnim(1, NaN);
+    assert.ok(Number.isFinite(cloud.geometry.attributes.position.array[1]), id);
+  }
+  assert.strictEqual(colors.size, 4, 'Cada arena tem paleta própria');
+});

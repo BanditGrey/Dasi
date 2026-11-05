@@ -43,10 +43,19 @@ As imagens de família estão em `src/client/dev_viewer/art/classic/` e aparecem
 
 ### Blockouts GLB — andamento
 
-Os sete cenários de Lorencia (`LOR_01`–`LOR_07`), os sete de Noria (`NOR_01`–`NOR_07`) e os seis de Devias (`DEV_01`–`DEV_06`) possuem **blockouts iniciais** em `src/client/dev_viewer/models/scenarios/`. São exportações da geometria procedural existente, não modelos artísticos finais nem reconstruções fiéis das pinturas. Podem ser baixados no painel de comparação do visualizador ao selecionar cada cenário.
+Os **56 cenários** possuem blockouts iniciais em `src/client/dev_viewer/models/scenarios/`. São exportações da geometria procedural existente: **não** são modelos artísticos finais nem reconstruções fiéis das pinturas. Podem ser baixados no painel de comparação do visualizador ao selecionar cada cenário.
 
-Após `npm ci`, regenere um cenário com `node --experimental-strip-types tools/export_scenario_glb.mjs LOR_01` ou um bioma com `node --experimental-strip-types tools/export_scenario_glb.mjs NORIA`. O comando sobrescreve os GLBs de destino. A exportação omite partículas e luzes, que continuam no runtime; o visualizador ainda usa a geometria procedural, preservando animações e colisões. Estes arquivos são bases para modelagem e revisão, não substitutos automáticos dos cenários.
+Após `npm ci`, regenere um cenário com `node --experimental-strip-types tools/export_scenario_glb.mjs LOR_01`, um bioma com `node --experimental-strip-types tools/export_scenario_glb.mjs NORIA` ou todos com `node --experimental-strip-types tools/export_scenario_glb.mjs ALL`. O comando sobrescreve os GLBs de destino. Partículas, luzes, bolhas e fogos-fátuos controlados pelo runtime são omitidos da exportação. O visualizador continua usando a geometria procedural, preservando animações e colisões.
 
-**Pendente:** 36 blockouts dos outros biomas e acabamento, revisão visual e validação de colisões de todos os modelos.
+**Pendente:** acabamento artístico individual dos 56 modelos, avaliação em jogo contra os concepts e validação de colisões e desempenho. Os blockouts não são uma entrega final desses trabalhos.
+
+### Atmosfera viva no visualizador
+
+- Lorencia: chuva nos espaços abertos; taverna e forja não têm chuva interna.
+- Noria: esporos; Devias: nevasca; Dungeon: vapores e fogos-fátuos.
+- Lost Tower: brasas; Tarkan: tempestade de areia; Atlans: plâncton e bolhas; Icarus: partículas celestes.
+- Cerco: fumaça animada; cada arena de evento possui partículas animadas com paleta própria.
+
+Esses efeitos são visuais locais, não alteram colisões ou mecânicas, e não ficam embutidos nos GLBs estáticos. São uma primeira passagem de ambientação, não uma simulação completa de ecossistemas vivos.
 
 A praça `DEV_01` recebeu pedra úmida, chama quente e ameias, ainda em nível de blockout. O santuário `NOR_01` recebeu detalhes de varandas, lanternas, fonte e pavilhões, ainda em nível de blockout. A praça `LOR_01` recebeu uma primeira passagem 3D: calçamento, estátua alada, fachada iluminada e ameias. Os materiais de Devil Square, Chaos Castle e do Coliseu receberam uma primeira aproximação de paleta e iluminação. O visualizador mantém a geometria procedural de cada mapa, sem substituí-la automaticamente pelo GLB genérico do bioma. Os modelos 3D existentes **ainda não foram reconstruídos** integralmente a partir destas pinturas. Sua presença ao lado do concept facilita o planejamento e não implica paridade visual concluída.

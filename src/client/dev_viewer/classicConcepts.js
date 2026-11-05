@@ -92,9 +92,15 @@ export function getScenarioConcept(id) {
 }
 
 /** Blockouts exportados a partir de geometria procedural, não modelos finais. */
-export const SCENARIO_BLOCKOUTS = ['LOR_01', 'LOR_02', 'LOR_03', 'LOR_04', 'LOR_05', 'LOR_06', 'LOR_07', 'NOR_01', 'NOR_02', 'NOR_03', 'NOR_04', 'NOR_05', 'NOR_06', 'NOR_07', 'DEV_01', 'DEV_02', 'DEV_03', 'DEV_04', 'DEV_05', 'DEV_06'];
+export const SCENARIO_BLOCKOUTS = Object.keys(SCENARIO_CONCEPTS);
 export function getScenarioBlockout(id) {
-  const scenarioId = ({ LORENCIA: 'LOR_01', NORIA: 'NOR_01', DEVIAS: 'DEV_01' })[id] || id;
+  const aliases = {
+    LORENCIA: 'LOR_01', NORIA: 'NOR_01', DEVIAS: 'DEV_01', DUNGEON: 'DNG_01',
+    LOST_TOWER: 'LT_01', ATLANS: 'ATL_01', TARKAN: 'TAR_01', ICARUS: 'ICA_01',
+    VALLEY_OF_LOREN: 'VOL_01', BLOOD_CASTLE: 'EVT_01', DEVIL_SQUARE: 'EVT_02',
+    CHAOS_CASTLE: 'EVT_03', DUEL_COLISEUM: 'EVT_04',
+  };
+  const scenarioId = aliases[id] || id;
   return SCENARIO_BLOCKOUTS.includes(scenarioId)
     ? `models/scenarios/${scenarioId.toLowerCase()}.glb`
     : null;
