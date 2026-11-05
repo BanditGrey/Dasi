@@ -1,0 +1,126 @@
+{
+  "AssetType": "NiagaraSystem",
+  "AssetName": "NS_WingRibbonTrails",
+  "Version": "5.4.0",
+  "Description": "Fluid aerodynamic ribbon trails emitted from wingtip sockets during flight, sprinting, and aerial diving maneuvers.",
+  "SystemParameters": [
+    { "Name": "CharacterFlightVelocity", "Type": "float", "Default": 850.0 },
+    { "Name": "WingGenerationTier", "Type": "int32", "Default": 3 },
+    { "Name": "RibbonColorStart", "Type": "FLinearColor", "Default": { "R": 0.25, "G": 0.85, "B": 1.0, "A": 0.85 } },
+    { "Name": "RibbonColorEnd", "Type": "FLinearColor", "Default": { "R": 0.05, "G": 0.2, "B": 0.95, "A": 0.0 } },
+    { "Name": "RibbonBaseWidth", "Type": "float", "Default": 22.0 },
+    { "Name": "TrailLifetime", "Type": "float", "Default": 0.85 },
+    { "Name": "SkeletalMeshTarget", "Type": "FNiagaraUserParameterBinding", "Default": "SkeletalMeshComponent" }
+  ],
+  "Emitters": [
+    {
+      "Name": "Emitter_LeftWingRibbon",
+      "EmitterType": "RibbonRenderer",
+      "Properties": {
+        "MaterialOverride": "/Game/Materials/VFX/M_WingRibbon_Fluid.M_WingRibbon_Fluid",
+        "FacingMode": "Screen",
+        "RibbonTwistMode": "PassThrough",
+        "TessellationMode": "CustomTessellation",
+        "MaxTessellationPerSegment": 6
+      },
+      "SpawnScript": {
+        "ExecutionMode": "DistanceTraveledOrRate",
+        "SpawnPerUnit": 0.4,
+        "SpawnRateFallback": 90.0,
+        "ModuleStack": [
+          { "Module": "SkeletalMeshLocation", "SourceComponent": "User.SkeletalMeshTarget", "SocketName": "Wing_Tip_L" },
+          { "Module": "SetInitialRibbonWidth", "Width": "User.RibbonBaseWidth" },
+          { "Module": "InheritVelocity", "Scale": 0.15 }
+        ]
+      },
+      "UpdateScript": {
+        "ModuleStack": [
+          { "Module": "LifeCycle", "Mode": "KillAtLifetime", "Lifetime": "User.TrailLifetime" },
+          { "Module": "CurlNoiseForce", "NoiseFrequency": 0.04, "NoiseStrength": 45.0 },
+          { "Module": "Drag", "DragCoefficient": 0.65 },
+          {
+            "Module": "ScaleRibbonWidthOverLife",
+            "WidthCurve": [ { "Time": 0.0, "Val": 1.0 }, { "Time": 0.3, "Val": 0.85 }, { "Time": 0.8, "Val": 0.3 }, { "Time": 1.0, "Val": 0.0 } ]
+          },
+          {
+            "Module": "ColorOverLife",
+            "ColorLerpStart": "User.RibbonColorStart",
+            "ColorLerpEnd": "User.RibbonColorEnd",
+            "AlphaCurve": [ { "Time": 0.0, "Val": 0.9 }, { "Time": 0.4, "Val": 0.65 }, { "Time": 0.9, "Val": 0.15 }, { "Time": 1.0, "Val": 0.0 } ]
+          }
+        ]
+      }
+    },
+    {
+      "Name": "Emitter_RightWingRibbon",
+      "EmitterType": "RibbonRenderer",
+      "Properties": {
+        "MaterialOverride": "/Game/Materials/VFX/M_WingRibbon_Fluid.M_WingRibbon_Fluid",
+        "FacingMode": "Screen",
+        "RibbonTwistMode": "PassThrough",
+        "TessellationMode": "CustomTessellation",
+        "MaxTessellationPerSegment": 6
+      },
+      "SpawnScript": {
+        "ExecutionMode": "DistanceTraveledOrRate",
+        "SpawnPerUnit": 0.4,
+        "SpawnRateFallback": 90.0,
+        "ModuleStack": [
+          { "Module": "SkeletalMeshLocation", "SourceComponent": "User.SkeletalMeshTarget", "SocketName": "Wing_Tip_R" },
+          { "Module": "SetInitialRibbonWidth", "Width": "User.RibbonBaseWidth" },
+          { "Module": "InheritVelocity", "Scale": 0.15 }
+        ]
+      },
+      "UpdateScript": {
+        "ModuleStack": [
+          { "Module": "LifeCycle", "Mode": "KillAtLifetime", "Lifetime": "User.TrailLifetime" },
+          { "Module": "CurlNoiseForce", "NoiseFrequency": 0.04, "NoiseStrength": 45.0 },
+          { "Module": "Drag", "DragCoefficient": 0.65 },
+          {
+            "Module": "ScaleRibbonWidthOverLife",
+            "WidthCurve": [ { "Time": 0.0, "Val": 1.0 }, { "Time": 0.3, "Val": 0.85 }, { "Time": 0.8, "Val": 0.3 }, { "Time": 1.0, "Val": 0.0 } ]
+          },
+          {
+            "Module": "ColorOverLife",
+            "ColorLerpStart": "User.RibbonColorStart",
+            "ColorLerpEnd": "User.RibbonColorEnd",
+            "AlphaCurve": [ { "Time": 0.0, "Val": 0.9 }, { "Time": 0.4, "Val": 0.65 }, { "Time": 0.9, "Val": 0.15 }, { "Time": 1.0, "Val": 0.0 } ]
+          }
+        ]
+      }
+    },
+    {
+      "Name": "Emitter_WingWakeSparkles",
+      "EmitterType": "SpriteRenderer",
+      "Properties": {
+        "Alignment": "VelocityAligned",
+        "MaterialOverride": "/Game/Materials/VFX/M_StarlightMote.M_StarlightMote"
+      },
+      "SpawnScript": {
+        "ExecutionMode": "RateSpawning",
+        "SpawnRate": 60.0,
+        "LifetimeMin": 0.4,
+        "LifetimeMax": 0.8,
+        "ModuleStack": [
+          { "Module": "SpawnRate", "Rate": 60.0 },
+          { "Module": "SkeletalMeshLocation", "SourceComponent": "User.SkeletalMeshTarget", "SocketName": "Wing_Tip_L" },
+          { "Module": "AddVelocityInCone", "VelocityMin": 20.0, "VelocityMax": 80.0, "ConeAngle": 45.0 }
+        ]
+      },
+      "UpdateScript": {
+        "ModuleStack": [
+          { "Module": "CurlNoiseForce", "NoiseFrequency": 0.08, "NoiseStrength": 25.0 },
+          { "Module": "Drag", "DragCoefficient": 1.2 },
+          {
+            "Module": "ScaleSpriteSizeByCurve",
+            "Curve": [ { "Time": 0.0, "Val": 3.0 }, { "Time": 0.5, "Val": 5.0 }, { "Time": 1.0, "Val": 0.0 } ]
+          },
+          {
+            "Module": "ColorOverLife",
+            "AlphaCurve": [ { "Time": 0.0, "Val": 1.0 }, { "Time": 0.6, "Val": 0.8 }, { "Time": 1.0, "Val": 0.0 } ]
+          }
+        ]
+      }
+    }
+  ]
+}

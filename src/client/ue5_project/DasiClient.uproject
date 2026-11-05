@@ -1,0 +1,29 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "5.4",
+	"Category": "MMORPG",
+	"Description": "Dasi - Continent of Legend Reimagine MMORPG Client",
+	"Modules": [
+		{
+			"Name": "DasiClient",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine",
+				"CoreUObject",
+				"AIModule",
+				"NavigationSystem"
+			]
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "EnhancedInput",
+			"Enabled": true
+		},
+		{
+			"Name": "Niagara",
+			"Enabled": true
+		}
+	]
+}

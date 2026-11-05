@@ -1,0 +1,21 @@
+# Dependências Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Compilação e Builds temporários
+dist/
+build/
+*.tsbuildinfo
+
+# Logs e Temporários
+*.log
+.system_generated/
+.basinfy/
+
+# Sistema Operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp

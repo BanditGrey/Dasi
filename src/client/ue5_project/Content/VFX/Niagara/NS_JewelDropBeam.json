@@ -1,0 +1,144 @@
+{
+  "AssetType": "NiagaraSystem",
+  "AssetName": "NS_JewelDropBeam",
+  "Version": "5.4.0",
+  "Description": "Vertical celestial beacon pillar piercing skyward upon Jewel of Blessing / Soul drop with ground shockwaves, vortex sparks, and omnidirectional flash.",
+  "SystemParameters": [
+    { "Name": "JewelType", "Type": "Enum", "Default": "JewelOfBlessing", "Options": ["JewelOfBlessing", "JewelOfSoul", "JewelOfChaos", "JewelOfLife", "JewelOfCreation"] },
+    { "Name": "BeamColorCore", "Type": "FLinearColor", "Default": { "R": 0.15, "G": 0.85, "B": 1.0, "A": 1.0 } },
+    { "Name": "BeamColorAura", "Type": "FLinearColor", "Default": { "R": 0.05, "G": 0.35, "B": 0.95, "A": 1.0 } },
+    { "Name": "BeamHeight", "Type": "float", "Default": 25000.0 },
+    { "Name": "BeamRadius", "Type": "float", "Default": 45.0 },
+    { "Name": "ShockwaveRadius", "Type": "float", "Default": 350.0 },
+    { "Name": "DropLuminescenceHDR", "Type": "float", "Default": 150.0 }
+  ],
+  "Emitters": [
+    {
+      "Name": "Emitter_CelestialLightPillar",
+      "EmitterType": "MeshRenderer",
+      "Properties": {
+        "MeshAsset": "/Engine/BasicShapes/Cylinder.Cylinder",
+        "MaterialOverride": "/Game/Materials/VFX/M_JewelPillarBeam.M_JewelPillarBeam",
+        "FacingMode": "Velocity",
+        "SortMode": "ViewDistance"
+      },
+      "SpawnScript": {
+        "ExecutionMode": "SpawnBurst_Once",
+        "BurstCount": 1,
+        "SpawnTime": 0.0,
+        "Lifetime": 4.5,
+        "InitialScale": { "X": 0.45, "Y": 0.45, "Z": 250.0 },
+        "ModuleStack": [
+          { "Module": "SpawnBurstInstantaneous", "Count": 1 },
+          { "Module": "SetInitialMeshScale", "Scale": { "X": 0.1, "Y": 0.1, "Z": 250.0 } },
+          { "Module": "SetInitialColor", "Color": "System.BeamColorCore" }
+        ]
+      },
+      "UpdateScript": {
+        "ModuleStack": [
+          { "Module": "LifeCycle", "Mode": "KillAtLifetime" },
+          { 
+            "Module": "ScaleMeshByCurve",
+            "CurveX": [ { "Time": 0.0, "Val": 0.1 }, { "Time": 0.08, "Val": 1.8 }, { "Time": 0.25, "Val": 1.0 }, { "Time": 3.8, "Val": 0.9 }, { "Time": 4.5, "Val": 0.0 } ],
+            "CurveY": [ { "Time": 0.0, "Val": 0.1 }, { "Time": 0.08, "Val": 1.8 }, { "Time": 0.25, "Val": 1.0 }, { "Time": 3.8, "Val": 0.9 }, { "Time": 4.5, "Val": 0.0 } ],
+            "CurveZ": [ { "Time": 0.0, "Val": 1.0 }, { "Time": 4.5, "Val": 1.0 } ]
+          },
+          {
+            "Module": "ColorOverLife",
+            "AlphaCurve": [ { "Time": 0.0, "Val": 0.0 }, { "Time": 0.04, "Val": 1.0 }, { "Time": 0.8, "Val": 0.9 }, { "Time": 4.5, "Val": 0.0 } ]
+          }
+        ]
+      }
+    },
+    {
+      "Name": "Emitter_GroundShockwaveRings",
+      "EmitterType": "SpriteRenderer",
+      "Properties": {
+        "Alignment": "CustomFacingVector",
+        "CustomFacingVector": { "X": 0.0, "Y": 0.0, "Z": 1.0 },
+        "SubUVAnimation": { "NumSubUV": 1 }
+      },
+      "SpawnScript": {
+        "ExecutionMode": "SpawnBurst_Multiple",
+        "BurstList": [
+          { "Time": 0.00, "Count": 1 },
+          { "Time": 0.12, "Count": 1 },
+          { "Time": 0.25, "Count": 1 }
+        ],
+        "Lifetime": 1.2,
+        "ModuleStack": [
+          { "Module": "SetSpriteSize", "Size": { "X": 20.0, "Y": 20.0 } },
+          { "Module": "SetInitialColor", "Color": "System.BeamColorAura" }
+        ]
+      },
+      "UpdateScript": {
+        "ModuleStack": [
+          {
+            "Module": "ScaleSpriteSizeByCurve",
+            "Curve": [ { "Time": 0.0, "Val": 20.0 }, { "Time": 0.3, "Val": 280.0 }, { "Time": 1.2, "Val": 450.0 } ]
+          },
+          {
+            "Module": "ColorOverLife",
+            "AlphaCurve": [ { "Time": 0.0, "Val": 1.0 }, { "Time": 0.4, "Val": 0.7 }, { "Time": 1.2, "Val": 0.0 } ]
+          }
+        ]
+      }
+    },
+    {
+      "Name": "Emitter_AscendingVortexSparks",
+      "EmitterType": "SpriteRenderer",
+      "Properties": {
+        "Alignment": "VelocityAligned",
+        "MaterialOverride": "/Game/Materials/VFX/M_SparkParticle.M_SparkParticle"
+      },
+      "SpawnScript": {
+        "ExecutionMode": "RateSpawning",
+        "SpawnRate": 160.0,
+        "Duration": 3.5,
+        "LifetimeMin": 1.5,
+        "LifetimeMax": 2.8,
+        "ModuleStack": [
+          { "Module": "SpawnRate", "Rate": 160.0 },
+          { "Module": "SphereLocation", "Radius": 65.0, "SurfaceOnly": false },
+          { "Module": "AddVelocityInCone", "VelocityMin": 180.0, "VelocityMax": 420.0, "ConeAngle": 25.0, "ConeAxis": { "X": 0.0, "Y": 0.0, "Z": 1.0 } }
+        ]
+      },
+      "UpdateScript": {
+        "ModuleStack": [
+          { "Module": "VortexForce", "VortexAxis": { "X": 0.0, "Y": 0.0, "Z": 1.0 }, "Origin": { "X": 0.0, "Y": 0.0, "Z": 0.0 }, "Amount": 380.0 },
+          { "Module": "CurlNoiseForce", "NoiseFrequency": 0.025, "NoiseStrength": 80.0 },
+          { "Module": "Drag", "DragCoefficient": 0.35 },
+          {
+            "Module": "ColorOverLife",
+            "ColorMultiplierCurve": [ { "Time": 0.0, "Val": 8.0 }, { "Time": 0.5, "Val": 15.0 }, { "Time": 1.0, "Val": 0.0 } ]
+          },
+          {
+            "Module": "ScaleSpriteSizeByCurve",
+            "Curve": [ { "Time": 0.0, "Val": 4.0 }, { "Time": 0.2, "Val": 9.0 }, { "Time": 1.0, "Val": 0.5 } ]
+          }
+        ]
+      }
+    },
+    {
+      "Name": "Emitter_PointLightImpact",
+      "EmitterType": "LightRenderer",
+      "Properties": {
+        "bUseInverseSquaredFalloff": true,
+        "Radius": 850.0,
+        "ColorAdd": "System.BeamColorCore"
+      },
+      "SpawnScript": {
+        "BurstCount": 1,
+        "Lifetime": 1.8
+      },
+      "UpdateScript": {
+        "ModuleStack": [
+          {
+            "Module": "LightIntensityOverLife",
+            "IntensityCurve": [ { "Time": 0.0, "Val": 80000.0 }, { "Time": 0.15, "Val": 35000.0 }, { "Time": 1.8, "Val": 0.0 } ]
+          }
+        ]
+      }
+    }
+  ]
+}

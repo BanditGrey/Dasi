@@ -1,0 +1,201 @@
+// ============================================================================
+// DASI MMORPG - UNREAL ENGINE 5 UI MATERIAL MASTER HLSL INCLUDE
+// M_UI_FluidOrb_Master.ush
+//
+// 100% 3D Native Master Material for Health & Mana HUD Orbs.
+// Merges:
+//   1. Volumetric fluid core with Beer-Lambert absorption, sloshing, and meniscus.
+//   2. Exterior faceted crystal glass with Snell refraction (IOR 1.52) & Fresnel.
+//   3. Gothic gold filigree ornamental claw armature (Metallic PBR).
+//
+// Included inside UE5 Material Custom HLSL Nodes:
+//   #include "/Project/Materials/HLSL/MF_FluidVolume_Include.ush"
+//   #include "/Project/Materials/UI/M_UI_FluidOrb_Master.ush"
+// ============================================================================
+
+#ifndef M_UI_FLUID_ORB_MASTER_USH
+#define M_UI_FLUID_ORB_MASTER_USH
+
+#include "/Project/Materials/HLSL/MF_FluidVolume_Include.ush"
+
+// ----------------------------------------------------------------------------
+// STRUCTURE FOR COMPOSITED FLUID ORB MASTER PBR OUTPUT
+// ----------------------------------------------------------------------------
+struct FFluidOrbMasterOutput
+{
+	float3 BaseColor;
+	float3 EmissiveColor;
+	float3 WorldNormal;
+	float  Metallic;
+	float  Specular;
+	float  Roughness;
+	float  Opacity;
+	float  Refraction;
+};
+
+// ----------------------------------------------------------------------------
+// PROCEDURAL FACET CUT PATTERN FOR CRYSTAL GLASS
+// Simulates diamond/rhombus bevel cuts into the outer spherical glass
+// ----------------------------------------------------------------------------
+float3 ComputeFacetedGlassNormal(
+	float3 LocalNormal,
+	float2 UV,
+	float  FacetDensity,
+	float  FacetBevelIntensity)
+{
+	// Polar/Spherical coordinates facet lattice
+	float2 facetUV = UV * FacetDensity;
+	float2 gridID = floor(facetUV);
+	float2 gridFrac = frac(facetUV) - 0.5f;
+
+	// Rhomboid / Diamond Voronoi distance
+	float distManhattan = abs(gridFrac.x) + abs(gridFrac.y);
+	float bevelEdge = saturate((0.5f - distManhattan) * 12.0f);
+	
+	// Gradient slope for facet bevel
+	float2 facetGrad = sign(gridFrac) * (1.0f - bevelEdge) * FacetBevelIntensity;
+
+	// Perturb surface normal along tangent directions
+	float3 perturbed = normalize(LocalNormal + float3(facetGrad.x, facetGrad.y, 0.0f));
+	return perturbed;
+}
+
+// ----------------------------------------------------------------------------
+// GOTHIC GOLD ORNAMENTAL ARMATURE MASK
+// Procedural or texture-backed gothic filigree claw wrapping around the orb
+// ----------------------------------------------------------------------------
+float ComputeGothicGoldArmatureMask(
+	float3 LocalPos,
+	float2 UV,
+	Texture2D ArmatureMaskTex,
+	SamplerState SamplerLinear,
+	bool bUseProceduralFallback)
+{
+	if (!bUseProceduralFallback)
+	{
+		return ArmatureMaskTex.Sample(SamplerLinear, UV).r;
+	}
+
+	// Procedural 3D Gothic claw armature wrapping the lower hemisphere and rim
+	// Rim ring at Z ~ 0.0 and bottom dragon pedestal at Z < -0.6
+	float equatorRing = 1.0f - smoothstep(0.0f, 0.08f, abs(LocalPos.z));
+	float bottomBase  = smoothstep(-0.65f, -0.85f, LocalPos.z);
+
+	// 4 cardinal dragon claws arching upward
+	float angle = atan2(LocalPos.y, LocalPos.x);
+	float 4Claws = cos(angle * 4.0f);
+	float clawRibs = smoothstep(0.75f, 0.95f, 4Claws) * smoothstep(0.5f, -0.6f, LocalPos.z);
+
+	// Filigree rune knotwork pattern
+	float filigree = sin(angle * 12.0f + LocalPos.z * 15.0f) * cos(angle * 8.0f);
+	float filigreeMask = smoothstep(0.6f, 0.85f, filigree) * smoothstep(-0.4f, 0.2f, LocalPos.z);
+
+	return saturate(equatorRing * 0.8f + bottomBase + clawRibs + filigreeMask * 0.5f);
+}
+
+// ----------------------------------------------------------------------------
+// MASTER EVALUATION FUNCTION
+// ----------------------------------------------------------------------------
+FFluidOrbMasterOutput EvaluateFluidOrbMaster(
+	// Spatial & View vectors (Local Object Space)
+	float3 LocalPosition,          // Pixel position on orb mesh (Sphere radius = 1.0)
+	float3 LocalNormal,            // Geometric mesh normal
+	float3 LocalCameraPosition,    // Local space camera origin
+	float2 UV,
+	// Textures
+	Texture2D ArmatureMaskTex,     // Gothic gold filigree mask
+	Texture2D NormalDetailTex,     // Micro-scratches and glass impurities
+	SamplerState SamplerLinear,
+	// Fluid Parameters
+	float  FillPercent,            // [0.0 to 1.0]
+	bool   bIsManaOrb,             // False = HP (Ruby), True = MP (Cobalt)
+	float3 HeroAcceleration,       // Character movement inertia
+	float  TurbulenceIntensity,    // Combat damage sloshing
+	float  GlobalTime,
+	// Glass Parameters
+	float  GlassIOR,               // e.g. 1.52 (Crystal Glass)
+	float  FacetDensity,           // e.g. 14.0
+	float  FacetBevelIntensity,    // e.g. 0.35
+	float3 CustomFluidGlowColor)
+{
+	FFluidOrbMasterOutput Out;
+
+	// 1. Ray setup from Camera to current pixel on outer glass sphere
+	float3 rayDir = normalize(LocalPosition - LocalCameraPosition);
+	float3 rayOrigin = LocalCameraPosition;
+
+	// 2. Evaluate Gothic Gold Armature Mask
+	float goldMask = ComputeGothicGoldArmatureMask(LocalPosition, UV, ArmatureMaskTex, SamplerLinear, true);
+
+	// 3. Faceted Glass Normal & Imperfection Detail
+	float3 facetedNormal = ComputeFacetedGlassNormal(LocalNormal, UV, FacetDensity, FacetBevelIntensity);
+	float4 microDetail = NormalDetailTex.Sample(SamplerLinear, UV * 8.0f);
+	float3 glassNormal = normalize(facetedNormal + (microDetail.xyz * 2.0f - 1.0f) * 0.04f);
+
+	// 4. Snell-Descartes Refraction inside glass shell (IOR 1.52)
+	// Refract incident camera ray into the fluid interior
+	float eta = 1.0f / max(1.001f, GlassIOR); // Air (1.0) to Glass (1.52)
+	float3 refractedRayDir = refract(rayDir, glassNormal, eta);
+	if (length(refractedRayDir) < 0.001f)
+	{
+		refractedRayDir = rayDir; // Total internal reflection fallback
+	}
+
+	// 5. Evaluate Volumetric Liquid via Ray-Marching (MF_FluidVolume_Include)
+	FFluidVolumeResult fluidRes = EvaluateVolumetricFluidOrb(
+		LocalPosition,             // Ray begins at inner boundary of glass
+		refractedRayDir,
+		FillPercent,
+		bIsManaOrb,
+		HeroAcceleration,
+		TurbulenceIntensity,
+		GlobalTime,
+		CustomFluidGlowColor
+	);
+
+	// 6. Fresnel Effect on Crystal Glass Shell (Schlick's Approximation)
+	// F0 for crystal glass (n = 1.52) is ~0.043
+	float F0_Glass = 0.043f;
+	float cosTheta = saturate(dot(-rayDir, glassNormal));
+	float fresnelGlass = F0_Glass + (1.0f - F0_Glass) * pow(1.0f - cosTheta, 5.0f);
+
+	// 7. PBR Channel Compositing:
+	// Blend between:
+	//   A. Gothic Gold Filigree (Metallic, High Specular, Warm Gold Albedo)
+	//   B. Translucent Crystal Glass + Inner Glowing Fluid
+	
+	// Gothic Gold Metallic Properties
+	float3 goldAlbedo = float3(0.95f, 0.78f, 0.35f); // 24k burnished medieval gold
+	float  goldMetallic = 0.95f;
+	float  goldRoughness = 0.28f;
+	float  goldSpecular = 0.90f;
+
+	// Glass Outer Properties
+	float3 glassBase = float3(0.01f, 0.015f, 0.02f);
+	float  glassMetallic = 0.0f;
+	float  glassRoughness = lerp(0.03f, 0.12f, fresnelGlass); // Ultra-glossy, slight rough rim
+
+	// Final PBR Outputs
+	Out.BaseColor = lerp(
+		glassBase + fluidRes.BaseColor,
+		goldAlbedo,
+		goldMask
+	);
+
+	// Emissive combines inner liquid Beer-Lambert radiance + foam sparkle + gold rim glint
+	float3 goldEdgeGlint = goldAlbedo * pow(saturate(dot(-rayDir, glassNormal)), 8.0f) * 0.4f * goldMask;
+	Out.EmissiveColor = fluidRes.EmissiveColor * (1.0f - goldMask) + goldEdgeGlint;
+
+	Out.WorldNormal = lerp(glassNormal, LocalNormal, goldMask);
+	Out.Metallic = lerp(glassMetallic, goldMetallic, goldMask);
+	Out.Specular = lerp(lerp(0.5f, 0.95f, fresnelGlass), goldSpecular, goldMask);
+	Out.Roughness = lerp(glassRoughness, goldRoughness, goldMask);
+	
+	// Opacity and Refraction for UE5 Translucent / DefaultLit mode
+	Out.Opacity = lerp(saturate(fluidRes.Opacity + fresnelGlass * 0.85f), 1.0f, goldMask);
+	Out.Refraction = lerp(GlassIOR, 1.0f, goldMask);
+
+	return Out;
+}
+
+#endif // M_UI_FLUID_ORB_MASTER_USH

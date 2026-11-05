@@ -1,0 +1,322 @@
+// ============================================================================
+// DASI MMORPG - Unreal Engine 5 Custom HLSL Include
+// MF_ItemGlow_Include.ush
+//
+// Formatted for direct inclusion inside UE5 Material Custom HLSL Nodes:
+//   #include "/Project/Materials/HLSL/MF_ItemGlow_Include.ush"
+//
+// Refinement Level Visual Progression (+0 to +15):
+//   +0  to +6 : Baseline PBR (No emissive addition)
+//   +7  to +8 : Breathing Runic Core Glow & Inverted Fresnel Rim
+//   +9  to +10: Radiance Aura + High-Frequency Crystal Sparkle Glints
+//   +11 to +12: Sine Wave Prismatic Energy Dispersions & Micro Lightning Arcs
+//   +13 to +14: Turbulent Heat-Haze Refraction & Blinding Volumetric Corona
+//   +15       : Godly Sovereign Celestial Rainbow Flare
+// ============================================================================
+
+#ifndef MF_ITEM_GLOW_INCLUDE_USH
+#define MF_ITEM_GLOW_INCLUDE_USH
+
+// ----------------------------------------------------------------------------
+// CONSTANTS
+// ----------------------------------------------------------------------------
+static const float DASI_PI = 3.14159265359f;
+static const float DASI_TWO_PI = 6.28318530718f;
+
+// ----------------------------------------------------------------------------
+// NOISE & PSEUDO-RANDOM GENERATORS
+// ----------------------------------------------------------------------------
+float Dasi_Hash13(float3 p3)
+{
+	p3  = frac(p3 * 0.1031f);
+	p3 += dot(p3, p3.yzx + 33.33f);
+	return frac((p3.x + p3.y) * p3.z);
+}
+
+float3 Dasi_Hash33(float3 p3)
+{
+	p3 = frac(p3 * float3(0.1031f, 0.1030f, 0.0973f));
+	p3 += dot(p3, p3.yxz + 33.33f);
+	return frac((p3.xxy + p3.yxx) * p3.zyx);
+}
+
+float Dasi_ValueNoise3D(float3 p)
+{
+	float3 i = floor(p);
+	float3 f = frac(p);
+	f = f * f * (3.0f - 2.0f * f);
+
+	float n000 = Dasi_Hash13(i + float3(0, 0, 0));
+	float n100 = Dasi_Hash13(i + float3(1, 0, 0));
+	float n010 = Dasi_Hash13(i + float3(0, 1, 0));
+	float n110 = Dasi_Hash13(i + float3(1, 1, 0));
+	float n001 = Dasi_Hash13(i + float3(0, 0, 1));
+	float n101 = Dasi_Hash13(i + float3(1, 0, 1));
+	float n011 = Dasi_Hash13(i + float3(0, 1, 1));
+	float n111 = Dasi_Hash13(i + float3(1, 1, 1));
+
+	float x00 = lerp(n000, n100, f.x);
+	float x10 = lerp(n010, n110, f.x);
+	float x01 = lerp(n001, n101, f.x);
+	float x11 = lerp(n011, n111, f.x);
+
+	float y0 = lerp(x00, x10, f.y);
+	float y1 = lerp(x01, x11, f.y);
+
+	return lerp(y0, y1, f.z);
+}
+
+float Dasi_FBM3D(float3 p, int octaves)
+{
+	float value = 0.0f;
+	float amplitude = 0.5f;
+	float frequency = 1.0f;
+
+	for (int o = 0; o < octaves; ++o)
+	{
+		value += amplitude * Dasi_ValueNoise3D(p * frequency);
+		frequency *= 2.0f;
+		amplitude *= 0.5f;
+	}
+	return value;
+}
+
+// ----------------------------------------------------------------------------
+// LAYER 1: BREATHING RUNIC ENGRAVING GLOW (+7 to +8)
+// ----------------------------------------------------------------------------
+float3 Dasi_CalculateRuneGlow(
+	float3 WorldNormal,
+	float3 ViewDirection,
+	float  RuneMask,
+	float3 AuraColorPrimary,
+	float  Time,
+	float  PulseSpeed)
+{
+	float breathing = 0.75f + 0.25f * sin(Time * PulseSpeed * 2.2f);
+	float NdotV = saturate(dot(WorldNormal, ViewDirection));
+	float fresnel = pow(1.0f - NdotV, 3.5f);
+
+	float runeIntensity = RuneMask * 3.5f * breathing;
+	float rimInterior = fresnel * 1.8f * breathing;
+
+	return AuraColorPrimary * (runeIntensity + rimInterior);
+}
+
+// ----------------------------------------------------------------------------
+// LAYER 2: OUTER AURA & STOCHASTIC CRYSTAL SPARKLES (+9 to +10)
+// ----------------------------------------------------------------------------
+float3 Dasi_CalculateSparkleAura(
+	float3 WorldPosition,
+	float3 WorldNormal,
+	float3 ViewDirection,
+	float3 AuraColorPrimary,
+	float3 AuraColorSecondary,
+	float  Time)
+{
+	float NdotV = saturate(dot(WorldNormal, ViewDirection));
+	float outerRim = pow(1.0f - NdotV, 2.0f) * 4.0f;
+
+	// High frequency facet alignment
+	float3 sparkleCoord = WorldPosition * 0.45f; // Scaled for UE5 centimeter world space
+	float3 randDir = Dasi_Hash33(floor(sparkleCoord));
+
+	float3 lightDir = normalize(float3(0.577f, 0.577f, 0.577f));
+	float3 halfVec = normalize(ViewDirection + lightDir);
+	float facetAlignment = saturate(dot(randDir, halfVec));
+
+	float blink = sin(Time * 8.0f + Dasi_Hash13(floor(sparkleCoord)) * DASI_TWO_PI);
+	float glint = pow(facetAlignment, 32.0f) * step(0.6f, blink) * 12.0f;
+
+	float3 auraTint = lerp(AuraColorPrimary, AuraColorSecondary, 0.35f);
+	return (outerRim * auraTint) + (glint * float3(1.0f, 1.0f, 1.0f));
+}
+
+// ----------------------------------------------------------------------------
+// LAYER 3: CHROMATIC SINUSOIDAL WAVES & MICRO-ARCS (+11 to +12)
+// ----------------------------------------------------------------------------
+float3 Dasi_CalculateChromaticEnergyWaves(
+	float3 WorldPosition,
+	float3 AuraColorPrimary,
+	float3 AuraColorSecondary,
+	float  Time,
+	float  ArcDispersion)
+{
+	// Vertical wave propagation (Z-axis up in Unreal Engine 5 coordinate system)
+	float waveSpeed = 3.5f;
+	float waveFreq = 0.05f; // Frequency per centimeter
+	float phaseBase = WorldPosition.z * waveFreq - Time * waveSpeed;
+
+	// Prismatic RGB wavelength shift
+	float waveR = sin(phaseBase);
+	float waveG = sin(phaseBase + 0.35f);
+	float waveB = sin(phaseBase + 0.70f);
+
+	float3 chromaticPeak = float3(
+		pow(max(0.0f, waveR), 4.0f),
+		pow(max(0.0f, waveG), 4.0f),
+		pow(max(0.0f, waveB), 4.0f)
+	);
+
+	// Electrical micro-arc crackling
+	float arcNoise = Dasi_FBM3D(WorldPosition * 0.12f + float3(0, 0, Time * 6.0f), 2);
+	float electricArc = step(0.72f, arcNoise) * 6.0f * ArcDispersion;
+
+	return (chromaticPeak * 8.0f * AuraColorPrimary) + (electricArc * AuraColorSecondary);
+}
+
+// ----------------------------------------------------------------------------
+// LAYER 4: HEAT-HAZE REFRACTION & VOLUMETRIC CORONA (+13 to +15)
+// ----------------------------------------------------------------------------
+void Dasi_CalculateHeatHazeAndCorona(
+	float3 WorldPosition,
+	float3 WorldNormal,
+	float3 ViewDirection,
+	float  RefineLevel,
+	float  Time,
+	float  HeatHazeStrength,
+	float  CoronaIntensity,
+	float3 AuraColorPrimary,
+	out float3 OutCoronaGlow,
+	out float2 OutHeatHazeOffset)
+{
+	// 1. Turbulent Heat Haze Distortion (Centimeters to meters space)
+	float3 hazeCoord = WorldPosition * 0.025f + float3(0.0f, 0.0f, -Time * 3.0f);
+	float noiseX = Dasi_FBM3D(hazeCoord, 3) - 0.5f;
+	float noiseY = Dasi_FBM3D(hazeCoord + float3(12.3f, 4.5f, 8.1f), 3) - 0.5f;
+
+	float tierScale = 1.0f + max(0.0f, RefineLevel - 13.0f) * 0.6f;
+	float distortionMag = 0.025f * HeatHazeStrength * tierScale;
+
+	float NdotV = saturate(dot(WorldNormal, ViewDirection));
+	float silhouette = pow(1.0f - NdotV, 1.5f);
+
+	OutHeatHazeOffset = float2(noiseX, noiseY) * distortionMag * silhouette;
+
+	// 2. Volumetric Corona Radiance Flare
+	float coronaFalloff = pow(1.0f - NdotV, 1.2f);
+	float flarePulse = 1.0f 
+		+ 0.15f * sin(Time * 5.0f) 
+		+ 0.10f * sin(Time * 11.3f)
+		+ 0.05f * cos(Time * 23.7f);
+
+	float3 flareColor = AuraColorPrimary * (coronaFalloff * CoronaIntensity * flarePulse);
+
+	// Godly White-Gold celestial core on +15
+	if (RefineLevel >= 15.0f)
+	{
+		flareColor += float3(0.9f, 0.95f, 1.0f) * pow(1.0f - NdotV, 0.8f) * 8.0f;
+	}
+
+	OutCoronaGlow = flareColor;
+}
+
+// ============================================================================
+// MAIN UNIFIED ENTRY POINT FOR UE5 CUSTOM MATERIAL NODE
+//
+// In UE5 Custom HLSL Node:
+// Inputs:
+//   float3 WorldPos
+//   float3 WorldNormal
+//   float3 CameraVector (Normalized ViewDirection pointing to camera)
+//   float2 UV
+//   float  RuneMask
+//   float  RefineLevel
+//   float  Time
+//   float3 AuraColorPrimary
+//   float3 AuraColorSecondary
+//   float  PulseSpeed
+//   float  ArcDispersion
+//   float  CoronaIntensity
+//   float  HeatHazeStrength
+//
+// Outputs:
+//   float4 (RGB: Emissive HDR Color, A: Heat Haze UV Distortion Magnitude)
+// ============================================================================
+float4 Dasi_EvaluateItemRefinementGlow(
+	float3 WorldPos,
+	float3 WorldNormal,
+	float3 CameraVector,
+	float2 UV,
+	float  RuneMask,
+	float  RefineLevel,
+	float  Time,
+	float3 AuraColorPrimary,
+	float3 AuraColorSecondary,
+	float  PulseSpeed,
+	float  ArcDispersion,
+	float  CoronaIntensity,
+	float  HeatHazeStrength)
+{
+	float3 totalEmissive = float3(0.0f, 0.0f, 0.0f);
+	float heatHazeMagnitude = 0.0f;
+
+	if (RefineLevel < 7.0f)
+	{
+		return float4(0.0f, 0.0f, 0.0f, 0.0f);
+	}
+
+	// +7 to +8: Runic Core Glow
+	if (RefineLevel >= 7.0f)
+	{
+		totalEmissive += Dasi_CalculateRuneGlow(
+			WorldNormal, 
+			CameraVector, 
+			RuneMask, 
+			AuraColorPrimary, 
+			Time, 
+			PulseSpeed
+		);
+	}
+
+	// +9 to +10: Outer Aura + Sparkles
+	if (RefineLevel >= 9.0f)
+	{
+		totalEmissive += Dasi_CalculateSparkleAura(
+			WorldPos, 
+			WorldNormal, 
+			CameraVector, 
+			AuraColorPrimary, 
+			AuraColorSecondary, 
+			Time
+		);
+	}
+
+	// +11 to +12: Traveling Chromatic Sine Waves & Micro Arcs
+	if (RefineLevel >= 11.0f)
+	{
+		totalEmissive += Dasi_CalculateChromaticEnergyWaves(
+			WorldPos, 
+			AuraColorPrimary, 
+			AuraColorSecondary, 
+			Time, 
+			ArcDispersion
+		);
+	}
+
+	// +13 to +15: Volumetric Corona Flare & Heat Haze
+	if (RefineLevel >= 13.0f)
+	{
+		float3 coronaGlow = float3(0.0f, 0.0f, 0.0f);
+		float2 hazeOffset = float2(0.0f, 0.0f);
+
+		Dasi_CalculateHeatHazeAndCorona(
+			WorldPos,
+			WorldNormal,
+			CameraVector,
+			RefineLevel,
+			Time,
+			HeatHazeStrength,
+			CoronaIntensity,
+			AuraColorPrimary,
+			coronaGlow,
+			hazeOffset
+		);
+
+		totalEmissive += coronaGlow;
+		heatHazeMagnitude = length(hazeOffset);
+	}
+
+	return float4(totalEmissive, heatHazeMagnitude);
+}
+
+#endif // MF_ITEM_GLOW_INCLUDE_USH

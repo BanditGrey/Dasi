@@ -1,0 +1,265 @@
+// ============================================================================
+// DASI MMORPG - Unreal Engine 5 Custom HLSL Include
+// MF_OceanCaustics_Include.ush
+//
+// Formatted for direct inclusion inside UE5 Material Custom HLSL Nodes:
+//   #include "/Project/Materials/HLSL/MF_OceanCaustics_Include.ush"
+//
+// Features for Atlans (Thalassa Coral Depths & Sunken Ruins):
+//   1. Procedural Dual-Phase Voronoi Solar Caustics with Chromatic Dispersion
+//   2. Spectral Exponential Depth Extinction (Beer-Lambert Law)
+//   3. Underwater Volumetric In-Scattering & Deep Sea Marine Haze
+//   4. Surface Wave Refraction UV Perturbation for Seabed & Coral Meshes
+// ============================================================================
+
+#ifndef MF_OCEAN_CAUSTICS_INCLUDE_USH
+#define MF_OCEAN_CAUSTICS_INCLUDE_USH
+
+static const float OC_PI = 3.14159265359f;
+
+// ----------------------------------------------------------------------------
+// 2D HASH & VORONOI NOISE UTILITIES
+// ----------------------------------------------------------------------------
+float2 OC_Hash22(float2 p)
+{
+	float3 p3 = frac(float3(p.xyx) * float3(0.1031f, 0.1030f, 0.0973f));
+	p3 += dot(p3, p3.yzx + 33.33f);
+	return frac((p3.xx + p3.yz) * p3.zy);
+}
+
+// Computes distance to nearest Voronoi cell feature points (F1 & F2)
+float2 OC_VoronoiDistance(float2 p)
+{
+	float2 n = floor(p);
+	float2 f = frac(p);
+
+	float d1 = 8.0f;
+	float d2 = 8.0f;
+
+	[unroll]
+	for (int j = -1; j <= 1; ++j)
+	{
+		[unroll]
+		for (int i = -1; i <= 1; ++i)
+		{
+			float2 g = float2((float)i, (float)j);
+			float2 o = OC_Hash22(n + g);
+			// Jitter feature point with slight sinusoidal wave motion
+			float2 pos = g + o;
+			float d = length(f - pos);
+
+			if (d < d1)
+			{
+				d2 = d1;
+				d1 = d;
+			}
+			else if (d < d2)
+			{
+				d2 = d;
+			}
+		}
+	}
+
+	return float2(d1, d2);
+}
+
+// ----------------------------------------------------------------------------
+// DUAL-PHASE PROCEDURAL CAUSTIC CELL GENERATOR
+// Combines two counter-rotating/traveling Voronoi fields to create sharp caustic ridges
+// ----------------------------------------------------------------------------
+float OC_SingleWavelengthCaustic(float2 UV, float Time, float Scale, float Speed)
+{
+	float2 uv1 = UV * Scale + float2(Time * Speed * 0.7f, Time * Speed * 0.4f);
+	float2 uv2 = UV * Scale * 1.35f + float2(-Time * Speed * 0.5f, Time * Speed * 0.8f);
+
+	float2 v1 = OC_VoronoiDistance(uv1);
+	float2 v2 = OC_VoronoiDistance(uv2);
+
+	// Caustic cell boundary ridges (F2 - F1)
+	float caustic1 = pow(1.0f - saturate(v1.y - v1.x), 3.0f);
+	float caustic2 = pow(1.0f - saturate(v2.y - v2.x), 3.0f);
+
+	// Multiplicative interference creates cellular diamond web
+	return caustic1 * caustic2 * 4.0f;
+}
+
+// ----------------------------------------------------------------------------
+// CHROMATIC DISPERSION CAUSTICS
+// Separates Red, Green, and Blue light paths by wavelength refraction angles
+// ----------------------------------------------------------------------------
+float3 OC_ComputeChromaticCaustics(
+	float2 WorldUV,
+	float  Time,
+	float  CausticScale,
+	float  CausticSpeed,
+	float  DispersionSpread,
+	float  CausticIntensity,
+	float  WaterDepthMeters)
+{
+	// Deeper water widens chromatic fringe dispersion
+	float depthDispersion = DispersionSpread * (1.0f + WaterDepthMeters * 0.15f);
+
+	float2 uvR = WorldUV + float2(depthDispersion, -depthDispersion);
+	float2 uvG = WorldUV;
+	float2 uvB = WorldUV + float2(-depthDispersion, depthDispersion);
+
+	float r = OC_SingleWavelengthCaustic(uvR, Time, CausticScale, CausticSpeed);
+	float g = OC_SingleWavelengthCaustic(uvG, Time, CausticScale, CausticSpeed);
+	float b = OC_SingleWavelengthCaustic(uvB, Time, CausticScale, CausticSpeed);
+
+	// Depth attenuation: Solar caustics decay exponentially beyond ~25-30m
+	float depthFade = exp(-WaterDepthMeters * 0.08f);
+
+	return float3(r, g, b) * CausticIntensity * depthFade;
+}
+
+// ----------------------------------------------------------------------------
+// BEER-LAMBERT EXPONENTIAL SPECTRAL DEPTH EXTINCTION
+// Clean oceanic water: Red absorbed in first 5m, Green survives to 20m, Blue to 60m+
+// ----------------------------------------------------------------------------
+float3 OC_ComputeSpectralDepthAbsorption(
+	float3 BaseColor,
+	float  WaterDepthMeters,
+	float3 AbsorptionCoeff,   // Typically float3(0.22, 0.045, 0.012)
+	float3 WaterDeepAbyssColor)
+{
+	float3 transmittance = exp(-AbsorptionCoeff * WaterDepthMeters);
+	float3 depthFilteredColor = BaseColor * transmittance;
+
+	// In-scattering blend towards oceanic abyssal deep indigo (#000c1e)
+	float inscatterAmount = 1.0f - exp(-WaterDepthMeters * 0.035f);
+	return lerp(depthFilteredColor, WaterDeepAbyssColor, inscatterAmount);
+}
+
+// ----------------------------------------------------------------------------
+// UNIFIED ENTRY POINT FOR ATLANS SEABED & CORAL MATERIALS
+// ----------------------------------------------------------------------------
+struct FOceanCausticResult
+{
+	float3 OutBaseColor;
+	float3 OutEmissiveCaustic;
+	float  DepthAttenuation;
+};
+
+/**
+ * Evaluates underwater color absorption and caustic lighting for seabed and submerged props.
+ */
+FOceanCausticResult Dasi_EvaluateOceanCaustics(
+	float3 BaseColor,
+	float3 WorldPosition,
+	float3 WorldNormal,
+	float  WaterSurfaceZ,           // Unreal Engine Z coordinate of ocean surface
+	float  Time,
+	float  CausticScale,
+	float  CausticSpeed,
+	float  DispersionSpread,
+	float  CausticIntensity,
+	float3 WaterAbsorptionCoeff,    // float3(0.22, 0.045, 0.012)
+	float3 WaterDeepAbyssColor,     // float3(0.0, 0.04, 0.1)
+	float3 SunDirection)
+{
+	FOceanCausticResult Result;
+
+	// Calculate water column depth above this pixel in meters (UE5 100 uu = 1m)
+	float depthMeters = max(0.0f, (WaterSurfaceZ - WorldPosition.z) * 0.01f);
+
+	// Normal upward alignment (sunlight caustics project downwards onto upward facing surfaces)
+	float upwardFactor = saturate(dot(WorldNormal, float3(0.0f, 0.0f, 1.0f)));
+	float sunAlignment = saturate(dot(WorldNormal, SunDirection) * 0.5f + 0.5f);
+	float projectionWeight = upwardFactor * sunAlignment;
+
+	// 1. Spectral Absorption
+	float3 absorbedBaseColor = OC_ComputeSpectralDepthAbsorption(
+		BaseColor,
+		depthMeters,
+		WaterAbsorptionCoeff,
+		WaterDeepAbyssColor
+	);
+
+	// 2. Chromatic Voronoi Caustics
+	float2 worldPlanarUV = WorldPosition.xy * 0.005f; // Centimeter to UV scale
+	float3 caustics = OC_ComputeChromaticCaustics(
+		worldPlanarUV,
+		Time,
+		CausticScale,
+		CausticSpeed,
+		DispersionSpread,
+		CausticIntensity,
+		depthMeters
+	) * projectionWeight;
+
+	Result.OutBaseColor       = absorbedBaseColor;
+	Result.OutEmissiveCaustic = caustics;
+	Result.DepthAttenuation   = exp(-depthMeters * 0.05f);
+
+	return Result;
+}
+
+// ----------------------------------------------------------------------------
+// PACKED HELPER FUNCTIONS FOR UE5 CUSTOM MATERIAL NODE
+// ----------------------------------------------------------------------------
+float4 Dasi_OceanCaustics_EmissiveColor(
+	float3 BaseColor,
+	float3 WorldPosition,
+	float3 WorldNormal,
+	float  WaterSurfaceZ,
+	float  Time,
+	float  CausticScale,
+	float  CausticSpeed,
+	float  DispersionSpread,
+	float  CausticIntensity,
+	float3 WaterAbsorptionCoeff,
+	float3 WaterDeepAbyssColor,
+	float3 SunDirection)
+{
+	FOceanCausticResult R = Dasi_EvaluateOceanCaustics(
+		BaseColor,
+		WorldPosition,
+		WorldNormal,
+		WaterSurfaceZ,
+		Time,
+		CausticScale,
+		CausticSpeed,
+		DispersionSpread,
+		CausticIntensity,
+		WaterAbsorptionCoeff,
+		WaterDeepAbyssColor,
+		SunDirection
+	);
+
+	return float4(R.OutEmissiveCaustic, R.DepthAttenuation);
+}
+
+float4 Dasi_OceanCaustics_FilteredBaseColor(
+	float3 BaseColor,
+	float3 WorldPosition,
+	float3 WorldNormal,
+	float  WaterSurfaceZ,
+	float  Time,
+	float  CausticScale,
+	float  CausticSpeed,
+	float  DispersionSpread,
+	float  CausticIntensity,
+	float3 WaterAbsorptionCoeff,
+	float3 WaterDeepAbyssColor,
+	float3 SunDirection)
+{
+	FOceanCausticResult R = Dasi_EvaluateOceanCaustics(
+		BaseColor,
+		WorldPosition,
+		WorldNormal,
+		WaterSurfaceZ,
+		Time,
+		CausticScale,
+		CausticSpeed,
+		DispersionSpread,
+		CausticIntensity,
+		WaterAbsorptionCoeff,
+		WaterDeepAbyssColor,
+		SunDirection
+	);
+
+	return float4(R.OutBaseColor, 1.0f);
+}
+
+#endif // MF_OCEAN_CAUSTICS_INCLUDE_USH

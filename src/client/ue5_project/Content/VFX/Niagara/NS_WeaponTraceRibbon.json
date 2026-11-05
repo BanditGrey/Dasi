@@ -1,0 +1,115 @@
+{
+  "AssetType": "NiagaraSystem",
+  "AssetName": "NS_WeaponTraceRibbon",
+  "Version": "5.4.0",
+  "Description": "Continuous dual-socket blade arc ribbon emitter responding to item refinement tiers (+0 to +15) with dynamic color, electric arcs, and ember shedding.",
+  "SystemParameters": [
+    { "Name": "RefinementTier", "Type": "int32", "Default": 15 },
+    { "Name": "TraceColorPrimary", "Type": "FLinearColor", "Default": { "R": 1.0, "G": 0.85, "B": 0.3, "A": 1.0 } },
+    { "Name": "TraceColorSecondary", "Type": "FLinearColor", "Default": { "R": 0.2, "G": 0.8, "B": 1.0, "A": 1.0 } },
+    { "Name": "EmissiveLuminanceHDR", "Type": "float", "Default": 45.0 },
+    { "Name": "TrailDuration", "Type": "float", "Default": 0.35 },
+    { "Name": "MeshComponentTarget", "Type": "FNiagaraUserParameterBinding", "Default": "WeaponMeshComponent" },
+    { "Name": "SocketNameRoot", "Type": "FName", "Default": "Weapon_Root" },
+    { "Name": "SocketNameTip", "Type": "FName", "Default": "Weapon_Tip" }
+  ],
+  "Emitters": [
+    {
+      "Name": "Emitter_BladeRibbonSheet",
+      "EmitterType": "RibbonRenderer",
+      "Properties": {
+        "MaterialOverride": "/Game/Materials/VFX/M_WeaponTrace_Refinement.M_WeaponTrace_Refinement",
+        "FacingMode": "Custom",
+        "RibbonTwistMode": "PassThrough",
+        "RibbonUVMode": "NormalizedDistanceOverLife",
+        "TessellationMode": "CustomTessellation",
+        "MaxTessellationPerSegment": 8
+      },
+      "SpawnScript": {
+        "ExecutionMode": "RateSpawning",
+        "SpawnRate": 180.0,
+        "ModuleStack": [
+          { "Module": "SampleSkeletalOrStaticSocketPair", "RootSocket": "User.SocketNameRoot", "TipSocket": "User.SocketNameTip" },
+          { "Module": "SetInitialRibbonWidth", "WidthFromSocketDistance": true },
+          { "Module": "SetInitialColor", "Color": "User.TraceColorPrimary" }
+        ]
+      },
+      "UpdateScript": {
+        "ModuleStack": [
+          { "Module": "LifeCycle", "Mode": "KillAtLifetime", "Lifetime": "User.TrailDuration" },
+          {
+            "Module": "ScaleRibbonWidthOverLife",
+            "WidthCurve": [ { "Time": 0.0, "Val": 1.0 }, { "Time": 0.4, "Val": 0.95 }, { "Time": 0.85, "Val": 0.5 }, { "Time": 1.0, "Val": 0.0 } ]
+          },
+          {
+            "Module": "ColorOverLife",
+            "ColorLerpStart": "User.TraceColorPrimary",
+            "ColorLerpEnd": "User.TraceColorSecondary",
+            "AlphaCurve": [ { "Time": 0.0, "Val": 1.0 }, { "Time": 0.6, "Val": 0.85 }, { "Time": 0.9, "Val": 0.3 }, { "Time": 1.0, "Val": 0.0 } ]
+          }
+        ]
+      }
+    },
+    {
+      "Name": "Emitter_RefinementArcCrackles",
+      "EmitterType": "RibbonRenderer",
+      "Properties": {
+        "MaterialOverride": "/Game/Materials/VFX/M_LightningArc.M_LightningArc",
+        "FacingMode": "Screen"
+      },
+      "SpawnScript": {
+        "ExecutionMode": "RateSpawning",
+        "SpawnRate": 85.0,
+        "LifetimeMin": 0.12,
+        "LifetimeMax": 0.22,
+        "ModuleStack": [
+          { "Module": "SampleSocketWithOffset", "SocketName": "User.SocketNameTip", "OffsetRadius": 12.0 },
+          { "Module": "AddVelocityInCone", "VelocityMin": 60.0, "VelocityMax": 160.0 }
+        ]
+      },
+      "UpdateScript": {
+        "ModuleStack": [
+          { "Module": "JitterPositionNoise", "Frequency": 28.0, "Amplitude": 18.0 },
+          {
+            "Module": "ColorOverLife",
+            "Color": "User.TraceColorSecondary",
+            "AlphaCurve": [ { "Time": 0.0, "Val": 1.0 }, { "Time": 0.1, "Val": 0.9 }, { "Time": 1.0, "Val": 0.0 } ]
+          }
+        ]
+      }
+    },
+    {
+      "Name": "Emitter_RefinementEmbers",
+      "EmitterType": "SpriteRenderer",
+      "Properties": {
+        "Alignment": "VelocityAligned",
+        "MaterialOverride": "/Game/Materials/VFX/M_SparkParticle.M_SparkParticle"
+      },
+      "SpawnScript": {
+        "ExecutionMode": "RateSpawning",
+        "SpawnRate": 90.0,
+        "LifetimeMin": 0.3,
+        "LifetimeMax": 0.6,
+        "ModuleStack": [
+          { "Module": "SampleSocketInterpolated", "SocketRoot": "User.SocketNameRoot", "SocketTip": "User.SocketNameTip" },
+          { "Module": "AddVelocityFromMotionDelta", "Scale": 0.35 }
+        ]
+      },
+      "UpdateScript": {
+        "ModuleStack": [
+          { "Module": "Drag", "DragCoefficient": 1.4 },
+          { "Module": "GravityForce", "Gravity": { "X": 0.0, "Y": 0.0, "Z": -350.0 } },
+          {
+            "Module": "ScaleSpriteSizeByCurve",
+            "Curve": [ { "Time": 0.0, "Val": 4.0 }, { "Time": 0.3, "Val": 6.5 }, { "Time": 1.0, "Val": 0.2 } ]
+          },
+          {
+            "Module": "ColorOverLife",
+            "Color": "User.TraceColorPrimary",
+            "AlphaCurve": [ { "Time": 0.0, "Val": 1.0 }, { "Time": 0.7, "Val": 0.6 }, { "Time": 1.0, "Val": 0.0 } ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,317 @@
+// ============================================================================
+// DASI MMORPG - Unreal Engine 5 Custom HLSL Include
+// MF_GlacialIce_Include.ush
+//
+// Formatted for direct inclusion inside UE5 Material Custom HLSL Nodes:
+//   #include "/Project/Materials/HLSL/MF_GlacialIce_Include.ush"
+//
+// Features for Devias (Fortaleza Gélida de Boreal):
+//   1. Physical Subsurface Scattering (SSS) with Beer-Lambert spectral absorption
+//      - Wavelength-dependent transmission (Deep cyan/aquamarine forward scatter)
+//      - Henyey-Greenstein forward scattering phase function for sun backlight
+//   2. Procedural Dynamic Snow Accumulation:
+//      - Upward World-Normal alignment with configurable slope thresholds
+//      - Wind drift bias (accumulating on leeward faces)
+//   3. Stochastic Micro-Facet Snow Sparkle / Crystal Glints
+//   4. Devias Brazier Thermal Melting Distance Mask
+// ============================================================================
+
+#ifndef MF_GLACIAL_ICE_INCLUDE_USH
+#define MF_GLACIAL_ICE_INCLUDE_USH
+
+static const float GI_PI = 3.14159265359f;
+static const float GI_TWO_PI = 6.28318530718f;
+
+// ----------------------------------------------------------------------------
+// HASH & NOISE UTILITIES
+// ----------------------------------------------------------------------------
+float GI_Hash13(float3 p3)
+{
+	p3  = frac(p3 * 0.1031f);
+	p3 += dot(p3, p3.yzx + 33.33f);
+	return frac((p3.x + p3.y) * p3.z);
+}
+
+float3 GI_Hash33(float3 p3)
+{
+	p3 = frac(p3 * float3(0.1031f, 0.1030f, 0.0973f));
+	p3 += dot(p3, p3.yxz + 33.33f);
+	return frac((p3.xxy + p3.yxx) * p3.zyx);
+}
+
+// ----------------------------------------------------------------------------
+// HENYEY-GREENSTEIN PHASE FUNCTION
+// Simulates forward anisotropic light scattering inside translucent ice
+// ----------------------------------------------------------------------------
+float GI_HenyeyGreensteinPhase(float cosTheta, float g)
+{
+	float g2 = g * g;
+	float denom = 1.0f + g2 - 2.0f * g * cosTheta;
+	return (1.0f - g2) / (4.0f * GI_PI * pow(max(denom, 0.0001f), 1.5f));
+}
+
+// ----------------------------------------------------------------------------
+// SPECTRAL BEER-LAMBERT SUBSURFACE TRANSMISSION
+// ----------------------------------------------------------------------------
+float3 GI_ComputeBeerLambertSSS(
+	float3 ThicknessVector,      // Light travel distance through ice in meters
+	float3 AbsorptionCoeff,      // Typically float3(0.85, 0.22, 0.05) [1/m]
+	float3 DeepScatterColor,     // Typically float3(0.0, 0.65, 0.95)
+	float3 LightDirection,
+	float3 ViewDirection,
+	float  IceTranslucencyPower)
+{
+	// Beer-Lambert wavelength exponential decay
+	float3 transmission = exp(-AbsorptionCoeff * length(ThicknessVector));
+
+	// Forward scattering towards viewer (backlight bleeding)
+	float VdotL = saturate(dot(-LightDirection, ViewDirection));
+	float forwardPhase = pow(VdotL, IceTranslucencyPower);
+
+	// Deep scatter color modulation
+	float3 sssColor = lerp(DeepScatterColor, float3(0.8f, 0.95f, 1.0f), transmission);
+	return sssColor * (transmission + forwardPhase * 0.6f);
+}
+
+// ----------------------------------------------------------------------------
+// MICRO-CRYSTALLINE SNOW SPARKLE / GLINT GENERATOR
+// ----------------------------------------------------------------------------
+float GI_ComputeSnowSparkles(
+	float3 WorldPosition,
+	float3 WorldNormal,
+	float3 ViewDirection,
+	float3 LightDirection,
+	float  SparkleDensity,
+	float  SparkleIntensity)
+{
+	// Centimeter to meter scale adjustment
+	float3 samplePos = WorldPosition * (SparkleDensity * 0.01f);
+	float3 cellID = floor(samplePos);
+
+	float3 facetNormal = normalize(GI_Hash33(cellID) * 2.0f - 1.0f);
+	float3 halfVector = normalize(ViewDirection + LightDirection);
+
+	// Specular micro-facet alignment
+	float NdotH = saturate(dot(facetNormal, halfVector));
+	float sparkleLobe = pow(NdotH, 64.0f);
+
+	// Stochastic blinking based on slight view angle perturbation
+	float jitter = GI_Hash13(cellID);
+	float blink = step(0.82f, jitter);
+
+	return sparkleLobe * blink * SparkleIntensity;
+}
+
+// ----------------------------------------------------------------------------
+// THERMAL BRAZIER MELT MASK
+// Creates thawed circular safe-zones around Devias campfires and braziers
+// ----------------------------------------------------------------------------
+float GI_ComputeThermalMeltMask(
+	float3 WorldPosition,
+	float3 BrazierWorldPos,
+	float  BrazierRadius,
+	float  BrazierFalloff)
+{
+	float distToHeat = distance(WorldPosition, BrazierWorldPos);
+	float meltFactor = 1.0f - saturate((distToHeat - (BrazierRadius - BrazierFalloff)) / max(BrazierFalloff, 0.001f));
+	return meltFactor;
+}
+
+// ----------------------------------------------------------------------------
+// UNIFIED GLACIAL ICE & DYNAMIC SNOW EVALUATION
+// ----------------------------------------------------------------------------
+struct FGlacialIceSnowResult
+{
+	float3 OutBaseColor;
+	float3 OutWorldNormal;
+	float  OutRoughness;
+	float  OutMetallic;
+	float  OutSpecular;
+	float3 OutSubsurfaceColor;
+	float  SnowCoverage;
+};
+
+/**
+ * Evaluates ice subsurface scattering, snow slope accumulation, and sparkle glints.
+ */
+FGlacialIceSnowResult Dasi_EvaluateGlacialIceSnow(
+	float3 IceBaseColor,
+	float3 IceNormalWS,
+	float3 SnowBaseColor,
+	float3 WorldPosition,
+	float3 CameraVector,
+	float3 SunDirection,
+	float3 WindDirection,
+	float  SnowAccumulation,    // [0.0 = Pure Ice, 1.0 = Heavy Blizzard Snow]
+	float  SlopeThreshold,      // Minimum Dot(Normal, Up) for snow (e.g. 0.35)
+	float  SlopeSoftness,       // Edge blend width (e.g. 0.15)
+	float  IceThickness,        // Approximated local thickness in meters
+	float3 AbsorptionCoeff,     // e.g. float3(0.85, 0.22, 0.05)
+	float3 DeepScatterColor,    // e.g. float3(0.0, 0.65, 0.95)
+	float3 BrazierWorldPos,
+	float  BrazierRadius,
+	float  BrazierFalloff,
+	float  SparkleDensity,
+	float  SparkleIntensity)
+{
+	FGlacialIceSnowResult Result;
+
+	// 1. Upward Normal & Wind Drift Alignment
+	float3 worldUp = float3(0.0f, 0.0f, 1.0f);
+	float upAlignment = dot(IceNormalWS, worldUp);
+
+	// Wind drift bias: Snow accumulates on the leeward side of rocks
+	float windAlignment = dot(IceNormalWS, -normalize(WindDirection));
+	float effectiveSlope = upAlignment + windAlignment * 0.2f;
+
+	float snowMask = smoothstep(SlopeThreshold - SlopeSoftness, SlopeThreshold + SlopeSoftness, effectiveSlope);
+	snowMask *= saturate(SnowAccumulation);
+
+	// 2. Devias Thermal Brazier Melting
+	float meltMask = GI_ComputeThermalMeltMask(WorldPosition, BrazierWorldPos, BrazierRadius, BrazierFalloff);
+	snowMask = saturate(snowMask * (1.0f - meltMask));
+
+	// 3. Subsurface Scattering for Deep Glacial Ice
+	float3 sssColor = GI_ComputeBeerLambertSSS(
+		float3(IceThickness, IceThickness, IceThickness),
+		AbsorptionCoeff,
+		DeepScatterColor,
+		SunDirection,
+		CameraVector,
+		3.0f
+	);
+
+	// 4. Micro-Crystal Snow Sparkle
+	float sparkles = GI_ComputeSnowSparkles(
+		WorldPosition,
+		worldUp,
+		CameraVector,
+		SunDirection,
+		SparkleDensity,
+		SparkleIntensity
+	) * snowMask;
+
+	// 5. PBR Surface Blending (Ice vs Snow)
+	// Ice: Translucent deep cyan, very smooth roughness (0.08), high specular
+	// Snow: High diffuse albedo, high roughness (0.75), micro-specular glints
+	float3 compositeSnowColor = SnowBaseColor + float3(sparkles, sparkles, sparkles);
+	float3 finalBaseColor = lerp(IceBaseColor, compositeSnowColor, snowMask);
+
+	float iceRoughness = 0.08f;
+	float snowRoughness = 0.75f;
+	float finalRoughness = lerp(iceRoughness, snowRoughness, snowMask);
+
+	float iceSpecular = 0.55f;
+	float snowSpecular = 0.25f;
+	float finalSpecular = lerp(iceSpecular, snowSpecular, snowMask);
+
+	// When melted, surface turns into wet slippery thawed slush
+	if (meltMask > 0.01f)
+	{
+		finalRoughness = lerp(finalRoughness, 0.03f, meltMask);
+		finalBaseColor = lerp(finalBaseColor, IceBaseColor * 0.7f, meltMask * 0.5f);
+	}
+
+	Result.OutBaseColor       = finalBaseColor;
+	Result.OutWorldNormal     = IceNormalWS;
+	Result.OutRoughness       = finalRoughness;
+	Result.OutMetallic        = 0.0f;
+	Result.OutSpecular        = finalSpecular;
+	Result.OutSubsurfaceColor = sssColor * (1.0f - snowMask);
+	Result.SnowCoverage       = snowMask;
+
+	return Result;
+}
+
+// ----------------------------------------------------------------------------
+// PACKED HELPER FUNCTIONS FOR UE5 CUSTOM MATERIAL NODE
+// ----------------------------------------------------------------------------
+float4 Dasi_GlacialIce_AlbedoRoughness(
+	float3 IceBaseColor,
+	float3 IceNormalWS,
+	float3 SnowBaseColor,
+	float3 WorldPosition,
+	float3 CameraVector,
+	float3 SunDirection,
+	float3 WindDirection,
+	float  SnowAccumulation,
+	float  SlopeThreshold,
+	float  SlopeSoftness,
+	float  IceThickness,
+	float3 AbsorptionCoeff,
+	float3 DeepScatterColor,
+	float3 BrazierWorldPos,
+	float  BrazierRadius,
+	float  BrazierFalloff,
+	float  SparkleDensity,
+	float  SparkleIntensity)
+{
+	FGlacialIceSnowResult R = Dasi_EvaluateGlacialIceSnow(
+		IceBaseColor,
+		IceNormalWS,
+		SnowBaseColor,
+		WorldPosition,
+		CameraVector,
+		SunDirection,
+		WindDirection,
+		SnowAccumulation,
+		SlopeThreshold,
+		SlopeSoftness,
+		IceThickness,
+		AbsorptionCoeff,
+		DeepScatterColor,
+		BrazierWorldPos,
+		BrazierRadius,
+		BrazierFalloff,
+		SparkleDensity,
+		SparkleIntensity
+	);
+
+	return float4(R.OutBaseColor, R.OutRoughness);
+}
+
+float4 Dasi_GlacialIce_SubsurfaceSnowMask(
+	float3 IceBaseColor,
+	float3 IceNormalWS,
+	float3 SnowBaseColor,
+	float3 WorldPosition,
+	float3 CameraVector,
+	float3 SunDirection,
+	float3 WindDirection,
+	float  SnowAccumulation,
+	float  SlopeThreshold,
+	float  SlopeSoftness,
+	float  IceThickness,
+	float3 AbsorptionCoeff,
+	float3 DeepScatterColor,
+	float3 BrazierWorldPos,
+	float  BrazierRadius,
+	float  BrazierFalloff,
+	float  SparkleDensity,
+	float  SparkleIntensity)
+{
+	FGlacialIceSnowResult R = Dasi_EvaluateGlacialIceSnow(
+		IceBaseColor,
+		IceNormalWS,
+		SnowBaseColor,
+		WorldPosition,
+		CameraVector,
+		SunDirection,
+		WindDirection,
+		SnowAccumulation,
+		SlopeThreshold,
+		SlopeSoftness,
+		IceThickness,
+		AbsorptionCoeff,
+		DeepScatterColor,
+		BrazierWorldPos,
+		BrazierRadius,
+		BrazierFalloff,
+		SparkleDensity,
+		SparkleIntensity
+	);
+
+	return float4(R.OutSubsurfaceColor, R.SnowCoverage);
+}
+
+#endif // MF_GLACIAL_ICE_INCLUDE_USH

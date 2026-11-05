@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dasi MMORPG - Dev Viewer & Inventory Inspector</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./libs/three.module.js",
+      "three/addons/": "./libs/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header / Top Bar -->
+    <header class="top-nav">
+      <div class="brand">
+        <div class="crest-icon">⚔️</div>
+        <div class="brand-text">
+          <h1>DASI</h1>
+          <span class="sub-brand">CONTINENT OF LEGEND &bull; DEV CLIENT v1.0</span>
+        </div>
+      </div>
+
+      <div class="server-telemetry">
+        <div class="telemetry-badge" id="conn-status-badge">
+          <span class="status-dot offline" id="status-dot"></span>
+          <span id="conn-status-text">Conectando...</span>
+        </div>
+        <div class="telemetry-badge">
+          <span class="telemetry-label">RTT:</span>
+          <span class="telemetry-val" id="telemetry-rtt">-- ms</span>
+        </div>
+        <div class="telemetry-badge">
+          <span class="telemetry-label">Sessão:</span>
+          <span class="telemetry-val" id="telemetry-session">--</span>
+        </div>
+        <button class="btn-refresh" id="btn-quick-scenery" style="background: linear-gradient(180deg, #d97706, #92400e); border-color: #f59e0b; color: #fff; font-weight: bold; margin-right: 6px;">🏰 Ver Cenários 3D</button>
+        <button class="btn-refresh" id="btn-reconnect" title="Reconectar">🔄 Reconectar</button>
+      </div>
+    </header>
+
+    <!-- Character Banner com Avatar 3D WebGL Interativo -->
+    <div class="char-banner">
+      <div class="char-avatar-container" id="char-avatar-container" title="Clique para trocar de classe ou inspecionar o Avatar 3D">
+        <canvas id="char-avatar-canvas" class="char-avatar-canvas" width="68" height="68"></canvas>
+        <span class="avatar-class-tag" id="avatar-class-tag">DK</span>
+        <div class="avatar-glow-ring"></div>
+      </div>
+      <div class="char-info">
+        <div class="char-name-row">
+          <span class="char-name" id="char-name">Blade Knight</span>
+          <span class="char-class-badge" id="char-class">DK</span>
+          <span class="char-level-badge">Nível <strong id="char-level">250</strong></span>
+          <button class="btn-switch-class-modal" id="btn-switch-class-modal" title="Abrir Salão dos Heróis e Selecionar Classe">⚔️ Trocar Classe (Avatares 3D)</button>
+        </div>
+        <div class="char-stats-strip">
+          <div class="stat-pill stat-free-points" id="pill-free-points" title="Pontos Livres obtidos ao subir de nível (+5 por nível)">
+            <span class="lbl">PTS LIVRES</span> <strong id="stat-points">25</strong>
+          </div>
+          <div class="stat-pill" title="Força: Aumenta dano físico e requisitos de equipamentos">
+            <span class="lbl">FOR</span> <strong id="stat-str">320</strong>
+            <button class="btn-stat-add" data-stat="strength" title="Alocar +1 Ponto em Força">+</button>
+          </div>
+          <div class="stat-pill" title="Agilidade: Aumenta velocidade de ataque, esquiva e defesa">
+            <span class="lbl">AGI</span> <strong id="stat-agi">120</strong>
+            <button class="btn-stat-add" data-stat="agility" title="Alocar +1 Ponto em Agilidade">+</button>
+          </div>
+          <div class="stat-pill" title="Vitalidade: Aumenta HP máximo e resistência SD">
+            <span class="lbl">VIT</span> <strong id="stat-vit">100</strong>
+            <button class="btn-stat-add" data-stat="vitality" title="Alocar +1 Ponto em Vitalidade">+</button>
+          </div>
+          <div class="stat-pill" title="Energia: Aumenta Mana máximo e poder de habilidades">
+            <span class="lbl">ENE</span> <strong id="stat-ene">80</strong>
+            <button class="btn-stat-add" data-stat="energy" title="Alocar +1 Ponto em Energia">+</button>
+          </div>
+        </div>
+      </div>
+      <div class="char-actions-strip">
+        <button class="btn-quick-feature" id="btn-open-afk-modal" title="Visualizar ou Coletar Ganhos de Caça Offline">💤 Caça Offline</button>
+        <button class="btn-quick-feature" id="btn-open-shop-modal" title="Negociar com Ferreiro Han e Pupa das Poções">🏪 Mercadores</button>
+        <button class="btn-quick-feature btn-glow-gold" id="btn-open-chaos-modal" title="Abrir Máquina do Caos de Noria">⚡ Chaos Machine</button>
+      </div>
+      <div class="instructions-pill">
+        💡 <em>Dica: Arraste joias sobre armas ou armaduras para aprimorar (+0 até +15). Clique nos monstros para lutar!</em>
+      </div>
+    </div>
+
+    <!-- View Switcher Tabs -->
+    <div class="view-mode-tabs">
+      <button class="tab-btn active" id="tab-scenery" data-mode="scenery" style="border-color: #38bdf8; color: #7dd3fc; font-weight: bold;">🏰 Cenários 3D (Biomas)</button>
+      <button class="tab-btn" id="tab-combat" data-mode="combat">⚔️ Arena de Combate (Lorencia)</button>
+      <button class="tab-btn" id="tab-bosses" data-mode="bosses">👹 Chefes & Invasões</button>
+      <button class="tab-btn" id="tab-events" data-mode="events">🏆 Arenas & Dungeons</button>
+      <button class="tab-btn" id="tab-inventory" data-mode="inventory">🎒 Forja & Bolsa 8x8</button>
+      <button class="tab-btn" id="tab-split" data-mode="split">⚔️🎒 Visão Simultânea (Arena + Bolsa)</button>
+      <button class="tab-btn" id="tab-viewer3d" data-mode="viewer3d">💎 Heróis & Monstros 3D</button>
+    </div>
+
+    <!-- COMBAT ARENA SECTION -->
+    <section class="panel-box combat-arena-box" id="combat-arena-panel" style="display: none;">
+      <div class="panel-header">
+        <div class="title-with-badge">
+          <span class="panel-title">ARENA DE COMBATE AUTORITATIVO</span>
+          <span class="badge-accent" id="arena-map-badge">PLANÍCIES DE LORENCIA</span>
+        </div>
+        <div class="arena-map-teleport-strip">
+          <span class="map-strip-label">Reino:</span>
+          <button class="btn-map-teleport active-map" id="btn-teleport-lorencia" data-map="LORENCIA" title="Teletransportar para Lorencia [Atalho: 1]">🏰 Lorencia</button>
+          <button class="btn-map-teleport" id="btn-teleport-noria" data-map="NORIA" title="Teletransportar para Noria [Atalho: 2]">🌿 Noria</button>
+          <button class="btn-map-teleport" id="btn-teleport-devias" data-map="DEVIAS" title="Teletransportar para Devias [Atalho: 3]">❄️ Devias</button>
+        </div>
+        <div class="arena-telemetry-strip">
+          <span class="arena-stat-badge">Monstros Vivos: <strong id="arena-mobs-counter">0</strong></span>
+          <span class="arena-stat-badge">Drops no Chão: <strong id="arena-drops-counter">0</strong></span>
+          <span class="arena-stat-badge">XP Acumulado: <strong id="arena-xp-counter">0</strong></span>
+          <button class="btn-toggle-engine" id="btn-toggle-engine" title="Alternar entre Motor 3D Real (Three.js) e Retro 2D">💎 Motor 3D Ativo</button>
+        </div>
+      </div>
+
+      <div class="combat-viewport-wrapper">
+        <!-- Overlay de Túnel de Dobra (Warp Flash) -->
+        <div class="warp-tunnel-overlay" id="warp-tunnel-overlay"></div>
+
+        <!-- Banner Celebratório de Level Up -->
+        <div class="levelup-celebration-banner" id="levelup-celebration-banner">
+          <span class="levelup-banner-title">⭐ LEVEL UP! ⭐</span>
+          <span class="levelup-banner-sub" id="levelup-banner-sub">Nível 251 Alcançado! Atributos e Vitais Elevados!</span>
+        </div>
+
+        <!-- Motor 3D Realtime Three.js WebGL (Nativo) -->
+        <div id="combat-3d-viewport" class="combat-3d-viewport"></div>
+
+        <!-- Canvas 2D Retro Clássico (Opcional) -->
+        <canvas id="combat-canvas" width="840" height="420" style="display: none;"></canvas>
+
+        <!-- Overlay HUD de Combate -->
+        <div class="arena-overlay-hud">
+          <div class="arena-target-hud" id="arena-target-hud">
+            <div class="hud-target-info">
+              <span class="hud-label">Alvo Selecionado:</span>
+              <strong id="hud-target-name">Nenhum (Clique em um monstro)</strong>
+              <span id="hud-target-type"></span>
+            </div>
+            <div class="hud-hp-wrapper">
+              <div class="hud-hp-bar">
+                <div class="hud-hp-fill" id="hud-target-hp-fill" style="width: 0%;"></div>
+                <div class="hud-ghost-hp-fill" id="hud-target-ghost-hp" style="width: 0%;"></div>
+              </div>
+              <span class="hud-hp-text" id="hud-target-hp-text">-- / --</span>
+            </div>
+            <!-- Medidor de Postura / Stagger -->
+            <div class="hud-poise-wrapper">
+              <span class="poise-label">POSTURA:</span>
+              <div class="hud-poise-bar">
+                <div class="hud-poise-fill" id="hud-target-poise-fill" style="width: 100%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="idle-hunt-control-bar">
+            <div class="idle-hunt-status-pill" id="idle-status-badge">
+              <span class="idle-pulse-dot"></span>
+              <div class="idle-status-texts">
+                <span class="idle-status-title" id="idle-status-text">⚡ AUTO-HUNT ATIVO (100% IDLE)</span>
+                <span class="idle-status-sub" id="idle-action-text">Localizando Inimigos...</span>
+              </div>
+            </div>
+            <button class="btn-idle-toggle" id="btn-toggle-autohunt" title="Pausar ou Retomar a caça autônoma">⏸️ Pausar Caça</button>
+            <button class="btn-action-levelup" id="btn-arena-levelup" title="Level Up & Alocação (+5 Pontos de Atributos)">🌟 Level Up (+5 pts)</button>
+            <button class="btn-action-chaosforge" id="btn-arena-chaosforge" title="Chaos Machine (Síntese de Asas e Itens do Caos)">⚡ Chaos Machine</button>
+          </div>
+        </div>
+
+        <!-- DOCK DE HUD MODERNO 3D (Globos de Fluido + Console Tático 100% Idle) -->
+        <div class="arena-bottom-3d-hud" id="arena-bottom-3d-hud">
+          <!-- Globo de Vida 3D -->
+          <div class="orb-container orb-health" id="orb-health-box">
+            <div class="orb-glass">
+              <div class="orb-fluid health-fluid" id="health-fluid-fill" style="height: 100%;">
+                <div class="fluid-wave wave-1"></div>
+                <div class="fluid-wave wave-2"></div>
+              </div>
+              <div class="orb-gloss"></div>
+              <div class="orb-inner-shadow"></div>
+            </div>
+            <div class="orb-value-badge" id="orb-health-val">1250 / 1250</div>
+            <span class="orb-tag">HP</span>
+          </div>
+
+          <!-- Centro: Gauges Vitais e Console Tático 100% Idle -->
+          <div class="hud-center-action-console">
+            <!-- Mini-Barras Superiores: Shield Defense e Estamina -->
+            <div class="hud-sub-gauges">
+              <div class="gauge-pill gauge-sd" title="Shield Defense (Absorção e Resistência)">
+                <span class="gauge-tag">SD</span>
+                <div class="gauge-track"><div class="gauge-fill" id="gauge-sd-fill" style="width: 100%;"></div></div>
+              </div>
+              <div class="gauge-pill gauge-sta" title="Estamina e Fôlego">
+                <span class="gauge-tag">STA</span>
+                <div class="gauge-track"><div class="gauge-fill" id="gauge-sta-fill" style="width: 100%;"></div></div>
+              </div>
+            </div>
+
+            <!-- Console Tático AFK & Rotação Autônoma -->
+            <div class="idle-tactical-console">
+              <!-- Painel Superior de Telemetria AFK -->
+              <div class="afk-metrics-streamer">
+                <div class="afk-metric-chip" title="Tempo de Sessão Idle Ativa">
+                  <span class="afk-metric-icon">⏱️</span>
+                  <span class="afk-metric-label">AFK:</span>
+                  <strong class="afk-metric-val" id="afk-uptime">00:00:00</strong>
+                </div>
+                <div class="afk-metric-chip" title="Monstros Eliminados pelo Herói">
+                  <span class="afk-metric-icon">💀</span>
+                  <span class="afk-metric-label">Kills:</span>
+                  <strong class="afk-metric-val" id="afk-kills">0</strong>
+                </div>
+                <div class="afk-metric-chip" title="Zen Coletado pelo Auto-Loot">
+                  <span class="afk-metric-icon">🪙</span>
+                  <span class="afk-metric-label">Zen:</span>
+                  <strong class="afk-metric-val" id="afk-zen">0</strong>
+                </div>
+                <div class="afk-metric-chip" title="Joias Místicas Recolhidas (Bless/Soul/Chaos/Life)">
+                  <span class="afk-metric-icon">💎</span>
+                  <span class="afk-metric-label">Joias:</span>
+                  <strong class="afk-metric-val" id="afk-jewels">0</strong>
+                </div>
+                <div class="afk-metric-chip" title="Dano Médio por Segundo em Tempo Real">
+                  <span class="afk-metric-icon">💥</span>
+                  <span class="afk-metric-label">DPS:</span>
+                  <strong class="afk-metric-val" id="afk-dps">0</strong>
+                </div>
+              </div>
+
+              <!-- Monitor da Rotação Autônoma de Habilidades e Poções -->
+              <div class="idle-rotation-monitor">
+                <div class="idle-skill-slot" id="slot-skill-cyclone" title="Auto-Skill: Twisting Slash (Dano em Área 360°)">
+                  <div class="idle-skill-icon">🌪️</div>
+                  <span class="idle-skill-label">Twisting Slash</span>
+                  <div class="idle-cooldown-overlay" id="idle-cd-cyclone"></div>
+                  <span class="idle-skill-status" id="idle-status-cyclone">PRONTO</span>
+                </div>
+                <div class="idle-skill-slot" id="slot-skill-deathstab" title="Auto-Skill: Death Stab (Estocada Perfurante Letal)">
+                  <div class="idle-skill-icon">⚡</div>
+                  <span class="idle-skill-label">Death Stab</span>
+                  <div class="idle-cooldown-overlay" id="idle-cd-deathstab"></div>
+                  <span class="idle-skill-status" id="idle-status-deathstab">PRONTO</span>
+                </div>
+                <div class="idle-skill-slot" id="slot-skill-weapon" title="Auto-Attack: Golpe Primário da Lâmina">
+                  <div class="idle-skill-icon">⚔️</div>
+                  <span class="idle-skill-label">Golpe de Arma</span>
+                  <span class="idle-skill-status active-auto">AUTO</span>
+                </div>
+                <div class="idle-skill-slot" id="slot-potion-hp" title="Auto-Potion: Bebe Poção de Vida se HP < 65%">
+                  <div class="idle-skill-icon">🧪</div>
+                  <span class="idle-skill-label">Auto-Vida (65%)</span>
+                  <div class="idle-cooldown-overlay" id="idle-cd-hp"></div>
+                  <span class="idle-skill-status active-auto">ATIVO</span>
+                </div>
+                <div class="idle-skill-slot" id="slot-potion-mp" title="Auto-Potion: Bebe Poção de Mana se MP < 40%">
+                  <div class="idle-skill-icon">💧</div>
+                  <span class="idle-skill-label">Auto-Mana (40%)</span>
+                  <div class="idle-cooldown-overlay" id="idle-cd-mp"></div>
+                  <span class="idle-skill-status active-auto">ATIVO</span>
+                </div>
+                <div class="idle-skill-slot" id="slot-auto-loot" title="Auto-Loot: Radar Permanente de Joias e Zen">
+                  <div class="idle-skill-icon">🧲</div>
+                  <span class="idle-skill-label">Auto-Loot</span>
+                  <span class="idle-skill-status active-auto">RADAR</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Globo de Mana 3D -->
+          <div class="orb-container orb-mana" id="orb-mana-box">
+            <div class="orb-glass">
+              <div class="orb-fluid mana-fluid" id="mana-fluid-fill" style="height: 100%;">
+                <div class="fluid-wave wave-1"></div>
+                <div class="fluid-wave wave-2"></div>
+              </div>
+              <div class="orb-gloss"></div>
+              <div class="orb-inner-shadow"></div>
+            </div>
+            <div class="orb-value-badge" id="orb-mana-val">680 / 680</div>
+            <span class="orb-tag">MP</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="arena-footer-tip">
+        <span>⚡ <strong>Paradigma 100% Idle Combat:</strong> O herói ataca, executa rotações de habilidades, consome poções e recolhe joias/zen de forma totalmente autônoma. Seu foco estratégico é alocar atributos (+5 por nível), sintetizar asas e itens (+0 a +15) na <strong>Chaos Machine</strong> e explorar os continentes de Lorencia, Noria e Devias! Use <strong>1, 2, 3</strong> para alternar reinos.</span>
+      </div>
+    </section>
+
+    <!-- 3D NATIVE FEATURE VIEWER (Three.js WebGL Core & PBR Action RPG) -->
+    <section class="panel-box dasi-3d-panel" id="dasi-3d-panel" style="display: flex;">
+      <div class="panel-header">
+        <div class="title-with-badge">
+          <span class="panel-title">VISUALIZADOR 3D NATIVO EM TEMPO REAL</span>
+          <span class="badge-accent">WEBGL PBR & SHADING DINÂMICO</span>
+        </div>
+        <div class="viewer-3d-telemetry">
+          <span class="badge-mode-active" id="badge-3d-mode">MODO: CENÁRIO (LORENCIA)</span>
+          <span class="badge-glow-active" id="badge-3d-glow">BIOMA: 3D REALTIME PBR</span>
+          <button class="btn-quick-feature" id="btn-open-art-modal" style="background: linear-gradient(180deg, #6366f1, #4338ca); border-color: #818cf8; color: #fff; font-weight: bold; margin-left: 10px; cursor: pointer;">🖼️ Ver Concept Art</button>
+          <button class="btn-quick-feature" id="btn-toggle-art-split" style="background: linear-gradient(180deg, #059669, #047857); border-color: #34d399; color: #fff; font-weight: bold; margin-left: 6px; cursor: pointer;" title="Exibir pintura conceitual original lado a lado com o modelo 3D">🖼️ Comparar com Concept Art</button>
+        </div>
+      </div>
+
+      <div class="viewer-3d-body">
+        <!-- Canvas Viewport 3D -->
+        <div class="viewer-3d-canvas-wrap" style="position: relative;">
+          <!-- Floating Biome & Collision Quick Bar no topo do Canvas 3D -->
+          <div class="viewport-biome-bar" id="viewport-biome-bar" style="position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 30; display: flex; flex-wrap: wrap; gap: 6px; background: rgba(10, 14, 23, 0.90); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 30px; border: 1px solid rgba(255, 255, 255, 0.18); box-shadow: 0 8px 32px rgba(0,0,0,0.7); max-width: 95%; justify-content: center; align-items: center;">
+            <button class="btn-vp-biome active" data-id="LORENCIA" style="background: rgba(217, 119, 6, 0.35); border: 1px solid #f59e0b; color: #fbbf24; border-radius: 20px; padding: 4px 12px; font-weight: bold; font-family: 'Rajdhani', sans-serif; cursor: pointer; transition: all 0.2s;">🏰 Lorencia</button>
+            <button class="btn-vp-biome" data-id="NORIA" style="background: transparent; border: 1px solid rgba(255,255,255,0.12); color: #94a3b8; border-radius: 20px; padding: 4px 12px; font-weight: bold; font-family: 'Rajdhani', sans-serif; cursor: pointer; transition: all 0.2s;">🌿 Noria</button>
+            <button class="btn-vp-biome" data-id="DEVIAS" style="background: transparent; border: 1px solid rgba(255,255,255,0.12); color: #94a3b8; border-radius: 20px; padding: 4px 12px; font-weight: bold; font-family: 'Rajdhani', sans-serif; cursor: pointer; transition: all 0.2s;">❄️ Devias</button>
+            <button class="btn-vp-biome" data-id="DUNGEON" style="background: transparent; border: 1px solid rgba(255,255,255,0.12); color: #94a3b8; border-radius: 20px; padding: 4px 12px; font-weight: bold; font-family: 'Rajdhani', sans-serif; cursor: pointer; transition: all 0.2s;">💀 Dungeon</button>
+            <button class="btn-vp-biome" data-id="LOST_TOWER" style="background: transparent; border: 1px solid rgba(255,255,255,0.12); color: #94a3b8; border-radius: 20px; padding: 4px 12px; font-weight: bold; font-family: 'Rajdhani', sans-serif; cursor: pointer; transition: all 0.2s;">🔥 Lost Tower</button>
+            <button class="btn-vp-biome" data-id="ATLANS" style="background: transparent; border: 1px solid rgba(255,255,255,0.12); color: #94a3b8; border-radius: 20px; padding: 4px 12px; font-weight: bold; font-family: 'Rajdhani', sans-serif; cursor: pointer; transition: all 0.2s;">🌊 Atlans</button>
+            <button class="btn-vp-biome" data-id="TARKAN" style="background: transparent; border: 1px solid rgba(255,255,255,0.12); color: #94a3b8; border-radius: 20px; padding: 4px 12px; font-weight: bold; font-family: 'Rajdhani', sans-serif; cursor: pointer; transition: all 0.2s;">🏜️ Tarkan</button>
+            <button class="btn-vp-biome" data-id="ICARUS" style="background: transparent; border: 1px solid rgba(255,255,255,0.12); color: #94a3b8; border-radius: 20px; padding: 4px 12px; font-weight: bold; font-family: 'Rajdhani', sans-serif; cursor: pointer; transition: all 0.2s;">🪽 Icarus</button>
+            <button class="btn-collision-toggle" id="btn-toggle-collision-debug" style="background: rgba(244, 63, 94, 0.20); border: 1px solid #f43f5e; color: #fda4af; border-radius: 20px; padding: 4px 12px; font-weight: bold; font-family: 'Rajdhani', sans-serif; cursor: pointer; transition: all 0.2s; margin-left: 6px;">🛡️ Colisão 3D: OFF</button>
+            <span id="lbl-real-scenery-status" style="font-size: 11px; color: #4ade80; background: rgba(34, 197, 94, 0.20); border: 1px solid #22c55e; border-radius: 12px; padding: 2px 8px; font-weight: bold; margin-left: 4px;">🎮 Modelo 3D: Real GLB (Blender 5.2 PBR)</span>
+          </div>
+
+          <div id="dasi-3d-viewport" class="dasi-3d-viewport"></div>
+          
+          <div class="viewer-3d-overlay-tips">
+            <span>🖱️ <strong>Clique & Arraste:</strong> Órbita 360° | <strong>Scroll:</strong> Zoom suave | <strong>Botão Direito:</strong> Pan | <strong>WASD / Setas:</strong> Caminhada com Colisão Física</span>
+          </div>
+        </div>
+
+        <!-- Painel Comparativo Lado a Lado: Concept Art Oficial vs Modelo 3D Real -->
+        <aside class="concept-art-split-panel" id="concept-art-split-panel" style="display: none; width: 380px; min-width: 320px; background: rgba(10, 15, 26, 0.96); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 8px; padding: 14px; flex-direction: column; gap: 10px; box-shadow: -4px 0 24px rgba(0,0,0,0.7); overflow-y: auto;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 16px;">🖼️</span>
+              <h4 style="margin: 0; color: #38bdf8; font-family: 'Cinzel', serif; font-size: 14px; letter-spacing: 0.5px;">ARTE CONCEITUAL BASE</h4>
+            </div>
+            <button id="btn-close-art-split" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; padding: 0 4px;" title="Fechar Painel Comparativo">&times;</button>
+          </div>
+          <div style="border-radius: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.18); box-shadow: 0 4px 16px rgba(0,0,0,0.6); background: #000;">
+            <img id="split-concept-art-img" src="art/lorencia_concept_art.jpg" alt="Arte Conceitual" style="width: 100%; height: auto; display: block; object-fit: cover; max-height: 240px;">
+          </div>
+          <div style="background: rgba(30, 41, 59, 0.7); border-radius: 6px; padding: 10px; border-left: 3px solid #f59e0b;">
+            <h5 id="split-concept-art-title" style="margin: 0 0 4px 0; color: #fbbf24; font-family: 'Cinzel', serif; font-size: 13px;">Lorencia Citadel</h5>
+            <p id="split-concept-art-desc" style="margin: 0; font-size: 11.5px; color: #cbd5e1; line-height: 1.45;">Melancolia medieval gótica sob chuva fria contínua. Fonte octogonal de pedra com estátua em bronze do Arcanjo de Loren, ladeada pelo Bazar com tendas coloridas, a Taverna e a muralha fortificada.</p>
+          </div>
+          <div style="background: rgba(15, 23, 42, 0.85); border-radius: 6px; padding: 10px; border: 1px solid rgba(255,255,255,0.08);">
+            <strong style="color: #4ade80; font-size: 11.5px; display: block; margin-bottom: 6px;">🏛️ RECONSTRUÇÃO 3D REAL (BLENDER 5.2 & WEBGL):</strong>
+            <ul id="split-concept-art-features" style="margin: 0; padding-left: 16px; font-size: 11px; color: #94a3b8; line-height: 1.6;">
+              <li><strong style="color: #f1f5f9;">Calçamento Gótico:</strong> Textura PBR com juntas de argamassa e poças reflexivas.</li>
+              <li><strong style="color: #f1f5f9;">Fonte do Arcanjo:</strong> Bacia octogonal com bronze sagrado e halo dourado.</li>
+              <li><strong style="color: #f1f5f9;">Muralha & Torres:</strong> Ameias com portão de carvalho e grade de ferro.</li>
+              <li><strong style="color: #f1f5f9;">Iluminação 2200K:</strong> 8 tochas com chamas vivas e flicker dinâmico.</li>
+            </ul>
+          </div>
+        </aside>
+
+        <!-- Sidebar / Console de Controles 3D -->
+        <div class="viewer-3d-controls-sidebar">
+          
+          <!-- Seção de Categorias 3D -->
+          <div class="control-group">
+            <label class="control-label">CATEGORIA DE VISUALIZAÇÃO:</label>
+            <div class="cat-buttons-row">
+              <button class="btn-3d-cat" data-cat="HERO">🛡️ Heróis</button>
+              <button class="btn-3d-cat" data-cat="MONSTER">👹 Monstros</button>
+              <button class="btn-3d-cat active" data-cat="ENVIRONMENT">🏰 Cenários</button>
+              <button class="btn-3d-cat" data-cat="ARMORY">⚔️ Armas & 3D</button>
+              <button class="btn-3d-cat" data-cat="CHAOS_MACHINE">⚙️ Chaos Forge</button>
+            </div>
+          </div>
+
+          <!-- Sub-seletores de Armaduras & Armas 3D (Showcase de Museu & Forja) -->
+          <div class="control-group" id="sub-group-armory" style="display: none; flex-direction: column; gap: 8px;">
+            <label class="control-label">MODO DA ARMARIA 3D:</label>
+            <div class="cat-buttons-row" style="margin-bottom: 6px;">
+              <button class="btn-armory-submode active" data-sub="WEAPON" style="flex: 1; padding: 5px 8px; font-size: 11.5px; border-radius: 4px; border: 1px solid #38bdf8; background: rgba(56, 189, 248, 0.2); color: #7dd3fc; cursor: pointer; font-weight: bold;">🗡️ Armas 3D</button>
+              <button class="btn-armory-submode" data-sub="SHIELD" style="flex: 1; padding: 5px 8px; font-size: 11.5px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.15); background: transparent; color: #94a3b8; cursor: pointer; font-weight: bold;">🛡️ Escudos 3D</button>
+              <button class="btn-armory-submode" data-sub="ARMOR_SET" style="flex: 1; padding: 5px 8px; font-size: 11.5px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.15); background: transparent; color: #94a3b8; cursor: pointer; font-weight: bold;">🦹 Sets 3D</button>
+            </div>
+
+            <label class="control-label">SELEÇÃO DO ITEM 3D:</label>
+            <select class="scenario-dropdown-3d" id="select-armory-item" style="width: 100%; background: #0f172a; border: 1px solid #f59e0b; color: #f8fafc; border-radius: 6px; padding: 8px 10px; font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer;">
+              <optgroup label="🗡️ ARMAS CLÁSSICAS (Blender 5.2 PBR)" id="optgroup-armory-weapons">
+                <option value="DRAGON_BLADE" selected>Dragon Blade (DK/MG)</option>
+                <option value="ARCHANGEL_SWORD">Sword of Archangel (DK/MG)</option>
+                <option value="CHAOS_DRAGON_AXE">Chaos Dragon Axe (DK)</option>
+                <option value="SWORD_OF_DESTRUCTION">Sword of Destruction (DK/MG)</option>
+                <option value="KUNDUN_STAFF">Staff of Kundun (DW)</option>
+                <option value="CHAOS_LIGHTNING_STAFF">Chaos Lightning Staff (DW)</option>
+                <option value="CELESTIAL_BOW">Celestial Bow (ELF)</option>
+                <option value="GREAT_REIGN_CROSSBOW">Great Reign Crossbow (ELF)</option>
+                <option value="RUNE_BLADE">Rune Blade of Aether (MG)</option>
+                <option value="LORD_SCEPTER">Imperial Lord Scepter (DL)</option>
+              </optgroup>
+              <optgroup label="🛡️ ESCUDOS GÓTICOS" id="optgroup-armory-shields">
+                <option value="DRAGON_SHIELD">Dragon Shield (DK/MG)</option>
+                <option value="TOWER_SHIELD">Tower Shield (DK/DL)</option>
+                <option value="SKULL_SHIELD">Skull Shield (DK/DW/MG)</option>
+              </optgroup>
+              <optgroup label="🦹 CONJUNTOS DE ARMADURA (Manequim Completo)" id="optgroup-armory-sets">
+                <option value="SET_DRAGON">Set Dragon (DK)</option>
+                <option value="SET_DARK_PHOENIX">Set Dark Phoenix (DK)</option>
+                <option value="SET_LEGENDARY">Set Legendary (DW)</option>
+                <option value="SET_GRAND_SOUL">Set Grand Soul (DW)</option>
+                <option value="SET_SPIRIT">Set Spirit (ELF)</option>
+                <option value="SET_DIVINE">Set Divine (ELF)</option>
+              </optgroup>
+            </select>
+
+            <!-- Card de Detalhes da Peça 3D -->
+            <div id="armory-item-infocard" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; line-height: 1.45;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong id="armory-info-title" style="color: #fbbf24; font-family: 'Cinzel', serif; font-size: 14px;">Dragon Blade</strong>
+                <span id="armory-info-badge" style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(34, 197, 94, 0.2); border: 1px solid #22c55e; color: #4ade80; font-weight: bold;">GLB Real (Blender 5.2)</span>
+              </div>
+              <span id="armory-info-req" style="color: #38bdf8; font-weight: 600; font-size: 11px;">Classe: Cavaleiro do Sangue / Gladiador (DK/MG)</span>
+              <p id="armory-info-desc" style="margin: 4px 0 0 0; color: #cbd5e1; font-size: 11px;">Lâmina colossal forjada no sangue de dragões vermelhos. Espinha dorsal serrilhada com gema escarlate incandescente e guarda esculpida em chifres.</p>
+            </div>
+          </div>
+
+          <!-- Sub-seletores de Heróis (As 5 Classes Canônicas de Continent of Legend) -->
+          <div class="control-group" id="sub-group-heroes" style="display: none;">
+            <label class="control-label">CLASSE HEROICA & ARMAS:</label>
+            <div class="sub-buttons-grid">
+              <button class="btn-sub-entity active" data-cat="HERO" data-id="DK">⚔️ Dark Knight</button>
+              <button class="btn-sub-entity" data-cat="HERO" data-id="DW">🔮 Dark Wizard</button>
+              <button class="btn-sub-entity" data-cat="HERO" data-id="ELF">🪽 Fairy Elf</button>
+              <button class="btn-sub-entity" data-cat="HERO" data-id="MG">⚡ Magic Gladiator</button>
+              <button class="btn-sub-entity" data-cat="HERO" data-id="DL">👑 Dark Lord</button>
+            </div>
+            <label class="control-label" style="margin-top: 6px;">SET DE ARMADURA:</label>
+            <div class="tier-buttons-row">
+              <button class="btn-set-tier active" data-tier="DRAGON">Dragon</button>
+              <button class="btn-set-tier" data-tier="PHOENIX">Phoenix</button>
+              <button class="btn-set-tier" data-tier="GRAND_SOUL">Grand Soul</button>
+              <button class="btn-set-tier" data-tier="SPIRIT">Spirit</button>
+              <button class="btn-set-tier" data-tier="HURRICANE">Hurricane</button>
+              <button class="btn-set-tier" data-tier="DARK_MASTER">Dark Master</button>
+            </div>
+          </div>
+
+          <!-- Sub-seletores de Monstros -->
+          <div class="control-group" id="sub-group-monsters" style="display: none;">
+            <label class="control-label">BESTIÁRIO CLÁSSICO 3D:</label>
+            <div class="sub-buttons-grid">
+              <button class="btn-sub-entity" data-cat="MONSTER" data-id="SPIDER">🕷️ Aranha Gigante</button>
+              <button class="btn-sub-entity" data-cat="MONSTER" data-id="BUDGE_DRAGON">🐉 Budge Dragon</button>
+              <button class="btn-sub-entity" data-cat="MONSTER" data-id="BULL_FIGHTER">🐂 Bull Fighter</button>
+              <button class="btn-sub-entity" data-cat="MONSTER" data-id="SKELETON">💀 Skeleton</button>
+            </div>
+          </div>
+
+          <!-- Sub-seletores de Cenários (8 Biomas & 47 Cenários Canônicos) -->
+          <div class="control-group" id="sub-group-environments" style="display: flex;">
+            <label class="control-label">TODOS OS 47 CENÁRIOS CANÔNICOS EM 3D:</label>
+            <select class="scenario-dropdown-3d" id="select-scenario-47" style="width: 100%; background: #0f172a; border: 1px solid #38bdf8; color: #f8fafc; border-radius: 6px; padding: 8px 10px; font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 600; margin-bottom: 8px; cursor: pointer;">
+              <optgroup label="🏰 LORENCIA (7 Cenários)">
+                <option value="LOR_01" selected>LOR_01: Citadel Plaza & Fonte do Arcanjo (15 colisores)</option>
+                <option value="LOR_02">LOR_02: East Gate & Planícies das Bestas (7 colisores)</option>
+                <option value="LOR_03">LOR_03: West Gate & Bosque das Aranhas (7 colisores)</option>
+                <option value="LOR_04">LOR_04: North Gate & Ponte do Castelo Real (6 colisores)</option>
+                <option value="LOR_05">LOR_05: South Cemetery (Cemitério dos Caídos) (6 colisores)</option>
+                <option value="LOR_06">LOR_06: Lorencia Tavern (A Taverna da Lareira) (5 colisores)</option>
+                <option value="LOR_07">LOR_07: Lorencia Blacksmith (A Forja de Hanzo) (4 colisores)</option>
+              </optgroup>
+              <optgroup label="🌿 NORIA (7 Cenários)">
+                <option value="NOR_01">NOR_01: Sanctuary Mother Tree & Praça Élfica (8 colisores)</option>
+                <option value="NOR_02">NOR_02: Chaos Machine Workshop (Oficina Duendes) (6 colisores)</option>
+                <option value="NOR_03">NOR_03: Queen Lúthien's Altar & Lago Néctar (7 colisores)</option>
+                <option value="NOR_04">NOR_04: East Groves (Bosque das Ninfas) (5 colisores)</option>
+                <option value="NOR_05">NOR_05: Giant Mushroom Glade (Fungos Colossais) (5 colisores)</option>
+                <option value="NOR_06">NOR_06: Deep Canyon & Ponte Pênsil (4 colisores)</option>
+                <option value="NOR_07">NOR_07: Creeper Hollow (Covil Stone Golem) (6 colisores)</option>
+              </optgroup>
+              <optgroup label="❄️ DEVIAS (6 Cenários)">
+                <option value="DEV_01">DEV_01: Glacial Citadel & Braseiro do Rei (8 colisores)</option>
+                <option value="DEV_02">DEV_02: Cathedral Facade (Basílica Boreal) (4 colisores)</option>
+                <option value="DEV_03">DEV_03: North Snowfields (Campos de Nevasca) (4 colisores)</option>
+                <option value="DEV_04">DEV_04: Ice Shard Ridge (Crista Espinhos Gelo) (5 colisores)</option>
+                <option value="DEV_05">DEV_05: Frozen Abyss Bridge (Ponte Pergelissolo) (4 colisores)</option>
+                <option value="DEV_06">DEV_06: Ice Queen Palace (Trono Lapidado) (6 colisores)</option>
+              </optgroup>
+              <optgroup label="💀 DUNGEON (6 Cenários)">
+                <option value="DNG_01">DNG_01: Entrada & Ossuário Ancestral (6 colisores)</option>
+                <option value="DNG_02">DNG_02: Corredores das Prisões & Grilhões (5 colisores)</option>
+                <option value="DNG_03">DNG_03: Criptas Venenosas & Lodo Ácido (5 colisores)</option>
+                <option value="DNG_04">DNG_04: Poço de Tortura & Fornalhas de Sangue (4 colisores)</option>
+                <option value="DNG_05">DNG_05: Labirinto das Almas Perdidas (5 colisores)</option>
+                <option value="DNG_06">DNG_06: O Covil Abissal da Górgona (7 colisores)</option>
+              </optgroup>
+              <optgroup label="🔥 LOST TOWER (7 Cenários)">
+                <option value="LT_01">LT_01: Portal de Obsidiana & Chamas (5 colisores)</option>
+                <option value="LT_02">LT_02: Corredores Rúnicos Incandescentes (4 colisores)</option>
+                <option value="LT_03">LT_03: Grelhas de Ferro sobre Mar de Magma (5 colisores)</option>
+                <option value="LT_04">LT_04: Mirante Demoníaco & Gárgulas (4 colisores)</option>
+                <option value="LT_05">LT_05: Colunata Espiral Ascendente (5 colisores)</option>
+                <option value="LT_06">LT_06: Muralhas Infernais & Balistas (4 colisores)</option>
+                <option value="LT_07">LT_07: O Trono de Fogo do Balrog (7 colisores)</option>
+              </optgroup>
+              <optgroup label="🌊 ATLANS (7 Cenários)">
+                <option value="ATL_01">ATL_01: Águas Rasas & Recifes com Caustics (4 colisores)</option>
+                <option value="ATL_02">ATL_02: Santuário de Nácar (Cúpula de Ar) (6 colisores)</option>
+                <option value="ATL_03">ATL_03: Labirinto dos Corais & Anêmonas (4 colisores)</option>
+                <option value="ATL_04">ATL_04: Trincheira das Correntes & Anéis (4 colisores)</option>
+                <option value="ATL_05">ATL_05: Cemitério de Leviatãs & Galeão (4 colisores)</option>
+                <option value="ATL_06">ATL_06: Fendas Hidrotermais & Basalto (4 colisores)</option>
+                <option value="ATL_07">ATL_07: O Fosso Abissal da Grande Hydra (5 colisores)</option>
+              </optgroup>
+              <optgroup label="🏜️ TARKAN (5 Cenários)">
+                <option value="TAR_01">TAR_01: Dunas de Areia Carmesim & Tempestades (4 colisores)</option>
+                <option value="TAR_02">TAR_02: Oásis Fervilhante & Palmeiras Secas (5 colisores)</option>
+                <option value="TAR_03">TAR_03: Espinhaço do Grande Verme do Deserto (4 colisores)</option>
+                <option value="TAR_04">TAR_04: Cemitério de Autômatos de Ferro (4 colisores)</option>
+                <option value="TAR_05">TAR_05: A Cratera de Areia Movediça de Zaikan (4 colisores)</option>
+              </optgroup>
+              <optgroup label="🪽 ICARUS (2 Cenários)">
+                <option value="ICA_01">ICA_01: Cidadela da Levitação & Pontes de Luz (4 colisores)</option>
+                <option value="ICA_02">ICA_02: Ninho de Lótus do Dark Phoenix (4 colisores)</option>
+              </optgroup>
+            </select>
+            <div class="sub-buttons-grid">
+              <button class="btn-sub-entity active" data-cat="ENVIRONMENT" data-id="LORENCIA">🏰 Lorencia (7 Cenários)</button>
+              <button class="btn-sub-entity" data-cat="ENVIRONMENT" data-id="NORIA">🌿 Noria (7 Cenários)</button>
+              <button class="btn-sub-entity" data-cat="ENVIRONMENT" data-id="DEVIAS">❄️ Devias (6 Cenários)</button>
+              <button class="btn-sub-entity" data-cat="ENVIRONMENT" data-id="DUNGEON">💀 Dungeon (6 Cenários)</button>
+              <button class="btn-sub-entity" data-cat="ENVIRONMENT" data-id="LOST_TOWER">🔥 Lost Tower (7 Cenários)</button>
+              <button class="btn-sub-entity" data-cat="ENVIRONMENT" data-id="ATLANS">🌊 Atlans (7 Cenários)</button>
+              <button class="btn-sub-entity" data-cat="ENVIRONMENT" data-id="TARKAN">🏜️ Tarkan (5 Cenários)</button>
+              <button class="btn-sub-entity" data-cat="ENVIRONMENT" data-id="ICARUS">🪽 Icarus (2 Cenários)</button>
+            </div>
+          </div>
+
+          <!-- Seção de Refinamento (+0 a +15) -->
+          <div class="control-group" id="group-3d-refinement" style="display: none;">
+            <div class="slider-header-3d">
+              <span class="control-label">SHADING & BRILHO PBR (+0 a +15):</span>
+              <strong class="glow-val-3d" id="lbl-refinement-level">+9 AURA SOLAR</strong>
+            </div>
+            <input type="range" class="refinement-range" id="range-3d-refinement" min="0" max="15" value="9" step="1">
+            <div class="refinement-quick-btns">
+              <button class="btn-quick-glow" data-level="0">+0 PBR</button>
+              <button class="btn-quick-glow" data-level="7">+7 Runa</button>
+              <button class="btn-quick-glow active" data-level="9">+9 Dourado</button>
+              <button class="btn-quick-glow" data-level="11">+11 Raio</button>
+              <button class="btn-quick-glow" data-level="15">+15 Celestial</button>
+            </div>
+            <p class="refinement-desc-3d" id="desc-refinement-3d">
+              Aura solar dourada cintilante com partículas aditivas e realce especular metálico.
+            </p>
+          </div>
+
+          <!-- Seção de Animações do Action RPG -->
+          <div class="control-group" id="group-3d-animations" style="display: none;">
+            <label class="control-label">ANIMAÇÕES DO ACTION RPG:</label>
+            <div class="anim-buttons-grid">
+              <button class="btn-3d-anim active" id="btn-anim-idle" data-anim="IDLE">🛡️ Idle Heroico</button>
+              <button class="btn-3d-anim" id="btn-anim-skill1" data-anim="TWISTING_SLASH">🔥 Habilidade 1 [E]</button>
+              <button class="btn-3d-anim" id="btn-anim-skill2" data-anim="DEATH_STAB">⚡ Habilidade 2 [R]</button>
+              <button class="btn-3d-anim" id="btn-anim-roll" data-anim="ROLL">🌪️ Esquiva Tática [Space]</button>
+            </div>
+          </div>
+
+          <!-- Câmera & Presets -->
+          <div class="control-group">
+            <label class="control-label">PRESETS DE CÂMERA 3D:</label>
+            <div class="camera-buttons-row">
+              <button class="btn-3d-cam" id="btn-cam-reset" data-preset="RESET">🔄 Resetar</button>
+              <button class="btn-3d-cam" id="btn-cam-front" data-preset="FRONT">👤 Frente</button>
+              <button class="btn-3d-cam" id="btn-cam-wings" data-preset="WINGS">🪽 Asas/Costas</button>
+              <button class="btn-3d-cam" id="btn-cam-blade" data-preset="BLADE">🗡️ Arma/Foco</button>
+            </div>
+          </div>
+
+          <!-- Informações de Fidelidade Gráfica -->
+          <div class="fidelity-card-3d">
+            <div class="fidelity-title">✨ ESPECIFICAÇÃO TÉCNICA 3D NATIVA</div>
+            <ul class="fidelity-list">
+              <li><strong>Heróis:</strong> DK (Dragon/Phoenix), DW (Grand Soul) e ELF (Spirit)</li>
+              <li><strong>Monstros:</strong> Spider, Budge Dragon, Bull Fighter e Skeleton</li>
+              <li><strong>Cenários:</strong> Lorencia (Castelo), Noria (Feywood), Devias (Boreal), Atlans (Thalassa) e Icarus (Aethel)</li>
+              <li><strong>Física:</strong> PBR Metallic-Roughness, ACES Filmic Tone Mapping e Animações</li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+
+    <!-- BOSSES & GOLDEN INVASIONS SECTION -->
+    <section class="panel-box bosses-panel" id="bosses-panel" style="display: none;">
+      <div class="panel-header">
+        <div class="title-with-badge">
+          <span class="panel-title">👹 CHEFES MUNDIAIS & INVASÕES DOURADAS</span>
+          <span class="badge-accent">MULTI-FASE & MOTOR AUTORITATIVO</span>
+        </div>
+        <div class="boss-telemetry-strip">
+          <span class="arena-stat-badge">Chefes Ativos: <strong id="bosses-active-count">0</strong></span>
+          <span class="arena-stat-badge">Invasões Douradas: <strong id="invasions-active-count">0</strong></span>
+          <button class="btn-quick-feature btn-glow-gold" id="btn-trigger-random-invasion" title="Invocar Invasão Dourada Instantânea">⚡ Disparar Invasão Dourada</button>
+        </div>
+      </div>
+
+      <div class="bosses-content-grid">
+        <!-- Coluna da Esquerda: Controles de Invocação & Box of Kundun -->
+        <div class="bosses-control-col">
+          <!-- Card de Invocação de Chefes -->
+          <div class="sub-card-box">
+            <h4 class="sub-card-title">⚔️ INVOCAR CHEFES CANÔNICOS</h4>
+            <p class="sub-card-sub">Invoque chefes autoritativos com fases dinâmicas, escudos rúnicos e ataques telegrafados.</p>
+            <div class="boss-spawn-buttons-grid">
+              <button class="btn-boss-spawn" data-boss="boss_gorgon">
+                <span class="boss-btn-icon">🐍</span>
+                <div class="boss-btn-info">
+                  <strong>Górgona</strong>
+                  <span>Nível 55 &bull; Covil DNG_06 &bull; Gaze Petrificante</span>
+                </div>
+              </button>
+              <button class="btn-boss-spawn" data-boss="boss_ice_queen">
+                <span class="boss-btn-icon">❄️</span>
+                <div class="boss-btn-info">
+                  <strong>Ice Queen</strong>
+                  <span>Nível 52 &bull; Trono DEV_06 &bull; Nevasca & Congelamento</span>
+                </div>
+              </button>
+              <button class="btn-boss-spawn" data-boss="boss_balrog">
+                <span class="boss-btn-icon">🔥</span>
+                <div class="boss-btn-info">
+                  <strong>Balrog</strong>
+                  <span>Nível 66 &bull; Trono LT_07 &bull; Fogo do Inferno</span>
+                </div>
+              </button>
+              <button class="btn-boss-spawn" data-boss="boss_zaikan">
+                <span class="boss-btn-icon">🦂</span>
+                <div class="boss-btn-info">
+                  <strong>Zaikan</strong>
+                  <span>Nível 70 &bull; Cratera TAR_05 &bull; Tempestade de Areia</span>
+                </div>
+              </button>
+              <button class="btn-boss-spawn" data-boss="boss_kundun">
+                <span class="boss-btn-icon">👑</span>
+                <div class="boss-btn-info">
+                  <strong>Kundun</strong>
+                  <span>Nível 100 &bull; Kalima KAL_01 &bull; Ruína Cósmica</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Card de Invasões Douradas & Box of Kundun -->
+          <div class="sub-card-box">
+            <h4 class="sub-card-title">🌟 INVASÕES DOURADAS & CAIXAS DE KUNDUN</h4>
+            <div class="invasion-tier-buttons">
+              <button class="btn-invasion-tier" data-tier="1">Tier 1: Golden Budge Dragon (Lorencia)</button>
+              <button class="btn-invasion-tier" data-tier="2">Tier 2: Golden Soldier (Noria)</button>
+              <button class="btn-invasion-tier" data-tier="3">Tier 3: Golden Titan (Devias)</button>
+              <button class="btn-invasion-tier" data-tier="4">Tier 4: Golden Tantalos (Tarkan)</button>
+              <button class="btn-invasion-tier" data-tier="5">Tier 5: Golden Dragon King (Lost Tower)</button>
+            </div>
+
+            <div class="box-opener-strip">
+              <label class="control-label" style="margin-top: 8px;">TESTAR ABERTURA DE BOX OF KUNDUN (+1..+5):</label>
+              <div class="box-buttons-row">
+                <button class="btn-box-open" data-box="1">📦 Box +1</button>
+                <button class="btn-box-open" data-box="2">📦 Box +2</button>
+                <button class="btn-box-open" data-box="3">📦 Box +3</button>
+                <button class="btn-box-open" data-box="4">📦 Box +4</button>
+                <button class="btn-box-open" data-box="5">📦 Box +5</button>
+              </div>
+              <div class="box-loot-result" id="box-loot-result">
+                <span>Clique em uma Box para simular abertura autoritativa e inspecionar os drops gerados.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Coluna da Direita: HUD do Chefe, Telégrafo & Lista em Tempo Real -->
+        <div class="bosses-telemetry-col">
+          <!-- Boss-Bar HUD em Destaque -->
+          <div class="boss-hud-card" id="boss-hud-card">
+            <div class="boss-hud-header">
+              <div class="boss-hud-title-wrap">
+                <span class="boss-icon" id="boss-hud-icon">🐍</span>
+                <div>
+                  <h3 class="boss-hud-name" id="boss-hud-name">Górgona (Rainha das Serpentes)</h3>
+                  <span class="boss-hud-loc" id="boss-hud-loc">Localização: DNG_06 &bull; Nível 55</span>
+                </div>
+              </div>
+              <div class="boss-hud-badges">
+                <span class="boss-phase-badge" id="boss-hud-phase">FASE 1</span>
+                <span class="boss-state-badge" id="boss-hud-state">NORMAL</span>
+              </div>
+            </div>
+
+            <!-- Barras de HP & Escudo Rúnico -->
+            <div class="boss-bars-container">
+              <div class="boss-bar-label-row">
+                <span>VITAIS DO CHEFE:</span>
+                <span id="boss-hp-text">85.000 / 85.000 (Escudo: 20.000)</span>
+              </div>
+              <div class="boss-hp-track">
+                <div class="boss-hp-fill" id="boss-hp-fill" style="width: 100%;"></div>
+                <div class="boss-shield-fill" id="boss-shield-fill" style="width: 25%;"></div>
+              </div>
+
+              <!-- Barra de Postura / Poise -->
+              <div class="boss-bar-label-row" style="margin-top: 6px;">
+                <span>POSTURA & ESTABILIDADE:</span>
+                <span id="boss-poise-text">100% (Imunidade a Stagger em Fúria)</span>
+              </div>
+              <div class="boss-poise-track">
+                <div class="boss-poise-fill" id="boss-poise-fill" style="width: 100%;"></div>
+              </div>
+            </div>
+
+            <!-- Monitor de Telégrafo em Tempo Real -->
+            <div class="boss-telegraph-monitor">
+              <div class="telegraph-header">
+                <span class="telegraph-tag">⚠️ TELÉGRAFO DE ATAQUE ATIVO:</span>
+                <strong id="boss-telegraph-name">Nenhum ataque em canalização</strong>
+              </div>
+              <div class="telegraph-progress-track">
+                <div class="telegraph-progress-fill" id="boss-telegraph-fill" style="width: 0%;"></div>
+              </div>
+              <div class="telegraph-desc-strip" id="boss-telegraph-desc">
+                <span>Área de Efeito: -- &bull; Duração do Cast: -- s</span>
+              </div>
+            </div>
+
+            <!-- Proximity Aura Strip -->
+            <div class="boss-aura-strip" id="boss-aura-strip">
+              <span class="aura-icon">✨</span>
+              <span class="aura-text" id="boss-aura-text">Aura de Proximidade: Inativa</span>
+            </div>
+
+            <!-- Quick Action: Atacar Chefe -->
+            <div class="boss-action-footer">
+              <button class="btn-boss-attack" id="btn-boss-attack">⚔️ Desferir Golpe de Teste no Chefe</button>
+              <button class="btn-boss-reset" id="btn-boss-despawn">🗑️ Despawnar Chefe</button>
+            </div>
+          </div>
+
+          <!-- Lista de Todos os Chefes Ativos no Mundo -->
+          <div class="sub-card-box">
+            <h4 class="sub-card-title">🌐 ROSTER DE CHEFES MUNDIAIS ATIVOS</h4>
+            <div class="active-bosses-list" id="active-bosses-list">
+              <div class="empty-list-notice">Nenhum chefe ativo no momento. Use os botões à esquerda para invocar.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EVENT ARENAS & DUNGEONS SECTION -->
+    <section class="panel-box events-panel" id="events-panel" style="display: none;">
+      <div class="panel-header">
+        <div class="title-with-badge">
+          <span class="panel-title">🏆 ARENAS DE EVENTOS & MASMORRAS AUTORITATIVAS</span>
+          <span class="badge-accent">BLOOD CASTLE &bull; DEVIL SQUARE &bull; CHAOS CASTLE &bull; COLISEU &bull; CATACOMBS</span>
+        </div>
+        <div class="events-telemetry-strip">
+          <button class="btn-quick-feature" id="btn-refresh-events">🔄 Atualizar Arenas</button>
+        </div>
+      </div>
+
+      <div class="events-cards-grid">
+        <!-- 1. Blood Castle Card -->
+        <div class="event-card bc-card">
+          <div class="event-card-header">
+            <div class="event-card-title-wrap">
+              <span class="event-icon">🩸</span>
+              <div>
+                <h4>Blood Castle</h4>
+                <span class="event-sub">Rush Cronometrado (15 min) &bull; Ponte & Arcanjo</span>
+              </div>
+            </div>
+            <span class="event-status-tag" id="bc-status-tag">ABERTO</span>
+          </div>
+
+          <div class="event-timer-box">
+            <span class="timer-lbl">TEMPO RESTANTE:</span>
+            <strong class="timer-val" id="bc-timer-val">15:00</strong>
+          </div>
+
+          <!-- 4 Stages Progress -->
+          <div class="stage-stepper">
+            <div class="stage-step active" id="bc-step-1">
+              <span class="step-num">1</span>
+              <span class="step-lbl">Ponte (Cota 40)</span>
+            </div>
+            <div class="stage-step" id="bc-step-2">
+              <span class="step-num">2</span>
+              <span class="step-lbl">Portão</span>
+            </div>
+            <div class="stage-step" id="bc-step-3">
+              <span class="step-num">3</span>
+              <span class="step-lbl">Feiticeiros (2)</span>
+            </div>
+            <div class="stage-step" id="bc-step-4">
+              <span class="step-num">4</span>
+              <span class="step-lbl">Arma Arcanjo</span>
+            </div>
+          </div>
+
+          <div class="event-progress-details" id="bc-details">
+            <div class="detail-row">
+              <span>Monstros da Ponte:</span>
+              <strong id="bc-bridge-count">0 / 40</strong>
+            </div>
+            <div class="detail-row">
+              <span>Integridade do Portão:</span>
+              <strong id="bc-gate-hp">100.000 / 100.000 (100%)</strong>
+            </div>
+          </div>
+
+          <div class="event-actions-row">
+            <button class="btn-event-action" id="btn-bc-enter">🚪 Entrar (Cloak)</button>
+            <button class="btn-event-action" id="btn-bc-kill-mob">⚔️ Matar Monstro</button>
+            <button class="btn-event-action" id="btn-bc-hit-gate">💥 Golpear Portão</button>
+            <button class="btn-event-action" id="btn-bc-deliver">🪽 Entregar Arma</button>
+          </div>
+        </div>
+
+        <!-- 2. Devil Square Card -->
+        <div class="event-card ds-card">
+          <div class="event-card-header">
+            <div class="event-card-title-wrap">
+              <span class="event-icon">🔥</span>
+              <div>
+                <h4>Devil Square</h4>
+                <span class="event-sub">Sobrevivência &bull; 4 Ondas &bull; 4 Pilares de Fogo</span>
+              </div>
+            </div>
+            <span class="event-status-tag" id="ds-status-tag">ABERTO</span>
+          </div>
+
+          <div class="event-timer-box">
+            <span class="timer-lbl">ONDA ATUAL:</span>
+            <strong class="timer-val" id="ds-wave-val">Onda 1 / 4</strong>
+          </div>
+
+          <div class="ds-pillars-grid">
+            <div class="pillar-chip active" id="pillar-north">🔥 Pilar Norte: Ativo</div>
+            <div class="pillar-chip active" id="pillar-south">🔥 Pilar Sul: Ativo</div>
+            <div class="pillar-chip active" id="pillar-east">🔥 Pilar Leste: Ativo</div>
+            <div class="pillar-chip active" id="pillar-west">🔥 Pilar Oeste: Ativo</div>
+          </div>
+
+          <div class="event-progress-details">
+            <div class="detail-row">
+              <span>Pontuação Acumulada:</span>
+              <strong id="ds-score-val">0 pts</strong>
+            </div>
+            <div class="detail-row">
+              <span>Monstros Eliminados:</span>
+              <strong id="ds-kills-val">0</strong>
+            </div>
+          </div>
+
+          <div class="event-actions-row">
+            <button class="btn-event-action" id="btn-ds-enter">🚪 Entrar (Convite)</button>
+            <button class="btn-event-action" id="btn-ds-next-wave">⚡ Avançar Onda</button>
+            <button class="btn-event-action" id="btn-ds-chest">💎 Abrir Baú Triunfo</button>
+          </div>
+        </div>
+
+        <!-- 3. Chaos Castle Card -->
+        <div class="event-card cc-card">
+          <div class="event-card-header">
+            <div class="event-card-title-wrap">
+              <span class="event-icon">⚔️</span>
+              <div>
+                <h4>Chaos Castle</h4>
+                <span class="event-sub">Battle Royale Anônimo &bull; Colapso de 3 Anéis</span>
+              </div>
+            </div>
+            <span class="event-status-tag" id="cc-status-tag">ABERTO</span>
+          </div>
+
+          <div class="event-timer-box">
+            <span class="timer-lbl">ESTÁGIO DO ANEL:</span>
+            <strong class="timer-val" id="cc-stage-val">Anel 1 (42m &times; 42m)</strong>
+          </div>
+
+          <div class="cc-rings-indicator">
+            <div class="cc-ring-visual" id="cc-visual-ring">
+              <div class="ring-core">14m</div>
+              <div class="ring-mid">28m</div>
+              <div class="ring-outer">42m</div>
+            </div>
+            <div class="cc-combatants-box">
+              <span>Combatentes Vivos:</span>
+              <strong id="cc-alive-val">100 / 100</strong>
+              <small>⚠️ Mortes geram ondas de choque que empurram ao abismo!</small>
+            </div>
+          </div>
+
+          <div class="event-actions-row">
+            <button class="btn-event-action" id="btn-cc-enter">🚪 Entrar (Armor)</button>
+            <button class="btn-event-action" id="btn-cc-kill-bot">💥 Morte & Shockwave</button>
+            <button class="btn-event-action" id="btn-cc-collapse">📉 Forçar Colapso</button>
+          </div>
+        </div>
+
+        <!-- 4. Duel Coliseum Card -->
+        <div class="event-card duel-card">
+          <div class="event-card-header">
+            <div class="event-card-title-wrap">
+              <span class="event-icon">🛡️</span>
+              <div>
+                <h4>Coliseu 1v1 (Gladiador)</h4>
+                <span class="event-sub">Duelo ao Primeiro a 10 Pontos &bull; Barreira R=17.5m</span>
+              </div>
+            </div>
+            <span class="event-status-tag" id="duel-status-tag">AGUARDANDO</span>
+          </div>
+
+          <div class="duel-scoreboard">
+            <div class="duel-player-box">
+              <span class="duel-pname" id="duel-p1-name">BladeKnight (Você)</span>
+              <strong class="duel-pscore" id="duel-p1-score">0</strong>
+            </div>
+            <span class="duel-vs">VS</span>
+            <div class="duel-player-box">
+              <span class="duel-pname" id="duel-p2-name">DarkLord_X</span>
+              <strong class="duel-pscore" id="duel-p2-score">0</strong>
+            </div>
+          </div>
+
+          <div class="event-progress-details">
+            <div class="detail-row">
+              <span>Barreira de Espectadores:</span>
+              <strong style="color: #38bdf8;">Ativa (Raio 17.5m)</strong>
+            </div>
+            <div class="detail-row">
+              <span>Regra de Vitória:</span>
+              <strong>Primeiro a 10 Abates</strong>
+            </div>
+          </div>
+
+          <div class="event-actions-row">
+            <button class="btn-event-action" id="btn-duel-start">⚔️ Iniciar Duelo</button>
+            <button class="btn-event-action" id="btn-duel-score-p1">🎯 Ponto Jogador 1</button>
+            <button class="btn-event-action" id="btn-duel-score-p2">🎯 Ponto Jogador 2</button>
+            <button class="btn-event-action" id="btn-duel-end">🏁 Encerrar Duelo</button>
+          </div>
+        </div>
+
+        <!-- 5. Catacombs Dungeon Card -->
+        <div class="event-card dungeon-card">
+          <div class="event-card-header">
+            <div class="event-card-title-wrap">
+              <span class="event-icon">💀</span>
+              <div>
+                <h4>Dungeon das Catacumbas</h4>
+                <span class="event-sub">3 Andares &bull; Lodo Ácido DoT &bull; Covil da Górgona</span>
+              </div>
+            </div>
+            <span class="event-status-tag" id="dng-status-tag">DISPONÍVEL</span>
+          </div>
+
+          <div class="event-timer-box">
+            <span class="timer-lbl">ANDAR ATUAL & RANQUE:</span>
+            <strong class="timer-val" id="dng-floor-val">Andar 1 (DNG_01) &bull; Ranque S</strong>
+          </div>
+
+          <div class="dungeon-hazards-tracker">
+            <div class="hazard-chip" id="dng-key-status">🔑 Chave de Ossos: Pendente</div>
+            <div class="hazard-chip" id="dng-mud-status">🧪 Lodo Ácido (Andar 2): Inativo</div>
+            <div class="hazard-chip" id="dng-pillars-status">🏛️ Pilares Rúnicos (Andar 3): 8 / 8</div>
+          </div>
+
+          <div class="event-progress-details">
+            <div class="detail-row">
+              <span>Tempo de Masmorra:</span>
+              <strong id="dng-time-val">00:00 (Ranque S &lt; 5m)</strong>
+            </div>
+            <div class="detail-row">
+              <span>Válvulas Drenadas:</span>
+              <strong id="dng-valves-val">0 / 3 Válvulas</strong>
+            </div>
+          </div>
+
+          <div class="event-actions-row">
+            <button class="btn-event-action" id="btn-dng-start">🚪 Iniciar Dungeon</button>
+            <button class="btn-event-action" id="btn-dng-key">🔑 Coletar Chave</button>
+            <button class="btn-event-action" id="btn-dng-drain">🚰 Drenar Válvula</button>
+            <button class="btn-event-action" id="btn-dng-pillar">💥 Quebrar Pilar</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Workspace: Equipment Paperdoll, 8x8 Grid, Item Glow & Details -->
+    <main class="workspace-grid" id="main-workspace-grid">
+      
+      <!-- COLUMN 1: Paperdoll Equipment Slots -->
+      <section class="panel-box equipment-box">
+        <div class="panel-header">
+          <span class="panel-title">EQUIPAMENTO DO HERÓI</span>
+          <span class="panel-sub">Slots de Corpo</span>
+        </div>
+        <div class="paperdoll-container">
+          
+          <!-- Top Row: Wings, Helm, Helper -->
+          <div class="doll-row">
+            <div class="slot-wrapper" data-slot="WINGS">
+              <span class="slot-label">Asas</span>
+              <div class="equip-slot" id="slot-WINGS" data-slot="WINGS"></div>
+            </div>
+            <div class="slot-wrapper" data-slot="HELM">
+              <span class="slot-label">Elmo</span>
+              <div class="equip-slot" id="slot-HELM" data-slot="HELM"></div>
+            </div>
+            <div class="slot-wrapper" data-slot="HELPER">
+              <span class="slot-label">Pet / Helper</span>
+              <div class="equip-slot" id="slot-HELPER" data-slot="HELPER"></div>
+            </div>
+          </div>
+
+          <!-- Mid-Top Row: Weapon R, Armor, Weapon L -->
+          <div class="doll-row">
+            <div class="slot-wrapper" data-slot="WEAPON_RIGHT">
+              <span class="slot-label">Arma (Dir)</span>
+              <div class="equip-slot slot-tall" id="slot-WEAPON_RIGHT" data-slot="WEAPON_RIGHT"></div>
+            </div>
+            <div class="slot-wrapper" data-slot="ARMOR">
+              <span class="slot-label">Armadura</span>
+              <div class="equip-slot slot-armor" id="slot-ARMOR" data-slot="ARMOR"></div>
+            </div>
+            <div class="slot-wrapper" data-slot="WEAPON_LEFT">
+              <span class="slot-label">Escudo / Arma</span>
+              <div class="equip-slot slot-tall" id="slot-WEAPON_LEFT" data-slot="WEAPON_LEFT"></div>
+            </div>
+          </div>
+
+          <!-- Mid-Bottom Row: Gloves, Pants, Pendant -->
+          <div class="doll-row">
+            <div class="slot-wrapper" data-slot="GLOVES">
+              <span class="slot-label">Luvas</span>
+              <div class="equip-slot" id="slot-GLOVES" data-slot="GLOVES"></div>
+            </div>
+            <div class="slot-wrapper" data-slot="PANTS">
+              <span class="slot-label">Calças</span>
+              <div class="equip-slot" id="slot-PANTS" data-slot="PANTS"></div>
+            </div>
+            <div class="slot-wrapper" data-slot="PENDANT">
+              <span class="slot-label">Pingente</span>
+              <div class="equip-slot" id="slot-PENDANT" data-slot="PENDANT"></div>
+            </div>
+          </div>
+
+          <!-- Bottom Row: Ring L, Boots, Ring R -->
+          <div class="doll-row">
+            <div class="slot-wrapper" data-slot="RING_LEFT">
+              <span class="slot-label">Anel (Esq)</span>
+              <div class="equip-slot slot-small" id="slot-RING_LEFT" data-slot="RING_LEFT"></div>
+            </div>
+            <div class="slot-wrapper" data-slot="BOOTS">
+              <span class="slot-label">Botas</span>
+              <div class="equip-slot" id="slot-BOOTS" data-slot="BOOTS"></div>
+            </div>
+            <div class="slot-wrapper" data-slot="RING_RIGHT">
+              <span class="slot-label">Anel (Dir)</span>
+              <div class="equip-slot slot-small" id="slot-RING_RIGHT" data-slot="RING_RIGHT"></div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- COLUMN 2: 8x8 Grid Inventory -->
+      <section class="panel-box inventory-box">
+        <div class="panel-header">
+          <div class="title-with-badge">
+            <span class="panel-title">BOLSA PRINCIPAL</span>
+            <span class="badge-accent">GRADE 8x8</span>
+          </div>
+          <span class="panel-sub" id="inv-capacity-counter">Itens: 0 / 64</span>
+        </div>
+
+        <div class="grid-outer-frame">
+          <div class="grid-board" id="inventory-grid">
+            <!-- 64 Células 8x8 geradas via JS -->
+          </div>
+          <!-- Camada de overlay para itens multi-slot flutuantes -->
+          <div class="items-layer" id="items-layer"></div>
+        </div>
+
+        <!-- Toolbar de Ações Rápidas -->
+        <div class="inventory-toolbar">
+          <button class="btn-tool" id="btn-spawn-bless" title="Criar Joia da Bênção">💎 + Bless</button>
+          <button class="btn-tool" id="btn-spawn-soul" title="Criar Joia da Alma">🔮 + Soul</button>
+          <button class="btn-tool" id="btn-spawn-life" title="Criar Joia da Vida">💚 + Life</button>
+          <button class="btn-tool" id="btn-spawn-chaos" title="Criar Joia do Caos">⚡ + Chaos</button>
+          <button class="btn-tool" id="btn-spawn-creation" title="Criar Joia da Criação">💠 + Creation</button>
+          <button class="btn-tool" id="btn-spawn-feather" title="Criar Pena de Loch (Asas T2)">🪶 + Pena</button>
+          <button class="btn-tool" id="btn-spawn-blade" title="Criar Dragon Blade">🗡️ + Blade</button>
+          <button class="btn-tool" id="btn-spawn-wings" title="Criar Asas de Dragão (T2)">🪽 + Asas T2</button>
+          <button class="btn-tool" id="btn-spawn-wings3" title="Criar Wings of Storm (T3)">🪽 + Asas T3</button>
+          <button class="btn-tool" id="btn-spawn-box-1" title="Criar Box of Kundun +1">🎁 + Kundun +1</button>
+          <button class="btn-tool" id="btn-spawn-box-5" title="Criar Box of Kundun +5">🎁 + Kundun +5</button>
+          <button class="btn-tool" id="btn-spawn-fruit" title="Criar Fruta de Força">🍎 + Fruta</button>
+        </div>
+      </section>
+
+      <!-- COLUMN 3: Real-time Item Glow Visualizer & Inspector -->
+      <section class="panel-box inspector-box">
+        <div class="panel-header">
+          <span class="panel-title">INSPEÇÃO & BRILHO DINÂMICO</span>
+          <span class="panel-sub">Shader Glow Engine (+0..+15)</span>
+        </div>
+
+        <!-- Glow Canvas Display -->
+        <div class="canvas-glow-wrapper">
+          <canvas id="glow-canvas" width="300" height="240"></canvas>
+          <div class="glow-tier-badge" id="glow-tier-badge">+7 RUNIC GLOW</div>
+        </div>
+
+        <!-- Item Details Card -->
+        <div class="item-card" id="inspected-item-card">
+          <div class="card-empty-msg">Passe o mouse ou selecione um item para inspecionar atributos e opções.</div>
+        </div>
+
+        <!-- Dev Refinement Slider (Manual Override for visual test) -->
+        <div class="glow-controls">
+          <div class="slider-header">
+            <span>Pré-visualizar Nível de Brilho:</span>
+            <strong id="slider-level-val">+7</strong>
+          </div>
+          <input type="range" id="level-slider" min="0" max="15" value="7" step="1">
+          <div class="glow-milestones">
+            <span>+0 PBR</span>
+            <span>+7 Runa</span>
+            <span>+9 Aura</span>
+            <span>+11 Raio</span>
+            <span>+15 Corona</span>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom: Interactive Jewel & Network Log Console -->
+    <footer class="log-console-panel">
+      <div class="console-header">
+        <span class="console-title">📜 REGISTRO DE EVENTOS & FORJA SAGRADA (LOG DE REDE)</span>
+        <button class="btn-clear-log" id="btn-clear-log">Limpar Console</button>
+      </div>
+      <div class="console-logs" id="console-logs">
+        <div class="log-row info">
+          <span class="timestamp">[00:00:00]</span>
+          <span class="source">[Engine]</span>
+          <span class="msg">Cliente de desenvolvimento iniciado. Aguardando pacotes do GameServer...</span>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODAIS DO SISTEMA 100% IDLE: CAÇA OFFLINE, MÁQUINA DO CAOS & MERCADORES -->
+  <!-- ==================================================================== -->
+
+  <!-- 1. Modal de Caça AFK Offline -->
+  <div class="dasi-modal-overlay" id="modal-afk-rewards" style="display: none;">
+    <div class="dasi-modal-card">
+      <div class="dasi-modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-icon">💤</span>
+          <h3>RELATÓRIO DE CAÇA AFK OFFLINE</h3>
+        </div>
+        <button class="btn-close-modal" data-close="modal-afk-rewards">&times;</button>
+      </div>
+      <div class="dasi-modal-body">
+        <p class="modal-subtitle">Seu herói continuou caçando nos reinos enquanto você esteve ausente!</p>
+        
+        <div class="afk-duration-selector">
+          <label>Simular Duração AFK:</label>
+          <div class="duration-buttons">
+            <button class="btn-duration active" data-hours="1">1 Hora</button>
+            <button class="btn-duration" data-hours="2">2 Horas</button>
+            <button class="btn-duration" data-hours="4">4 Horas</button>
+            <button class="btn-duration" data-hours="8">8 Horas</button>
+            <button class="btn-duration" data-hours="12">12 Horas</button>
+          </div>
+        </div>
+
+        <div class="afk-summary-grid">
+          <div class="summary-tile">
+            <span class="tile-icon">💀</span>
+            <span class="tile-lbl">Monstros Eliminados</span>
+            <strong class="tile-val" id="afk-modal-mobs">180</strong>
+          </div>
+          <div class="summary-tile">
+            <span class="tile-icon">🪙</span>
+            <span class="tile-lbl">Zen Acumulado</span>
+            <strong class="tile-val val-zen" id="afk-modal-zen">8.100 Zen</strong>
+          </div>
+          <div class="summary-tile">
+            <span class="tile-icon">⭐</span>
+            <span class="tile-lbl">Experiência (XP)</span>
+            <strong class="tile-val val-xp" id="afk-modal-xp">+63.000 XP</strong>
+          </div>
+          <div class="summary-tile">
+            <span class="tile-icon">💎</span>
+            <span class="tile-lbl">Joias Sagradas</span>
+            <div class="jewels-mini-strip" id="afk-modal-jewels">
+              <span class="jewel-chip" title="Jewel of Bless">🔷 Bless: <strong id="afk-jewel-bless">2</strong></span>
+              <span class="jewel-chip" title="Jewel of Soul">🟣 Soul: <strong id="afk-jewel-soul">3</strong></span>
+              <span class="jewel-chip" title="Jewel of Chaos">🔥 Chaos: <strong id="afk-jewel-chaos">4</strong></span>
+              <span class="jewel-chip" title="Jewel of Life">🟢 Life: <strong id="afk-jewel-life">1</strong></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dasi-modal-footer">
+        <button class="btn-claim-rewards" id="btn-claim-afk-rewards">🌟 Resgatar Todas as Recompensas</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Modal da Máquina do Caos (Chaos Machine) -->
+  <div class="dasi-modal-overlay" id="modal-chaos-machine" style="display: none;">
+    <div class="dasi-modal-card chaos-machine-card">
+      <div class="dasi-modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-icon">⚙️</span>
+          <h3>MÁQUINA DO CAOS — FORJA ALQUÍMICA</h3>
+        </div>
+        <button class="btn-close-modal" data-close="modal-chaos-machine">&times;</button>
+      </div>
+      <div class="dasi-modal-body">
+        <div class="chaos-recipe-tabs">
+          <button class="btn-recipe-tab active" data-recipe="CHAOS_WEAPON">⚔️ Arma do Caos</button>
+          <button class="btn-recipe-tab" data-recipe="FIRST_WING">🦅 Asas Nível 1</button>
+          <button class="btn-recipe-tab" data-recipe="ITEM_UPGRADE">💎 Refino +10..+15</button>
+        </div>
+
+        <div class="chaos-recipe-details">
+          <h4 id="chaos-recipe-title">Forja de Armas do Caos</h4>
+          <p id="chaos-recipe-desc">Combina um item de equipamento +4 ou superior com opções adicionais, 1x Jewel of Chaos e Zen para sintetizar uma poderosa arma mística do Caos (Chaos Dragon Axe, Nature Bow ou Lightning Staff).</p>
+
+          <div class="chaos-status-bar">
+            <div class="rate-box">
+              <span class="rate-lbl">Taxa de Sucesso:</span>
+              <strong class="rate-val" id="chaos-success-rate">75%</strong>
+            </div>
+            <div class="cost-box">
+              <span class="cost-lbl">Custo Alquímico:</span>
+              <strong class="cost-val" id="chaos-zen-cost">100.000 Zen</strong>
+            </div>
+          </div>
+
+          <div class="chaos-visual-progress">
+            <div class="chaos-progress-fill" id="chaos-progress-fill" style="width: 75%;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="dasi-modal-footer">
+        <button class="btn-chaos-forge-action" id="btn-chaos-mix-execute">⚡ INICIAR FUSÃO ALQUÍMICA</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Modal de Lojas de NPCs (Mercadores Han & Pupa) -->
+  <div class="dasi-modal-overlay" id="modal-npc-shop" style="display: none;">
+    <div class="dasi-modal-card shop-card">
+      <div class="dasi-modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-icon">🏪</span>
+          <h3>COMERCIANTES & MERCADORES IMPERIAIS</h3>
+        </div>
+        <button class="btn-close-modal" data-close="modal-npc-shop">&times;</button>
+      </div>
+      <div class="dasi-modal-body">
+        <div class="shop-merchant-tabs">
+          <button class="btn-shop-tab active" data-shop="han_blacksmith">🛡️ Han the Blacksmith (Lorencia)</button>
+          <button class="btn-shop-tab" data-shop="pupa_potion_girl">🧪 Pupa the Potion Girl (Noria)</button>
+        </div>
+
+        <div class="shop-catalog-grid" id="shop-catalog-container">
+          <!-- Gerado dinamicamente via app.js -->
+        </div>
+      </div>
+      <div class="dasi-modal-footer">
+        <div class="player-zen-indicator">
+          <span>Seu Tesouro:</span>
+          <strong id="shop-player-zen">1.250.000 Zen</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Modal de Galeria de Concept Art Oficial (5 Biomas Canônicos) -->
+  <div class="dasi-modal-overlay" id="modal-concept-art" style="display: none;">
+    <div class="dasi-modal-card concept-art-card" style="max-width: 960px;">
+      <div class="dasi-modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-icon">🖼️</span>
+          <h3>GALERIA OFICIAL DE CONCEPT ART (10 CENÁRIOS & 5 CLASSES AAA)</h3>
+        </div>
+        <button class="btn-close-modal" data-close="modal-concept-art">&times;</button>
+      </div>
+      <div class="dasi-modal-body" style="padding: 16px;">
+        <div class="art-tabs-row" style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+          <button class="btn-art-tab active" data-biome="LORENCIA" style="padding: 7px 16px; border-radius: 6px; border: 1px solid #d97706; background: rgba(217, 119, 6, 0.25); color: #fbbf24; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">🏰 Lorencia</button>
+          <button class="btn-art-tab" data-biome="NORIA" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(16, 185, 129, 0.1); color: #cbd5e1; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">🌿 Noria</button>
+          <button class="btn-art-tab" data-biome="DEVIAS" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(56, 189, 248, 0.1); color: #cbd5e1; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">❄️ Devias</button>
+          <button class="btn-art-tab" data-biome="DUNGEON" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(16, 185, 129, 0.1); color: #cbd5e1; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">💀 Dungeon</button>
+          <button class="btn-art-tab" data-biome="LOST_TOWER" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(239, 68, 68, 0.1); color: #cbd5e1; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">🔥 Lost Tower</button>
+          <button class="btn-art-tab" data-biome="ATLANS" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(6, 182, 212, 0.1); color: #cbd5e1; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">🌊 Atlans</button>
+          <button class="btn-art-tab" data-biome="TARKAN" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(217, 119, 6, 0.1); color: #cbd5e1; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">🏜️ Tarkan</button>
+          <button class="btn-art-tab" data-biome="ICARUS" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(192, 132, 252, 0.1); color: #cbd5e1; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">🪽 Icarus</button>
+          <button class="btn-art-tab" data-biome="VALLEY_OF_LOREN" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(239, 68, 68, 0.15); color: #cbd5e1; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">⚔️ Valley of Loren</button>
+          <button class="btn-art-tab" data-biome="BLOOD_CASTLE" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(185, 28, 28, 0.15); color: #cbd5e1; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">🩸 Blood Castle</button>
+          <!-- 5 Classes Canônicas de Heróis -->
+          <button class="btn-art-tab" data-biome="HERO_DK" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.15); color: #fca5a5; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">🛡️ Dark Knight</button>
+          <button class="btn-art-tab" data-biome="HERO_DW" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.15); color: #7dd3fc; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">🔮 Dark Wizard</button>
+          <button class="btn-art-tab" data-biome="HERO_ELF" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.15); color: #6ee7b7; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">🏹 Fairy Elf</button>
+          <button class="btn-art-tab" data-biome="HERO_MG" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(6, 182, 212, 0.4); background: rgba(6, 182, 212, 0.15); color: #67e8f9; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">⚡ Magic Gladiator</button>
+          <button class="btn-art-tab" data-biome="HERO_DL" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.15); color: #fcd34d; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">👑 Dark Lord</button>
+        </div>
+        <div class="art-viewer-display" style="border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; overflow: hidden; background: #000; box-shadow: 0 8px 32px rgba(0,0,0,0.6); text-align: center;">
+          <img id="concept-art-img" src="art/lorencia_concept_art.jpg" alt="Concept Art" style="width: 100%; height: auto; display: block; object-fit: contain; max-height: 520px;">
+        </div>
+        <div class="art-info-box" style="margin-top: 10px; padding: 12px; background: rgba(15, 23, 42, 0.7); border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
+          <h4 id="concept-art-title" style="margin: 0 0 4px 0; color: #fbbf24; font-family: 'Cinzel', serif;">Lorencia Citadel — Praça Central & Fonte do Arcanjo</h4>
+          <p id="concept-art-desc" style="margin: 0; font-size: 0.95rem; color: #cbd5e1; line-height: 1.4;">Melancolia medieval gótica sob chuva fria contínua. Fonte octogonal de pedra com a estátua em bronze do Arcanjo de Loren empunhando sua espada celestial sob um halo dourado flutuante, ladeada pelo Bazar com tendas coloridas, a Taverna da Lareira Dourada e a muralha fortificada.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+    <!-- 5. Modal do Salão dos Heróis & Avatares 3D (As 5 Classes Canônicas) -->
+  <div class="dasi-modal-overlay" id="modal-hero-classes" style="display: none;">
+    <div class="dasi-modal-card hero-classes-modal-card" style="max-width: 1120px; width: 95%;">
+      <div class="dasi-modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-icon">🏛️</span>
+          <h3>SALÃO DOS HERÓIS — SELEÇÃO DE CLASSES & AVATARES 3D</h3>
+        </div>
+        <button class="btn-close-modal" id="btn-close-class-modal">&times;</button>
+      </div>
+      <div class="dasi-modal-body" style="padding: 18px;">
+        <p class="modal-subtitle" style="margin-top: 0; margin-bottom: 16px; color: #94a3b8; font-size: 0.95rem;">
+          Selecione uma das <strong>5 Classes Canônicas Originais de Continent of Legend</strong>. Cada arquétipo possui anatomia 3D única, armas forjadas, asas lendárias e árvore de progressão física.
+        </p>
+        <div class="hero-classes-grid" id="hero-classes-grid">
+          <!-- Gerado dinamicamente via dasi3dAvatar.js -->
+        </div>
+      </div>
+      <div class="dasi-modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-size: 12px; color: #64748b;">
+          ⚡ <em>Modelos compilados nativamente em GLB PBR via Blender 5.2 LTS com suporte a shader glow (+0 a +15).</em>
+        </div>
+        <button class="btn-close-modal-footer" id="btn-close-class-modal-footer" onclick="document.getElementById('modal-hero-classes').style.display='none'">Fechar Salão</button>
+      </div>
+    </div>
+  </div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,408 @@
+// ============================================================================
+// DASI MMORPG - UNREAL ENGINE 5 LANDSCAPE MASTER HLSL INCLUDE
+// M_Lorencia_Landscape_Master.ush
+//
+// 100% 3D Native PBR Shading Pipeline for Lorencia Grey Plains & Loren Castle.
+// Images and classical 2D sprites serve solely as aesthetic references;
+// all visual components are rendered as true 3D physical surfaces with Nanite,
+// Runtime Virtual Texturing (RVT), Parallax Occlusion Mapping, and Lumen GI.
+//
+// Included inside UE5 Custom HLSL Nodes:
+//   #include "/Project/Materials/HLSL/MF_DynamicWeather_Include.ush"
+//   #include "/Project/Materials/Landscape/M_Lorencia_Landscape_Master.ush"
+// ============================================================================
+
+#ifndef M_LORENCIA_LANDSCAPE_MASTER_USH
+#define M_LORENCIA_LANDSCAPE_MASTER_USH
+
+#include "/Project/Materials/HLSL/MF_DynamicWeather_Include.ush"
+
+// ----------------------------------------------------------------------------
+// STRUCTURES FOR 4-LAYER PBR TERRAIN BLENDING
+// ----------------------------------------------------------------------------
+struct FLandscapeLayerPBR
+{
+	float3 BaseColor;
+	float3 WorldNormal;
+	float  Roughness;
+	float  Metallic;
+	float  Specular;
+	float  AmbientOcclusion;
+	float  Height;
+};
+
+struct FLandscapeMasterOutput
+{
+	float3 FinalBaseColor;
+	float3 FinalWorldNormal;
+	float  FinalRoughness;
+	float  FinalMetallic;
+	float  FinalSpecular;
+	float  FinalAmbientOcclusion;
+	float3 FinalEmissive;
+	float3 WorldPositionOffset;
+	
+	// Runtime Virtual Texture (RVT) Outputs
+	float4 RVT_BaseColor_AO;
+	float4 RVT_WorldNormal_Roughness;
+	float4 RVT_Specular_Metallic_Displacement;
+};
+
+// ----------------------------------------------------------------------------
+// PROCEDURAL TERRAIN NOISE & MICRO-VARIATION
+// ----------------------------------------------------------------------------
+float Lorencia_TerrainPerlin2D(float2 P)
+{
+	float2 Pi = floor(P);
+	float2 Pf = frac(P);
+	Pf = Pf * Pf * (3.0f - 2.0f * Pf); // Hermite cubic curve
+
+	float2 G00 = DW_Hash22(Pi + float2(0.0f, 0.0f)) * 2.0f - 1.0f;
+	float2 G10 = DW_Hash22(Pi + float2(1.0f, 0.0f)) * 2.0f - 1.0f;
+	float2 G01 = DW_Hash22(Pi + float2(0.0f, 1.0f)) * 2.0f - 1.0f;
+	float2 G11 = DW_Hash22(Pi + float2(1.0f, 1.0f)) * 2.0f - 1.0f;
+
+	float N00 = dot(G00, Pf - float2(0.0f, 0.0f));
+	float N10 = dot(G10, Pf - float2(1.0f, 0.0f));
+	float N01 = dot(G01, Pf - float2(0.0f, 1.0f));
+	float N11 = dot(G11, Pf - float2(1.0f, 1.0f));
+
+	float Nx0 = lerp(N00, N10, Pf.x);
+	float Nx1 = lerp(N01, N11, Pf.x);
+	return lerp(Nx0, Nx1, Pf.y) * 0.5f + 0.5f;
+}
+
+// ----------------------------------------------------------------------------
+// LAYER 1: COBBLESTONE WET (Cidadela, Praça Central e Arredores das Muralhas)
+// ----------------------------------------------------------------------------
+FLandscapeLayerPBR EvaluateCobblestoneWet(
+	float3 WorldPos,
+	float3 WorldNormalGeo,
+	float2 UV,
+	Texture2D CobbleAlbedoTex,
+	Texture2D CobbleNormalTex,
+	Texture2D CobbleORMHTex,
+	SamplerState SamplerLinear)
+{
+	FLandscapeLayerPBR Out;
+
+	// Triplanar / UV Scaling (World Units: 1 UV repeat per 400cm)
+	float2 uvTile = UV * 2.5f;
+	float4 albedoRaw = CobbleAlbedoTex.Sample(SamplerLinear, uvTile);
+	float4 ormhRaw   = CobbleORMHTex.Sample(SamplerLinear, uvTile); // R: AO, G: Roughness, B: Metallic, A: Height
+	float4 normRaw   = CobbleNormalTex.Sample(SamplerLinear, uvTile);
+
+	// Medieval dark sodalite granite with warm mortar edge wear
+	float3 baseStoneColor = albedoRaw.rgb * float3(0.88f, 0.85f, 0.82f);
+	
+	// Porous surface slight darkening from ancient moss in stone crevices
+	float creviceDarkening = saturate(ormhRaw.a * 1.2f);
+	Out.BaseColor = lerp(baseStoneColor * 0.65f, baseStoneColor, creviceDarkening);
+
+	// Reconstruct normal vector
+	float3 tangentNormal = normRaw.xyz * 2.0f - 1.0f;
+	Out.WorldNormal = tangentNormal; // In UE Custom node converted to WS
+	Out.Roughness = lerp(0.45f, 0.85f, ormhRaw.g);
+	Out.Metallic = ormhRaw.b * 0.05f; // Non-metallic stone
+	Out.Specular = 0.5f;
+	Out.AmbientOcclusion = ormhRaw.r;
+	Out.Height = ormhRaw.a;
+
+	return Out;
+}
+
+// ----------------------------------------------------------------------------
+// LAYER 2: MUD PUDDLES (Planícies Lamacentas, Trilhas de Carroças & Baixadas)
+// Dynamic Puddle Formation with 1.333 IOR and Dual Rain Ripples
+// ----------------------------------------------------------------------------
+FLandscapeLayerPBR EvaluateMudPuddles(
+	float3 WorldPos,
+	float3 WorldNormalGeo,
+	float2 UV,
+	Texture2D MudAlbedoTex,
+	Texture2D MudNormalTex,
+	Texture2D MudORMHTex,
+	SamplerState SamplerLinear,
+	float RainIntensity,
+	float WetnessSaturation,
+	float DynamicTime,
+	float RippleDensity,
+	float RippleSpeed)
+{
+	FLandscapeLayerPBR Out;
+
+	float2 uvTile = UV * 3.0f;
+	float4 mudAlbedo = MudAlbedoTex.Sample(SamplerLinear, uvTile);
+	float4 mudORMH   = MudORMHTex.Sample(SamplerLinear, uvTile);
+	float4 mudNormal = MudNormalTex.Sample(SamplerLinear, uvTile);
+
+	// Deep argillaceous brown mud
+	float3 mudColor = mudAlbedo.rgb * float3(0.62f, 0.48f, 0.36f);
+
+	// Evaluate Dynamic Weather (MF_DynamicWeather_Include)
+	FDynamicWeatherResult weatherRes = DW_EvaluateDynamicWeather(
+		mudColor,
+		mudNormal.xyz * 2.0f - 1.0f,
+		mudORMH.g,
+		mudORMH.b,
+		0.5f,
+		mudORMH.a,
+		RainIntensity,
+		WetnessSaturation,
+		UV,
+		DynamicTime,
+		RippleDensity,
+		RippleSpeed
+	);
+
+	Out.BaseColor = weatherRes.OutBaseColor;
+	Out.WorldNormal = weatherRes.OutWorldNormal;
+	Out.Roughness = weatherRes.OutRoughness;
+	Out.Metallic = weatherRes.OutMetallic;
+	Out.Specular = weatherRes.OutSpecular;
+	Out.AmbientOcclusion = mudORMH.r;
+	Out.Height = mudORMH.a;
+
+	return Out;
+}
+
+// ----------------------------------------------------------------------------
+// LAYER 3: GRASS SPARSE (Grama Agreste Úmida, Campos das Aranhas & Hounds)
+// ----------------------------------------------------------------------------
+FLandscapeLayerPBR EvaluateGrassSparse(
+	float3 WorldPos,
+	float3 WorldNormalGeo,
+	float2 UV,
+	Texture2D GrassAlbedoTex,
+	Texture2D GrassNormalTex,
+	Texture2D GrassORMHTex,
+	SamplerState SamplerLinear,
+	float WetnessSaturation)
+{
+	FLandscapeLayerPBR Out;
+
+	float2 uvTile = UV * 4.0f;
+	float4 grassAlbedo = GrassAlbedoTex.Sample(SamplerLinear, uvTile);
+	float4 grassORMH   = GrassORMHTex.Sample(SamplerLinear, uvTile);
+	float4 grassNormal = GrassNormalTex.Sample(SamplerLinear, uvTile);
+
+	// Subdued cold continental grass with withered autumnal fringes
+	float3 baseGrass = grassAlbedo.rgb * float3(0.55f, 0.62f, 0.40f);
+	
+	// Wetness darkening on organic grass blades
+	float wetDarken = lerp(1.0f, 0.72f, WetnessSaturation);
+	Out.BaseColor = baseGrass * wetDarken;
+
+	Out.WorldNormal = grassNormal.xyz * 2.0f - 1.0f;
+	Out.Roughness = lerp(grassORMH.g, 0.28f, WetnessSaturation * 0.7f);
+	Out.Metallic = 0.0f;
+	Out.Specular = lerp(0.35f, 0.60f, WetnessSaturation);
+	Out.AmbientOcclusion = grassORMH.r;
+	Out.Height = grassORMH.a;
+
+	return Out;
+}
+
+// ----------------------------------------------------------------------------
+// LAYER 4: GRAVEYARD ASH (Cemitério Abandonado das Almas Esquecidas)
+// Charcoal Soil, Tomb Dust & Spectral Bioluminescent Lichen
+// ----------------------------------------------------------------------------
+FLandscapeLayerPBR EvaluateGraveyardAsh(
+	float3 WorldPos,
+	float3 WorldNormalGeo,
+	float2 UV,
+	Texture2D AshAlbedoTex,
+	Texture2D AshNormalTex,
+	Texture2D AshORMHTex,
+	SamplerState SamplerLinear,
+	float DynamicTime)
+{
+	FLandscapeLayerPBR Out;
+
+	float2 uvTile = UV * 3.5f;
+	float4 ashAlbedo = AshAlbedoTex.Sample(SamplerLinear, uvTile);
+	float4 ashORMH   = AshORMHTex.Sample(SamplerLinear, uvTile);
+	float4 ashNormal = AshNormalTex.Sample(SamplerLinear, uvTile);
+
+	// Cold necrotic charcoal-grey earth
+	float3 earthAsh = ashAlbedo.rgb * float3(0.38f, 0.36f, 0.35f);
+
+	// Subtle spectral green lichen pulsing softly (Fogo-Fátuo resonance)
+	float pulse = sin(DynamicTime * 1.5f + WorldPos.x * 0.02f + WorldPos.y * 0.02f) * 0.5f + 0.5f;
+	float lichenMask = saturate((ashORMH.g - 0.6f) * 3.0f);
+	float3 spectralGaze = float3(0.06f, 0.75f, 0.45f) * (lichenMask * (0.4f + pulse * 0.6f));
+
+	Out.BaseColor = earthAsh + spectralGaze * 0.2f;
+	Out.WorldNormal = ashNormal.xyz * 2.0f - 1.0f;
+	Out.Roughness = lerp(0.9f, 0.35f, ashORMH.g); // Viscous rotting mud
+	Out.Metallic = 0.02f;
+	Out.Specular = 0.4f;
+	Out.AmbientOcclusion = ashORMH.r;
+	Out.Height = ashORMH.a;
+
+	return Out;
+}
+
+// ----------------------------------------------------------------------------
+// DYNAMIC FOOTPRINT & CART WHEEL RUT DEFORMATION (World Position Offset)
+// ----------------------------------------------------------------------------
+float3 ComputeDeformationWPO(
+	float3 WorldPos,
+	float2 UV,
+	Texture2D DynamicDeformRT, // 2D Render Target registering footprints & wheels
+	SamplerState SamplerLinear,
+	float MaxDepressionDepthCm,
+	float MudLayerWeight)
+{
+	if (MudLayerWeight <= 0.01f || MaxDepressionDepthCm <= 0.01f)
+	{
+		return float3(0.0f, 0.0f, 0.0f);
+	}
+
+	// Sample persistent deformation buffer (centered around active player cell)
+	float deformSample = DynamicDeformRT.SampleLevel(SamplerLinear, UV, 0).r;
+	
+	// Displace vertex downward along world Z into the mud layer
+	float zOffset = -deformSample * MaxDepressionDepthCm * MudLayerWeight;
+
+	return float3(0.0f, 0.0f, zOffset);
+}
+
+// ----------------------------------------------------------------------------
+// MASTER LANDSCAPE BLEND FUNCTION (HEIGHT-BASED BLEND WITH RVT SUPPORT)
+// ----------------------------------------------------------------------------
+FLandscapeMasterOutput EvaluateLorenciaLandscapeMaster(
+	float3 WorldPos,
+	float3 WorldNormalGeo,
+	float2 UV,
+	// Layer Weight Maps (from Landscape Painting)
+	float4 LayerWeights, // X: Cobble, Y: Mud, Z: Grass, W: GraveyardAsh
+	// Textures
+	Texture2D CobbleAlbedo, CobbleNormal, CobbleORMH,
+	Texture2D MudAlbedo,    MudNormal,    MudORMH,
+	Texture2D GrassAlbedo,  GrassNormal,  GrassORMH,
+	Texture2D AshAlbedo,    AshNormal,    AshORMH,
+	Texture2D DynamicDeformRT,
+	SamplerState SamplerLinear,
+	// Climate Parameters
+	float RainIntensity,
+	float WetnessSaturation,
+	float DynamicTime,
+	float MaxDepressionDepthCm)
+{
+	FLandscapeMasterOutput MasterOut;
+
+	// 1. Evaluate Individual PBR Layers
+	FLandscapeLayerPBR L_Cobble = EvaluateCobblestoneWet(
+		WorldPos, WorldNormalGeo, UV,
+		CobbleAlbedo, CobbleNormal, CobbleORMH, SamplerLinear
+	);
+
+	FLandscapeLayerPBR L_Mud = EvaluateMudPuddles(
+		WorldPos, WorldNormalGeo, UV,
+		MudAlbedo, MudNormal, MudORMH, SamplerLinear,
+		RainIntensity, WetnessSaturation, DynamicTime, 3.5f, 2.2f
+	);
+
+	FLandscapeLayerPBR L_Grass = EvaluateGrassSparse(
+		WorldPos, WorldNormalGeo, UV,
+		GrassAlbedo, GrassNormal, GrassORMH, SamplerLinear,
+		WetnessSaturation
+	);
+
+	FLandscapeLayerPBR L_Ash = EvaluateGraveyardAsh(
+		WorldPos, WorldNormalGeo, UV,
+		AshAlbedo, AshNormal, AshORMH, SamplerLinear,
+		DynamicTime
+	);
+
+	// 2. Height-Modulated Layer Weights for Sharp Transition Crevices
+	float4 rawWeights = saturate(LayerWeights);
+	float sumWeights = rawWeights.x + rawWeights.y + rawWeights.z + rawWeights.w;
+	if (sumWeights < 0.001f)
+	{
+		rawWeights.x = 1.0f; // Fallback to cobblestone
+		sumWeights = 1.0f;
+	}
+	float4 normWeights = rawWeights / sumWeights;
+
+	// Height modulation sharpness (contrast exponent = 6.0)
+	float4 heightBiasedWeights = normWeights * float4(
+		L_Cobble.Height,
+		L_Mud.Height,
+		L_Grass.Height,
+		L_Ash.Height
+	);
+	
+	float maxH = max(max(heightBiasedWeights.x, heightBiasedWeights.y), max(heightBiasedWeights.z, heightBiasedWeights.w));
+	float4 blendTransitions = max(float4(0.0f, 0.0f, 0.0f, 0.0f), heightBiasedWeights - maxH + 0.25f);
+	float blendSum = blendTransitions.x + blendTransitions.y + blendTransitions.z + blendTransitions.w;
+	float4 finalWeights = blendTransitions / max(0.0001f, blendSum);
+
+	// 3. Composite PBR Channels
+	MasterOut.FinalBaseColor = 
+		L_Cobble.BaseColor * finalWeights.x +
+		L_Mud.BaseColor    * finalWeights.y +
+		L_Grass.BaseColor  * finalWeights.z +
+		L_Ash.BaseColor    * finalWeights.w;
+
+	MasterOut.FinalWorldNormal = normalize(
+		L_Cobble.WorldNormal * finalWeights.x +
+		L_Mud.WorldNormal    * finalWeights.y +
+		L_Grass.WorldNormal  * finalWeights.z +
+		L_Ash.WorldNormal    * finalWeights.w
+	);
+
+	MasterOut.FinalRoughness = 
+		L_Cobble.Roughness * finalWeights.x +
+		L_Mud.Roughness    * finalWeights.y +
+		L_Grass.Roughness  * finalWeights.z +
+		L_Ash.Roughness    * finalWeights.w;
+
+	MasterOut.FinalMetallic = 
+		L_Cobble.Metallic * finalWeights.x +
+		L_Mud.Metallic    * finalWeights.y +
+		L_Grass.Metallic  * finalWeights.z +
+		L_Ash.Metallic    * finalWeights.w;
+
+	MasterOut.FinalSpecular = 
+		L_Cobble.Specular * finalWeights.x +
+		L_Mud.Specular    * finalWeights.y +
+		L_Grass.Specular  * finalWeights.z +
+		L_Ash.Specular    * finalWeights.w;
+
+	MasterOut.FinalAmbientOcclusion = 
+		L_Cobble.AmbientOcclusion * finalWeights.x +
+		L_Mud.AmbientOcclusion    * finalWeights.y +
+		L_Grass.AmbientOcclusion  * finalWeights.z +
+		L_Ash.AmbientOcclusion    * finalWeights.w;
+
+	// Spectral lichen glow for graveyard layer
+	float lichenGlowMask = saturate((L_Ash.Height - 0.5f) * 2.5f) * finalWeights.w;
+	float pulseLichen = sin(DynamicTime * 2.0f + WorldPos.x * 0.05f) * 0.5f + 0.5f;
+	MasterOut.FinalEmissive = float3(0.02f, 0.45f, 0.25f) * (lichenGlowMask * (0.8f + pulseLichen * 1.2f));
+
+	// 4. World Position Offset (Mud & Wheel Rut Displacement)
+	MasterOut.WorldPositionOffset = ComputeDeformationWPO(
+		WorldPos,
+		UV,
+		DynamicDeformRT,
+		SamplerLinear,
+		MaxDepressionDepthCm,
+		finalWeights.y // Influenced primarily by mud layer
+	);
+
+	// 5. Pack Runtime Virtual Texture (RVT) Channels
+	MasterOut.RVT_BaseColor_AO = float4(MasterOut.FinalBaseColor, MasterOut.FinalAmbientOcclusion);
+	MasterOut.RVT_WorldNormal_Roughness = float4(MasterOut.FinalWorldNormal * 0.5f + 0.5f, MasterOut.FinalRoughness);
+	MasterOut.RVT_Specular_Metallic_Displacement = float4(
+		MasterOut.FinalSpecular,
+		MasterOut.FinalMetallic,
+		saturate(-MasterOut.WorldPositionOffset.z / max(1.0f, MaxDepressionDepthCm)),
+		1.0f
+	);
+
+	return MasterOut;
+}
+
+#endif // M_LORENCIA_LANDSCAPE_MASTER_USH

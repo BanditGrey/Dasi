@@ -1,0 +1,310 @@
+// ============================================================================
+// DASI MMORPG - UNREAL ENGINE 5 CUSTOM HLSL INCLUDE
+// MF_FluidVolume_Include.ush
+//
+// 100% 3D Native Volumetric Fluid Shader for HP (Life) & MP (Mana) Orbs.
+// Provides ray-marched optical depth, dynamic meniscus, fluid sloshing inertia,
+// damage-induced turbulence shockwaves, and Beer-Lambert extinction attenuation.
+//
+// Formatted for direct inclusion inside UE5 Material Custom HLSL Nodes:
+//   #include "/Project/Materials/HLSL/MF_FluidVolume_Include.ush"
+// ============================================================================
+
+#ifndef MF_FLUID_VOLUME_INCLUDE_USH
+#define MF_FLUID_VOLUME_INCLUDE_USH
+
+static const float FLUID_PI = 3.14159265359f;
+
+// ----------------------------------------------------------------------------
+// PSEUDO-RANDOM HASH & 3D SIMPLEX/PERLIN NOISE
+// ----------------------------------------------------------------------------
+float Fluid_Hash13(float3 p3)
+{
+	p3 = frac(p3 * 0.1031f);
+	p3 += dot(p3, p3.zyx + 31.32f);
+	return frac((p3.x + p3.y) * p3.z);
+}
+
+float3 Fluid_Hash33(float3 p3)
+{
+	p3 = frac(p3 * float3(0.1031f, 0.1030f, 0.0973f));
+	p3 += dot(p3, p3.yxz + 33.33f);
+	return frac((p3.xxy + p3.yxx) * p3.zyx);
+}
+
+// Compact 3D Value Noise for fluid turbulence vortices
+float Fluid_Noise3D(float3 p)
+{
+	float3 i = floor(p);
+	float3 f = frac(p);
+	f = f * f * (3.0f - 2.0f * f); // Hermite interpolation
+
+	float n000 = Fluid_Hash13(i + float3(0.0f, 0.0f, 0.0f));
+	float n100 = Fluid_Hash13(i + float3(1.0f, 0.0f, 0.0f));
+	float n010 = Fluid_Hash13(i + float3(0.0f, 1.0f, 0.0f));
+	float n110 = Fluid_Hash13(i + float3(1.0f, 1.0f, 0.0f));
+	float n001 = Fluid_Hash13(i + float3(0.0f, 0.0f, 1.0f));
+	float n101 = Fluid_Hash13(i + float3(1.0f, 0.0f, 1.0f));
+	float n011 = Fluid_Hash13(i + float3(0.0f, 1.0f, 1.0f));
+	float n111 = Fluid_Hash13(i + float3(1.0f, 1.0f, 1.0f));
+
+	float nx00 = lerp(n000, n100, f.x);
+	float nx10 = lerp(n010, n110, f.x);
+	float nx01 = lerp(n001, n101, f.x);
+	float nx11 = lerp(n011, n111, f.x);
+
+	float nxy0 = lerp(nx00, nx10, f.y);
+	float nxy1 = lerp(nx01, nx11, f.y);
+
+	return lerp(nxy0, nxy1, f.z);
+}
+
+// ----------------------------------------------------------------------------
+// STRUCTURE FOR FLUID OUTPUT
+// ----------------------------------------------------------------------------
+struct FFluidVolumeResult
+{
+	float3 EmissiveColor;
+	float3 BaseColor;
+	float3 SurfaceNormal;
+	float  Roughness;
+	float  Metallic;
+	float  Specular;
+	float  Opacity;
+	float  FluidDepth;
+	float  MeniscusFoamMask;
+};
+
+// ----------------------------------------------------------------------------
+// RAY-SPHERE INTERSECTION (Unit Sphere Radius = 1.0 at Local Origin 0,0,0)
+// Returns float2(tNear, tFar). If missed, tFar < tNear.
+// ----------------------------------------------------------------------------
+float2 IntersectUnitSphere(float3 RayOrigin, float3 RayDir)
+{
+	float b = dot(RayOrigin, RayDir);
+	float c = dot(RayOrigin, RayOrigin) - 1.0f;
+	float discriminant = b * b - c;
+
+	if (discriminant < 0.0f)
+	{
+		return float2(-1.0f, -1.0f);
+	}
+
+	float sqrtD = sqrt(discriminant);
+	return float2(-b - sqrtD, -b + sqrtD);
+}
+
+// ----------------------------------------------------------------------------
+// DYNAMIC FLUID SURFACE SLOSHING & MENISCUS HEIGHT EVALUATION
+// ----------------------------------------------------------------------------
+// Evaluates the Z-coordinate of the liquid surface at local X,Y inside sphere.
+float ComputeFluidSurfaceZ(
+	float2 LocalXY,
+	float  FillPercent,            // [0.0 = Empty, 1.0 = Completely Full]
+	float3 HeroAcceleration,       // In-game hero velocity/acceleration impulse
+	float  TurbulenceIntensity,    // Shock intensity from damage or spellcasts [0.0 to 1.0]
+	float  GlobalTime,
+	out float3 OutSurfaceNormal,
+	out float  OutMeniscusMask)
+{
+	// 1. Nominal Base Cutoff Level (Maps FillPercent [0..1] to sphere Z [-1.0..+1.0])
+	float baseZ = lerp(-1.0f, 1.0f, FillPercent);
+
+	// Horizontal distance from sphere vertical axis
+	float r = length(LocalXY);
+	float rNorm = saturate(r);
+
+	// 2. Sloshing Tilt Plane from Movement Acceleration
+	// Hero movement tilts the equilibrium water plane (Inertia opposition)
+	float2 tiltVector = HeroAcceleration.xy * 0.25f;
+	float tiltOffset = dot(LocalXY, tiltVector);
+
+	// 3. Capillary Surface Tension Meniscus
+	// Liquid clings to the inner concave glass wall forming a curved rim
+	float wallProximity = saturate((rNorm - 0.70f) / 0.30f);
+	float meniscusCurve = wallProximity * wallProximity * 0.085f;
+	OutMeniscusMask = wallProximity;
+
+	// 4. Damage / Impact Wave Turbulence (Gerstner-style harmonic ripples)
+	float waveTurbulence = 0.0f;
+	float2 waveGradient = float2(0.0f, 0.0f);
+
+	if (TurbulenceIntensity > 0.005f)
+	{
+		// Wave 1: Fast circular shock ripple propagating from center
+		float freq1 = 18.0f;
+		float speed1 = 6.2f;
+		float ripple1 = sin(r * freq1 - GlobalTime * speed1) * 0.035f;
+		
+		// Wave 2: Chaotic cross-slosh modulated by 3D noise
+		float3 noiseCoord = float3(LocalXY * 4.5f, GlobalTime * 2.5f);
+		float perlinSlosh = (Fluid_Noise3D(noiseCoord) * 2.0f - 1.0f) * 0.045f;
+
+		// Wave 3: Directional impact surge
+		float freq3 = 12.0f;
+		float speed3 = 4.0f;
+		float surge = sin(LocalXY.x * freq3 + LocalXY.y * 8.0f + GlobalTime * speed3) * 0.025f;
+
+		waveTurbulence = (ripple1 + perlinSlosh + surge) * TurbulenceIntensity;
+
+		// Approximate surface normal perturbation gradient
+		float dNoise = (Fluid_Noise3D(noiseCoord + float3(0.05f, 0.0f, 0.0f)) - 
+		                Fluid_Noise3D(noiseCoord - float3(0.05f, 0.0f, 0.0f))) * 10.0f;
+		waveGradient = (LocalXY / max(0.001f, r)) * cos(r * freq1 - GlobalTime * speed1) * 0.3f * TurbulenceIntensity;
+		waveGradient.x += dNoise * 0.2f * TurbulenceIntensity;
+	}
+
+	// 5. Composite Final Surface Altitude
+	float finalZ = baseZ + tiltOffset + meniscusCurve + waveTurbulence;
+
+	// Reconstruct Surface Normal
+	float3 surfNormal = normalize(float3(-tiltVector.x - waveGradient.x, -tiltVector.y - waveGradient.y, 1.0f));
+	OutSurfaceNormal = surfNormal;
+
+	return finalZ;
+}
+
+// ----------------------------------------------------------------------------
+// RAY-MARCHED BEER-LAMBERT VOLUMETRIC LIQUID EVALUATION
+// ----------------------------------------------------------------------------
+FFluidVolumeResult EvaluateVolumetricFluidOrb(
+	float3 LocalRayOrigin,         // Camera position in sphere local space (normalized radius 1.0)
+	float3 LocalRayDir,            // Camera look direction in local space
+	float  FillPercent,            // [0.0 = Depleted, 1.0 = Full Orb]
+	bool   bIsManaOrb,             // False: Health (Deep Ruby Red), True: Mana (Cobalt Blue)
+	float3 HeroAcceleration,       // Inertial acceleration vector from character movement
+	float  TurbulenceIntensity,    // Shockwave magnitude from combat hit [0.0 to 1.0]
+	float  GlobalTime,
+	float3 InternalGlowColorOverride)
+{
+	FFluidVolumeResult Out;
+	Out.EmissiveColor = float3(0.0f, 0.0f, 0.0f);
+	Out.BaseColor = float3(0.0f, 0.0f, 0.0f);
+	Out.SurfaceNormal = float3(0.0f, 0.0f, 1.0f);
+	Out.Roughness = 0.02f; // Pristine specular liquid surface
+	Out.Metallic = 0.0f;
+	Out.Specular = 0.85f;
+	Out.Opacity = 0.0f;
+	Out.FluidDepth = 0.0f;
+	Out.MeniscusFoamMask = 0.0f;
+
+	// 1. Intersect Ray with Unit Sphere
+	float2 sphereHit = IntersectUnitSphere(LocalRayOrigin, LocalRayDir);
+	if (sphereHit.y < sphereHit.x || sphereHit.y < 0.0f)
+	{
+		return Out; // Ray completely misses the sphere
+	}
+
+	float tEntry = max(0.0f, sphereHit.x);
+	float tExit  = sphereHit.y;
+
+	// 2. Optical Absorption Coefficients for Beer-Lambert Law:
+	//    Transmittance = exp(-AbsorptionCoeff * OpticalPathLength)
+	// Health: Absorbs green and blue heavily -> brilliant blood ruby and dark wine depths
+	// Mana:   Absorbs red and yellow heavily -> luminous azure cobalt and sapphire depths
+	float3 absorptionCoeff;
+	float3 coreScatteringColor;
+	float3 meniscusGlowColor;
+
+	if (bIsManaOrb)
+	{
+		// Mana Orb Absorption & Scattering
+		absorptionCoeff = float3(4.2f, 1.8f, 0.18f); // Strong red absorption, weak blue absorption
+		coreScatteringColor = float3(0.12f, 0.45f, 1.25f);
+		meniscusGlowColor = float3(0.35f, 0.85f, 1.65f);
+	}
+	else
+	{
+		// Health Orb Absorption & Scattering
+		absorptionCoeff = float3(0.15f, 3.4f, 4.8f); // Weak red absorption, high green/blue extinction
+		coreScatteringColor = float3(1.25f, 0.08f, 0.06f);
+		meniscusGlowColor = float3(1.85f, 0.35f, 0.15f);
+	}
+
+	// 3. Ray-March Step Sampling to integrate volumetric liquid density
+	const int NUM_STEPS = 12;
+	float stepSize = (tExit - tEntry) / (float)NUM_STEPS;
+	float currentT = tEntry + stepSize * 0.5f;
+
+	float accumulatedOpticalDepth = 0.0f;
+	float3 accumulatedScattering = float3(0.0f, 0.0f, 0.0f);
+	float maxMeniscusFoam = 0.0f;
+	float3 representativeNormal = float3(0.0f, 0.0f, 1.0f);
+	bool bHitLiquidSurface = false;
+
+	[unroll]
+	for (int stepIdx = 0; stepIdx < NUM_STEPS; ++stepIdx)
+	{
+		float3 samplePos = LocalRayOrigin + LocalRayDir * currentT;
+		
+		// Evaluate Surface Cutoff Z at this (X, Y)
+		float3 stepNormal;
+		float stepMeniscusMask;
+		float surfaceZ = ComputeFluidSurfaceZ(
+			samplePos.xy,
+			FillPercent,
+			HeroAcceleration,
+			TurbulenceIntensity,
+			GlobalTime,
+			stepNormal,
+			stepMeniscusMask
+		);
+
+		// Inside liquid volume if point is below the animated dynamic surface
+		if (samplePos.z <= surfaceZ)
+		{
+			accumulatedOpticalDepth += stepSize;
+
+			// Proximity to liquid surface for meniscus and foam sparkles
+			float distToSurface = abs(samplePos.z - surfaceZ);
+			if (distToSurface < 0.08f)
+			{
+				if (!bHitLiquidSurface)
+				{
+					representativeNormal = stepNormal;
+					bHitLiquidSurface = true;
+				}
+
+				// Foam micro-bubbles on surface meniscus
+				float foamNoise = Fluid_Noise3D(samplePos * 18.0f + float3(GlobalTime * 0.8f, 0.0f, 0.0f));
+				float foamSparkle = step(0.65f, foamNoise) * stepMeniscusMask;
+				maxMeniscusFoam = max(maxMeniscusFoam, foamSparkle);
+			}
+
+			// Internal fluid bioluminescent motes (magical essence suspended in orb)
+			float moteNoise = Fluid_Noise3D(samplePos * 8.0f - float3(0.0f, 0.0f, GlobalTime * 0.5f));
+			float moteSparkle = pow(saturate(moteNoise - 0.72f) * 3.5f, 3.0f);
+			accumulatedScattering += coreScatteringColor * (1.0f + moteSparkle * 4.0f) * stepSize;
+		}
+
+		currentT += stepSize;
+	}
+
+	if (accumulatedOpticalDepth <= 0.0001f)
+	{
+		return Out; // Ray only passed through empty airspace above liquid
+	}
+
+	// 4. Beer-Lambert Transmittance Equation
+	// Transmittance drops exponentially with depth, creating rich ruby/cobalt jewel depth
+	float3 transmittance = exp(-absorptionCoeff * (accumulatedOpticalDepth * 2.2f));
+
+	// 5. Meniscus & Foam Bioluminescent Edge Highlight
+	float3 foamEmission = meniscusGlowColor * (maxMeniscusFoam * 2.5f);
+
+	// Core volumetric radiance
+	float3 inScatteredLight = coreScatteringColor * (1.0f - transmittance) + accumulatedScattering * 0.5f;
+
+	Out.BaseColor = inScatteredLight * 0.35f;
+	Out.EmissiveColor = inScatteredLight + foamEmission;
+	Out.SurfaceNormal = representativeNormal;
+	Out.Roughness = 0.025f;
+	Out.Specular = 0.90f;
+	Out.Opacity = saturate(1.0f - dot(transmittance, float3(0.333f, 0.333f, 0.333f)));
+	Out.FluidDepth = accumulatedOpticalDepth;
+	Out.MeniscusFoamMask = maxMeniscusFoam;
+
+	return Out;
+}
+
+#endif // MF_FLUID_VOLUME_INCLUDE_USH

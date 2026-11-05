@@ -1,0 +1,49 @@
+{
+  "asset_name": "BS_DarkKnight_Locomotion",
+  "type": "BlendSpace",
+  "target_skeleton": "SK_DarkKnight_Skeleton",
+  "axes": {
+    "horizontal": {
+      "name": "Direction",
+      "min": -180.0,
+      "max": 180.0,
+      "grid_divisions": 8,
+      "interpolation_time_seconds": 0.15
+    },
+    "vertical": {
+      "name": "Speed",
+      "min": 0.0,
+      "max": 800.0,
+      "grid_divisions": 4,
+      "interpolation_time_seconds": 0.20
+    }
+  },
+  "samples": [
+    { "animation": "AS_DarkKnight_Idle_Combat", "x": 0.0, "y": 0.0 },
+    { "animation": "AS_DarkKnight_Walk_F", "x": 0.0, "y": 180.0 },
+    { "animation": "AS_DarkKnight_Walk_FR", "x": 45.0, "y": 180.0 },
+    { "animation": "AS_DarkKnight_Walk_R", "x": 90.0, "y": 180.0 },
+    { "animation": "AS_DarkKnight_Walk_BR", "x": 135.0, "y": 180.0 },
+    { "animation": "AS_DarkKnight_Walk_B", "x": 180.0, "y": 180.0 },
+    { "animation": "AS_DarkKnight_Walk_B", "x": -180.0, "y": 180.0 },
+    { "animation": "AS_DarkKnight_Walk_BL", "x": -135.0, "y": 180.0 },
+    { "animation": "AS_DarkKnight_Walk_L", "x": -90.0, "y": 180.0 },
+    { "animation": "AS_DarkKnight_Walk_FL", "x": -45.0, "y": 180.0 },
+    { "animation": "AS_DarkKnight_Run_F", "x": 0.0, "y": 550.0 },
+    { "animation": "AS_DarkKnight_Run_FR", "x": 45.0, "y": 550.0 },
+    { "animation": "AS_DarkKnight_Run_R", "x": 90.0, "y": 550.0 },
+    { "animation": "AS_DarkKnight_Run_BR", "x": 135.0, "y": 550.0 },
+    { "animation": "AS_DarkKnight_Run_B", "x": 180.0, "y": 550.0 },
+    { "animation": "AS_DarkKnight_Run_B", "x": -180.0, "y": 550.0 },
+    { "animation": "AS_DarkKnight_Run_BL", "x": -135.0, "y": 550.0 },
+    { "animation": "AS_DarkKnight_Run_L", "x": -90.0, "y": 550.0 },
+    { "animation": "AS_DarkKnight_Run_FL", "x": -45.0, "y": 550.0 },
+    { "animation": "AS_DarkKnight_Sprint_F", "x": 0.0, "y": 800.0 }
+  ],
+  "sync_markers": [
+    "Foot_L_Down",
+    "Foot_R_Down",
+    "Foot_L_Pass",
+    "Foot_R_Pass"
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "$schema": "https://unrealengine.com/schema/ue5_material_specification.json",
+  "MaterialName": "M_Lorencia_Landscape_Master",
+  "Path": "/Game/Materials/Landscape/M_Lorencia_Landscape_Master",
+  "Description": "Master Landscape Material 100% 3D nativo para Lorencia, combinando 4 camadas PBR com Height-blending, poças d'água dinâmicas procedurais, suporte a Runtime Virtual Texturing (RVT) e canal WPO de deformação de pegadas e rodas.",
+  "ShadingModel": "MSM_DefaultLit",
+  "BlendMode": "BLEND_Opaque",
+  "TwoSided": false,
+  "NaniteEnabled": true,
+  "NumCustomizedUVs": 4,
+  "VirtualTextureSupport": {
+    "RuntimeVirtualTextureOutput": true,
+    "TargetRVT": "/Game/Maps/Lorencia/RVT_Lorencia_Landscape",
+    "Channels": [
+      {
+        "Target": "RVT_BaseColor_Normal_Roughness",
+        "Layout": "BaseColor (RGB) + AmbientOcclusion (A) / WorldNormal (XYZ) + Roughness (W)"
+      },
+      {
+        "Target": "RVT_WorldDisplacement",
+        "Layout": "Specular (R) + Metallic (G) + DisplacementCm (B) + Coverage (A)"
+      }
+    ]
+  },
+  "MaterialParameterCollections": [
+    {
+      "Collection": "/Game/Materials/MPC_Lorencia_Weather",
+      "Parameters": [
+        { "Name": "RainIntensity", "Type": "Scalar", "Default": 0.65 },
+        { "Name": "WetnessSaturation", "Type": "Scalar", "Default": 0.85 },
+        { "Name": "GlobalTime", "Type": "Scalar", "Default": 0.0 },
+        { "Name": "WindSpeed", "Type": "Scalar", "Default": 14.5 },
+        { "Name": "WindDirection", "Type": "Vector", "Default": { "X": 0.707, "Y": 0.707, "Z": 0.0 } },
+        { "Name": "MaxMudDeformationCm", "Type": "Scalar", "Default": 8.0 }
+      ]
+    }
+  ],
+  "Layers": [
+    {
+      "LayerName": "Cobblestone_Wet",
+      "Description": "Lajes de paralelepípedo medieval cinzelado para a Cidadela, Pátio Central e pontes.",
+      "Textures": {
+        "Albedo": "/Game/Textures/Landscape/T_Cobble_Albedo.uasset",
+        "Normal": "/Game/Textures/Landscape/T_Cobble_Normal.uasset",
+        "ORMH": "/Game/Textures/Landscape/T_Cobble_ORMH.uasset"
+      },
+      "DefaultTiling": 2.5,
+      "BaseRoughnessRange": [0.45, 0.85],
+      "WaterInteraction": "Runoff Surface (Não acumula poças profundas, apenas filme reflexivo)"
+    },
+    {
+      "LayerName": "Mud_Puddles",
+      "Description": "Lama argilosa com poças dinâmicas acopladas ao MF_DynamicWeather_Include (IOR 1.333, Specular afiado 0.02 Roughness, ripples concêntricos duplos).",
+      "Textures": {
+        "Albedo": "/Game/Textures/Landscape/T_Mud_Albedo.uasset",
+        "Normal": "/Game/Textures/Landscape/T_Mud_Normal.uasset",
+        "ORMH": "/Game/Textures/Landscape/T_Mud_ORMH.uasset"
+      },
+      "DefaultTiling": 3.0,
+      "BaseRoughnessRange": [0.02, 0.95],
+      "WaterInteraction": "Dynamic Pooling (Poças formam-se conforme RainIntensity e afundamento do Heightmap)"
+    },
+    {
+      "LayerName": "Grass_Sparse",
+      "Description": "Grama agreste úmida com detritos orgânicos para as planícies e campos das aranhas.",
+      "Textures": {
+        "Albedo": "/Game/Textures/Landscape/T_Grass_Albedo.uasset",
+        "Normal": "/Game/Textures/Landscape/T_Grass_Normal.uasset",
+        "ORMH": "/Game/Textures/Landscape/T_Grass_ORMH.uasset"
+      },
+      "DefaultTiling": 4.0,
+      "BaseRoughnessRange": [0.28, 0.78],
+      "WaterInteraction": "Absorptive Soil (Escurecimento gradual difuso por saturação de umidade)"
+    },
+    {
+      "LayerName": "Graveyard_Ash",
+      "Description": "Terra necrótica com cinzas funerárias, lamaçal e musgo espectral bioluminescente.",
+      "Textures": {
+        "Albedo": "/Game/Textures/Landscape/T_Ash_Albedo.uasset",
+        "Normal": "/Game/Textures/Landscape/T_Ash_Normal.uasset",
+        "ORMH": "/Game/Textures/Landscape/T_Ash_ORMH.uasset"
+      },
+      "DefaultTiling": 3.5,
+      "BaseRoughnessRange": [0.35, 0.90],
+      "WaterInteraction": "Stagnant Swamp Mud (Viscosidade e reflexos esverdeados difusos)"
+    }
+  ],
+  "CustomHLSLNodes": [
+    {
+      "NodeName": "EvaluateLorenciaLandscapeMasterNode",
+      "FileInclude": "/Project/Materials/Landscape/M_Lorencia_Landscape_Master.ush",
+      "EntryPoint": "EvaluateLorenciaLandscapeMaster",
+      "Inputs": [
+        "WorldPos",
+        "WorldNormalGeo",
+        "UV",
+        "LayerWeights",
+        "CobbleAlbedo", "CobbleNormal", "CobbleORMH",
+        "MudAlbedo", "MudNormal", "MudORMH",
+        "GrassAlbedo", "GrassNormal", "GrassORMH",
+        "AshAlbedo", "AshNormal", "AshORMH",
+        "DynamicDeformRT",
+        "RainIntensity",
+        "WetnessSaturation",
+        "DynamicTime",
+        "MaxDepressionDepthCm"
+      ],
+      "Outputs": [
+        "FinalBaseColor",
+        "FinalWorldNormal",
+        "FinalRoughness",
+        "FinalMetallic",
+        "FinalSpecular",
+        "FinalAmbientOcclusion",
+        "FinalEmissive",
+        "WorldPositionOffset",
+        "RVT_BaseColor_AO",
+        "RVT_WorldNormal_Roughness",
+        "RVT_Specular_Metallic_Displacement"
+      ]
+    }
+  ]
+}

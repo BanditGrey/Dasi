@@ -1,0 +1,44 @@
+{
+  "asset_name": "AM_TwistingSlash",
+  "type": "AnimMontage",
+  "target_skeleton": "SK_DarkKnight_Skeleton",
+  "sequence_source": "AS_DarkKnight_TwistingSlash",
+  "total_duration_seconds": 1.20,
+  "slot_name": "FullBody",
+  "sections": [
+    { "name": "Spin_Start", "start_time": 0.0, "duration": 0.20 },
+    { "name": "Spin_Loop", "start_time": 0.20, "duration": 0.75 },
+    { "name": "Spin_End", "start_time": 0.95, "duration": 0.25 }
+  ],
+  "notifies": [
+    {
+      "type": "UDasiAnimNotifyState_WeaponTrace",
+      "start_time": 0.20,
+      "end_time": 0.95,
+      "profile": "TwistingSlash_Whirlwind",
+      "initial_cleave_energy": 220.0,
+      "trace_radius_cm": 22.0
+    },
+    {
+      "type": "AnimNotify_TwistingSlash_VortexStart",
+      "time": 0.20,
+      "vortex_radius_m": 4.5,
+      "suction_force_n": 320.0
+    },
+    {
+      "type": "AnimNotify_TwistingSlash_VortexEnd",
+      "time": 0.95
+    },
+    {
+      "type": "UDasiAnimNotifyState_ComboWindow",
+      "start_time": 0.98,
+      "end_time": 1.20
+    }
+  ],
+  "curves": [
+    { "name": "AngularVelocity_Yaw", "peak_value": 18.0 },
+    { "name": "Torso_Lean_Pitch", "min_value": -12.0, "max_value": 8.0 },
+    { "name": "Vortex_Suction_Intensity", "peak_value": 1.0 },
+    { "name": "FootIK_Weight", "min_value": 0.2, "max_value": 1.0 }
+  ]
+}

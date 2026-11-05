@@ -1,0 +1,113 @@
+{
+  "MapName": "Lorencia_Main",
+  "EngineVersion": "5.4+",
+  "CoordinateOrigin": { "X": 0.0, "Y": 0.0, "Z": 1800.0 },
+  "WorldBounds": {
+    "Min": { "X": -102400.0, "Y": -102400.0, "Z": -1000.0 },
+    "Max": { "X": 102400.0, "Y": 102400.0, "Z": 5500.0 }
+  },
+  "Lighting": {
+    "DirectionalLight": {
+      "Name": "LightSource_OvercastSun",
+      "IntensityLux": 28000.0,
+      "TemperatureKelvin": 5200.0,
+      "Rotation": { "Pitch": -42.0, "Yaw": 135.0, "Roll": 0.0 },
+      "SourceAngleDegrees": 3.5,
+      "VolumetricScattering": 1.85,
+      "CloudShadows": true,
+      "DynamicShadowDistanceCm": 25000.0
+    },
+    "SkyLight": {
+      "Name": "SkyLight_DynamicLumen",
+      "RealTimeCapture": true,
+      "LumenGI": true,
+      "DFAO": {
+        "Enabled": true,
+        "OcclusionMaxDistanceCm": 1200.0,
+        "OcclusionContrast": 1.25
+      }
+    },
+    "SkyAtmosphere": {
+      "RayleighScatteringScale": 0.045,
+      "MieScatteringScale": 0.009,
+      "MieAnisotropy": 0.78,
+      "MultiScatteringFactor": 0.85
+    },
+    "ExponentialHeightFog": {
+      "FogDensity": 0.038,
+      "FogHeightFalloff": 0.0035,
+      "AltitudeBaseCm": 2500.0,
+      "VolumetricFog": {
+        "Enabled": true,
+        "ScatteringDistribution": 0.68,
+        "ExtinctionScale": 2.2,
+        "MaxDistanceCm": 18000.0
+      }
+    }
+  },
+  "WaterBodies": [
+    {
+      "Id": "WaterBody_CastleMoat",
+      "Type": "CustomCanalMoat",
+      "Center": { "X": 0.0, "Y": -5000.0, "Z": 1400.0 },
+      "WaterLevelZ": 1400.0,
+      "BedDepthZ": 1000.0,
+      "Material": "/Game/Materials/Water/M_Water_CastleMoat",
+      "TurbidityColor": { "R": 0.18, "G": 0.14, "B": 0.28 },
+      "UnderwaterSpikesCollision": "BlockAll"
+    },
+    {
+      "Id": "WaterBody_ArchangelFountain",
+      "Type": "OctagonalBasin",
+      "Center": { "X": 0.0, "Y": 0.0, "Z": 1845.0 },
+      "WaterLevelZ": 1845.0,
+      "DepthCm": 80.0,
+      "RadiusCm": 540.0,
+      "Material": "/Game/Materials/Water/M_Water_ArchangelFountain",
+      "MysticParticlesNiagara": "/Game/VFX/Niagara/NS_FountainMotes"
+    },
+    {
+      "Id": "WaterBody_SwampPuddles",
+      "Type": "ShallowSwampBody",
+      "Center": { "X": 0.0, "Y": -36000.0, "Z": 250.0 },
+      "WaterLevelZ": 250.0,
+      "DepthCm": 45.0,
+      "Material": "/Game/Materials/Water/M_Water_Swamp"
+    }
+  ],
+  "Volumes": [
+    {
+      "Id": "AudioVolume_Tavern_Hearth",
+      "Type": "AudioOcclusionVolume",
+      "Bounds": {
+        "Min": { "X": -1250.0, "Y": -6150.0, "Z": 1780.0 },
+        "Max": { "X": 1250.0, "Y": -2850.0, "Z": 3050.0 }
+      },
+      "LowPassFilterCutoffHz": 450.0,
+      "ExteriorGainReductionDb": -22.0,
+      "ReverbPreset": "MediumStoneRoom"
+    },
+    {
+      "Id": "PostProcessVolume_TavernInterior",
+      "Type": "LocalPostProcessVolume",
+      "Priority": 2.0,
+      "Bounds": {
+        "Min": { "X": -1250.0, "Y": -6150.0, "Z": 1780.0 },
+        "Max": { "X": 1250.0, "Y": -2850.0, "Z": 3050.0 }
+      },
+      "ExposureEV100": 8.5,
+      "ColorTemperatureOffsetK": 800.0,
+      "ColorSaturation": { "X": 1.15, "Y": 1.05, "Z": 0.95 }
+    },
+    {
+      "Id": "SafeZone_CitadelCourtyard",
+      "Type": "GameplaySafeZoneVolume",
+      "Bounds": {
+        "Min": { "X": -9500.0, "Y": -9500.0, "Z": 1750.0 },
+        "Max": { "X": 9500.0, "Y": 9500.0, "Z": 4000.0 }
+      },
+      "PvPAllowed": false,
+      "AllowStores": true
+    }
+  ]
+}

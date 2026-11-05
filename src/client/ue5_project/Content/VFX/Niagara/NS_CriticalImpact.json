@@ -1,0 +1,138 @@
+{
+  "AssetType": "NiagaraSystem",
+  "AssetName": "NS_CriticalImpact",
+  "Version": "5.4.0",
+  "Description": "High-impact combat feedback explosion for Critical Hits (Sapphire Blue) and Excellent Hits (Emerald Green) with physics bounce, shockwaves, and starlight streaks.",
+  "SystemParameters": [
+    { "Name": "HitType", "Type": "Enum", "Default": "Critical", "Options": ["Normal", "Critical", "Excellent", "DoubleDamage", "IgnoreDefense"] },
+    { "Name": "ImpactColorPrimary", "Type": "FLinearColor", "Default": { "R": 0.05, "G": 0.65, "B": 1.0, "A": 1.0 } },
+    { "Name": "ImpactColorSecondary", "Type": "FLinearColor", "Default": { "R": 0.0, "G": 0.95, "B": 0.45, "A": 1.0 } },
+    { "Name": "ImpactScale", "Type": "float", "Default": 1.25 },
+    { "Name": "HitNormal", "Type": "FVector", "Default": { "X": 0.0, "Y": 0.0, "Z": 1.0 } }
+  ],
+  "Emitters": [
+    {
+      "Name": "Emitter_FlashCross",
+      "EmitterType": "SpriteRenderer",
+      "Properties": {
+        "Alignment": "CameraFacing",
+        "MaterialOverride": "/Game/Materials/VFX/M_FlareCross_8Point.M_FlareCross_8Point"
+      },
+      "SpawnScript": {
+        "ExecutionMode": "SpawnBurst_Once",
+        "BurstCount": 1,
+        "Lifetime": 0.18,
+        "ModuleStack": [
+          { "Module": "SetSpriteSize", "Size": { "X": 160.0, "Y": 160.0 } },
+          { "Module": "SetInitialColor", "Color": "User.ImpactColorPrimary" }
+        ]
+      },
+      "UpdateScript": {
+        "ModuleStack": [
+          {
+            "Module": "ScaleSpriteSizeByCurve",
+            "Curve": [ { "Time": 0.0, "Val": 40.0 }, { "Time": 0.04, "Val": 220.0 }, { "Time": 0.18, "Val": 0.0 } ]
+          },
+          {
+            "Module": "ColorOverLife",
+            "AlphaCurve": [ { "Time": 0.0, "Val": 1.0 }, { "Time": 0.05, "Val": 1.0 }, { "Time": 0.18, "Val": 0.0 } ]
+          }
+        ]
+      }
+    },
+    {
+      "Name": "Emitter_ShockwaveRing",
+      "EmitterType": "SpriteRenderer",
+      "Properties": {
+        "Alignment": "CustomFacingVector",
+        "FacingVector": "User.HitNormal",
+        "MaterialOverride": "/Game/Materials/VFX/M_ShockwaveRing.M_ShockwaveRing"
+      },
+      "SpawnScript": {
+        "ExecutionMode": "SpawnBurst_Once",
+        "BurstCount": 1,
+        "Lifetime": 0.28,
+        "ModuleStack": [
+          { "Module": "SetSpriteSize", "Size": { "X": 15.0, "Y": 15.0 } },
+          { "Module": "SetInitialColor", "Color": "User.ImpactColorPrimary" }
+        ]
+      },
+      "UpdateScript": {
+        "ModuleStack": [
+          {
+            "Module": "ScaleSpriteSizeByCurve",
+            "Curve": [ { "Time": 0.0, "Val": 15.0 }, { "Time": 0.08, "Val": 140.0 }, { "Time": 0.28, "Val": 260.0 } ]
+          },
+          {
+            "Module": "ColorOverLife",
+            "AlphaCurve": [ { "Time": 0.0, "Val": 1.0 }, { "Time": 0.15, "Val": 0.7 }, { "Time": 0.28, "Val": 0.0 } ]
+          }
+        ]
+      }
+    },
+    {
+      "Name": "Emitter_HighVelocitySparks",
+      "EmitterType": "SpriteRenderer",
+      "Properties": {
+        "Alignment": "VelocityAligned",
+        "MaterialOverride": "/Game/Materials/VFX/M_SparkStreak.M_SparkStreak"
+      },
+      "SpawnScript": {
+        "ExecutionMode": "SpawnBurst_Once",
+        "BurstCount": 35,
+        "LifetimeMin": 0.4,
+        "LifetimeMax": 0.75,
+        "ModuleStack": [
+          { "Module": "AddVelocityInCone", "VelocityMin": 450.0, "VelocityMax": 950.0, "ConeAngle": 55.0, "ConeAxis": "User.HitNormal" },
+          { "Module": "SetInitialColor", "Color": "User.ImpactColorPrimary" }
+        ]
+      },
+      "UpdateScript": {
+        "ModuleStack": [
+          { "Module": "GravityForce", "Gravity": { "X": 0.0, "Y": 0.0, "Z": -980.0 } },
+          { "Module": "Collision", "CollisionMode": "CPU_SceneDepthCollision", "Restitution": 0.55, "Friction": 0.25 },
+          { "Module": "Drag", "DragCoefficient": 0.8 },
+          {
+            "Module": "ScaleSpriteSizeByCurve",
+            "Curve": [ { "Time": 0.0, "Val": 12.0 }, { "Time": 0.5, "Val": 8.0 }, { "Time": 1.0, "Val": 0.0 } ]
+          },
+          {
+            "Module": "ColorOverLife",
+            "AlphaCurve": [ { "Time": 0.0, "Val": 1.0 }, { "Time": 0.8, "Val": 0.9 }, { "Time": 1.0, "Val": 0.0 } ]
+          }
+        ]
+      }
+    },
+    {
+      "Name": "Emitter_ExcellentGlyphBurst",
+      "EmitterType": "SpriteRenderer",
+      "Properties": {
+        "Alignment": "CameraFacing",
+        "MaterialOverride": "/Game/Materials/VFX/M_AncientRunicGlyph.M_AncientRunicGlyph"
+      },
+      "SpawnScript": {
+        "ExecutionMode": "SpawnBurst_Conditional",
+        "Condition": "User.HitType == Excellent",
+        "BurstCount": 1,
+        "Lifetime": 0.45,
+        "ModuleStack": [
+          { "Module": "SetSpriteSize", "Size": { "X": 90.0, "Y": 90.0 } },
+          { "Module": "SetInitialColor", "Color": "User.ImpactColorSecondary" }
+        ]
+      },
+      "UpdateScript": {
+        "ModuleStack": [
+          { "Module": "RotationalVelocity", "Amount": 180.0 },
+          {
+            "Module": "ScaleSpriteSizeByCurve",
+            "Curve": [ { "Time": 0.0, "Val": 30.0 }, { "Time": 0.12, "Val": 110.0 }, { "Time": 0.45, "Val": 150.0 } ]
+          },
+          {
+            "Module": "ColorOverLife",
+            "AlphaCurve": [ { "Time": 0.0, "Val": 0.0 }, { "Time": 0.08, "Val": 1.0 }, { "Time": 0.3, "Val": 0.8 }, { "Time": 0.45, "Val": 0.0 } ]
+          }
+        ]
+      }
+    }
+  ]
+}

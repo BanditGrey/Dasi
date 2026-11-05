@@ -1,0 +1,47 @@
+{
+  "asset_name": "AM_DeathStab",
+  "type": "AnimMontage",
+  "target_skeleton": "SK_DarkKnight_Skeleton",
+  "sequence_source": "AS_DarkKnight_DeathStab",
+  "total_duration_seconds": 0.85,
+  "slot_name": "FullBody",
+  "sections": [
+    { "name": "Stab_Anticipation", "start_time": 0.0, "duration": 0.22 },
+    { "name": "Stab_Lunge", "start_time": 0.22, "duration": 0.23 },
+    { "name": "Stab_Impact_Hold", "start_time": 0.45, "duration": 0.13 },
+    { "name": "Stab_Recovery", "start_time": 0.58, "duration": 0.27 }
+  ],
+  "notifies": [
+    {
+      "type": "UDasiAnimNotifyState_WeaponTrace",
+      "start_time": 0.24,
+      "end_time": 0.45,
+      "profile": "DeathStab_Pierce",
+      "initial_cleave_energy": 300.0,
+      "trace_radius_cm": 14.0,
+      "ignore_armor_ratio": 0.35
+    },
+    {
+      "type": "AnimNotify_DeathStab_ForwardImpulse",
+      "time": 0.22,
+      "forward_speed_cm_s": 850.0,
+      "z_elevation_cm_s": 80.0
+    },
+    {
+      "type": "AnimNotify_DeathStab_SonicCone",
+      "time": 0.42,
+      "cone_angle_deg": 45.0,
+      "cone_range_m": 6.5
+    },
+    {
+      "type": "UDasiAnimNotifyState_ComboWindow",
+      "start_time": 0.65,
+      "end_time": 0.85
+    }
+  ],
+  "curves": [
+    { "name": "Forward_Impulse_Scale", "peak_value": 1.0 },
+    { "name": "Camera_FOV_Kick", "min_value": -4.5, "max_value": 0.0 },
+    { "name": "Spine_Thrust_Compression", "peak_value": 15.0 }
+  ]
+}

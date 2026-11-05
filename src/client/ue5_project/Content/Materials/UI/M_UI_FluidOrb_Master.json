@@ -1,0 +1,66 @@
+{
+  "$schema": "https://unrealengine.com/schema/ue5_material_specification.json",
+  "MaterialName": "M_UI_FluidOrb_Master",
+  "Path": "/Game/Materials/UI/M_UI_FluidOrb_Master",
+  "Description": "Master Material 100% 3D nativo para os globos volumétricos de Vida (HP) e Mana (MP) do HUD em arco. Incorpora refração em vidro lapidado com IOR 1.52, armação gótica dourada metálica e fluido volumétrico interno via ray-marching com absorção de Beer-Lambert e sloshing inercial.",
+  "ShadingModel": "MSM_DefaultLit",
+  "BlendMode": "BLEND_Translucent",
+  "TranslucencyLightingMode": "TLM_SurfaceTranslucencyVolume",
+  "TwoSided": false,
+  "NaniteEnabled": false,
+  "VirtualTextureSupport": {
+    "RuntimeVirtualTextureOutput": false
+  },
+  "Parameters": {
+    "Scalars": [
+      { "Name": "FillPercent", "Default": 1.0, "Description": "Nível de líquido [0.0 = Vazio, 1.0 = Cheio]" },
+      { "Name": "bIsManaOrb", "Default": 0.0, "Description": "0.0 para HP (Rubi Vermelho), 1.0 para MP (Cobalto Azul)" },
+      { "Name": "TurbulenceIntensity", "Default": 0.0, "Description": "Intensidade de choque ao tomar dano ou castar magias [0.0 a 1.0]" },
+      { "Name": "GlassIOR", "Default": 1.52, "Description": "Índice de refração do vidro de quartzo lapidado" },
+      { "Name": "FacetDensity", "Default": 14.0, "Description": "Frequência dos chanfros facetados do vidro" },
+      { "Name": "FacetBevelIntensity", "Default": 0.35, "Description": "Relevo angular das facetas" }
+    ],
+    "Vectors": [
+      { "Name": "HeroAcceleration", "Default": { "X": 0.0, "Y": 0.0, "Z": 0.0 }, "Description": "Vetor de inércia do movimento do herói para inclinação da superfície líquida" },
+      { "Name": "CustomFluidGlowColor", "Default": { "X": 0.0, "Y": 0.0, "Z": 0.0 }, "Description": "Override de cor emissiva para efeitos especiais" }
+    ],
+    "Textures": [
+      { "Name": "ArmatureMaskTex", "Slot": "Gothic_Gold_Armature_Mask", "Description": "Máscara da armação e garras góticas douradas" },
+      { "Name": "NormalDetailTex", "Slot": "Glass_Micro_Scratches", "Description": "Normais de micro-riscos e impurezas ópticas do vidro" }
+    ]
+  },
+  "CustomHLSLNodes": [
+    {
+      "NodeName": "EvaluateFluidOrbMasterNode",
+      "FileInclude": "/Project/Materials/UI/M_UI_FluidOrb_Master.ush",
+      "EntryPoint": "EvaluateFluidOrbMaster",
+      "Inputs": [
+        "LocalPosition",
+        "LocalNormal",
+        "LocalCameraPosition",
+        "UV",
+        "ArmatureMaskTex",
+        "NormalDetailTex",
+        "FillPercent",
+        "bIsManaOrb",
+        "HeroAcceleration",
+        "TurbulenceIntensity",
+        "GlobalTime",
+        "GlassIOR",
+        "FacetDensity",
+        "FacetBevelIntensity",
+        "CustomFluidGlowColor"
+      ],
+      "Outputs": [
+        "BaseColor",
+        "EmissiveColor",
+        "WorldNormal",
+        "Metallic",
+        "Specular",
+        "Roughness",
+        "Opacity",
+        "Refraction"
+      ]
+    }
+  ]
+}

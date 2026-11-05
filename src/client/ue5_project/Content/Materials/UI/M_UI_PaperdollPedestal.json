@@ -1,0 +1,60 @@
+{
+  "$schema": "https://unrealengine.com/schema/ue5_material_specification.json",
+  "MaterialName": "M_UI_PaperdollPedestal",
+  "Path": "/Game/Materials/UI/M_UI_PaperdollPedestal",
+  "Description": "Master Material 100% 3D nativo para o Pedestal de Mármore Obsidiano no Viewport do Paperdoll e Inspetor 3D de Itens. Incorpora Parallax Occlusion Mapping (POM) para sulcos rúnicos góticos profundos, reflexão anisotrópica radial e emissão pulsante sincronizada com o nível de refinamento do item (+0 a +15).",
+  "ShadingModel": "MSM_DefaultLit",
+  "BlendMode": "BLEND_Opaque",
+  "TwoSided": false,
+  "NaniteEnabled": true,
+  "AnisotropyEnabled": true,
+  "VirtualTextureSupport": {
+    "RuntimeVirtualTextureOutput": false
+  },
+  "Parameters": {
+    "Scalars": [
+      { "Name": "RefinementTier", "Default": 0.0, "Description": "Tier de refinamento do item inspecionado [0.0 a 15.0] que dita a ressonância luminosa" },
+      { "Name": "POMHeightScale", "Default": 0.035, "Description": "Profundidade dos entalhes rúnicos cavados no mármore via POM" },
+      { "Name": "RoughnessFloor", "Default": 0.045, "Description": "Rugosidade do mármore polido espelhado (Lumen reflexões nítidas)" },
+      { "Name": "AnisotropyStrength", "Default": 0.65, "Description": "Intensidade da dispersão anisotrópica radial" }
+    ],
+    "Vectors": [
+      { "Name": "CustomRuneColorOverride", "Default": { "X": 0.0, "Y": 0.0, "Z": 0.0 }, "Description": "Override de cor rúnica para classes ou alinhamentos específicos" }
+    ],
+    "Textures": [
+      { "Name": "ObsidianAlbedoTex", "Slot": "Obsidian_Base_Veins", "Description": "Textura de mármore obsidiano negro com veios minerais" },
+      { "Name": "ObsidianNormalTex", "Slot": "Obsidian_Normal_Polish", "Description": "Normais de micro-polimento da pedra" },
+      { "Name": "RuneHeightMaskTex", "Slot": "Gothic_Runic_HeightMask", "Description": "Máscara de altura e cavidade para entalhes rúnicos POM" }
+    ]
+  },
+  "CustomHLSLNodes": [
+    {
+      "NodeName": "EvaluatePaperdollPedestalMasterNode",
+      "FileInclude": "/Project/Materials/UI/M_UI_PaperdollPedestal.ush",
+      "EntryPoint": "EvaluatePaperdollPedestalMaster",
+      "Inputs": [
+        "WorldPos",
+        "WorldNormal",
+        "ViewDirTS",
+        "UV",
+        "ObsidianAlbedoTex",
+        "ObsidianNormalTex",
+        "RuneHeightMaskTex",
+        "GlobalTime",
+        "RefinementTier",
+        "POMHeightScale",
+        "CustomRuneColorOverride"
+      ],
+      "Outputs": [
+        "BaseColor",
+        "WorldNormal",
+        "EmissiveColor",
+        "Metallic",
+        "Specular",
+        "Roughness",
+        "Anisotropy",
+        "Tangent"
+      ]
+    }
+  ]
+}

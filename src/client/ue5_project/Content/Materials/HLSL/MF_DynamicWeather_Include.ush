@@ -1,0 +1,268 @@
+// ============================================================================
+// DASI MMORPG - Unreal Engine 5 Custom HLSL Include
+// MF_DynamicWeather_Include.ush
+//
+// Formatted for direct inclusion inside UE5 Material Custom HLSL Nodes:
+//   #include "/Project/Materials/HLSL/MF_DynamicWeather_Include.ush"
+//
+// Features:
+//   - Procedural Dual-Phase Concentric Rain Ripple Normal Perturbation
+//   - Dynamic Puddle Heightmask Accumulation & Mud Saturation
+//   - Physically-Based Wetness Transition (Diffuse Porosity Darkening & Specular Sharpening)
+//   - Water Surface Index of Refraction (IOR = 1.333, F0 = 0.02)
+//   - Tangent/World Space Normal Blending for Lumen & Screen-Space Reflections
+// ============================================================================
+
+#ifndef MF_DYNAMIC_WEATHER_INCLUDE_USH
+#define MF_DYNAMIC_WEATHER_INCLUDE_USH
+
+static const float DW_PI = 3.14159265359f;
+
+// ----------------------------------------------------------------------------
+// PROCEDURAL HASH & RANDOM FUNCTIONS
+// ----------------------------------------------------------------------------
+float2 DW_Hash22(float2 p)
+{
+	float3 p3 = frac(float3(p.xyx) * float3(0.1031f, 0.1030f, 0.0973f));
+	p3 += dot(p3, p3.yzx + 33.33f);
+	return frac((p3.xx + p3.yz) * p3.zy);
+}
+
+// ----------------------------------------------------------------------------
+// DUAL-PHASE CONCENTRIC RAIN RIPPLE GENERATOR
+// Simulates raindrops impacting puddles at random spatial grid cells.
+// ----------------------------------------------------------------------------
+float3 DW_ComputeRainRipples(
+	float2 UV,
+	float  Time,
+	float  RainIntensity,
+	float  RippleDensity,
+	float  RippleSpeed)
+{
+	if (RainIntensity <= 0.001f)
+	{
+		return float3(0.0f, 0.0f, 1.0f); // Flat tangent normal
+	}
+
+	float2 rippleNormal = float2(0.0f, 0.0f);
+	float animTime = Time * RippleSpeed;
+
+	// Two interleaved cell grids offset temporally for seamless overlap
+	[unroll]
+	for (int phase = 0; phase < 2; ++phase)
+	{
+		float phaseOffset = (float)phase * 0.5f;
+		float currentPhaseTime = animTime + phaseOffset;
+		float timeFloor = floor(currentPhaseTime);
+		float timeFraction = frac(currentPhaseTime);
+
+		float2 scaledUV = UV * RippleDensity + float2(phaseOffset * 7.13f, phaseOffset * 13.37f);
+		float2 cellID = floor(scaledUV);
+		float2 cellUV = frac(scaledUV);
+
+		// Random drop center within current grid cell
+		float2 dropCenter = DW_Hash22(cellID + timeFloor * 17.0f);
+		float2 toDrop = cellUV - dropCenter;
+		float dist = length(toDrop);
+
+		// Expanding circular shockwave ring
+		float ringRadius = timeFraction * 0.9f;
+		float ringDelta = dist - ringRadius;
+
+		// Dampen wave amplitude as it expands and over its lifetime
+		float waveEnvelope = exp(-dist * 4.0f) * (1.0f - timeFraction);
+		float waveFreq = 28.0f;
+		float waveAmp = sin(ringDelta * waveFreq) * waveEnvelope * step(0.0f, ringDelta + 0.15f);
+
+		// Normal slope gradient pointing outward from drop center
+		if (dist > 0.0001f)
+		{
+			rippleNormal += (toDrop / dist) * waveAmp;
+		}
+	}
+
+	// Modulate by rain intensity and reconstruct tangent Z
+	rippleNormal *= RainIntensity * 1.5f;
+	float normalZ = sqrt(max(0.0f, 1.0f - dot(rippleNormal, rippleNormal)));
+	return normalize(float3(rippleNormal.x, rippleNormal.y, normalZ));
+}
+
+// ----------------------------------------------------------------------------
+// DYNAMIC PUDDLE & WETNESS EVALUATION
+// ----------------------------------------------------------------------------
+struct FDynamicWeatherResult
+{
+	float3 OutBaseColor;
+	float3 OutWorldNormal;
+	float  OutRoughness;
+	float  OutMetallic;
+	float  OutSpecular;
+	float  PuddleMask;
+	float  WetnessAmount;
+};
+
+/**
+ * Evaluates terrain wetness and puddle accumulation.
+ * Returns modified PBR material parameters ready to connect to UE5 Material Outputs.
+ */
+FDynamicWeatherResult Dasi_EvaluateDynamicWeatherTerrain(
+	float3 BaseColor,
+	float3 BaseWorldNormal,
+	float  Roughness,
+	float  Metallic,
+	float  Specular,
+	float  HeightMap,            // Height/Cavity map [0 = deep ruts/depressions, 1 = cobblestone peaks]
+	float  PuddleCavityMask,     // Natural terrain pooling mask
+	float2 WorldUV,
+	float3 WorldPosition,
+	float  RainIntensity,        // [0.0 = Dry, 1.0 = Storm]
+	float  WetnessSaturation,    // [0.0 = Dry, 1.0 = Fully saturated mud]
+	float  PuddleThreshold,      // [0.0 to 1.0] Height level under which water collects
+	float  Time,
+	float  RippleDensity,
+	float  RippleSpeed)
+{
+	FDynamicWeatherResult Result;
+
+	// 1. Compute Puddle Accumulation Factor
+	// Water collects in low height depressions and cavity grooves
+	float effectiveThreshold = lerp(PuddleThreshold - 0.35f, PuddleThreshold + 0.25f, WetnessSaturation);
+	float heightPuddle = 1.0f - saturate((HeightMap - effectiveThreshold) / 0.15f);
+	float puddleFactor = saturate(heightPuddle * PuddleCavityMask * WetnessSaturation);
+
+	// 2. Compute Surface Wetness (soil saturation before puddle pooling)
+	float surfaceWetness = saturate(WetnessSaturation * 1.2f - (1.0f - PuddleCavityMask) * 0.3f);
+
+	// 3. PBR Albedo Wetness Darkening
+	// Wet soil/stone absorbs more internal light, darkening diffuse albedo by ~40-60%
+	float darkeningFactor = lerp(1.0f, 0.45f, surfaceWetness);
+	float3 wetBaseColor = BaseColor * darkeningFactor;
+
+	// Murky mud water albedo tint in puddle center
+	float3 murkyMudTint = float3(0.08f, 0.065f, 0.05f);
+	float3 finalBaseColor = lerp(wetBaseColor, lerp(wetBaseColor, murkyMudTint, 0.35f), puddleFactor);
+
+	// 4. PBR Roughness & Specular Modulation
+	// Wet porous surface drops roughness down; pure puddle becomes mirror-flat (0.02)
+	float wetRoughness = lerp(Roughness, 0.18f, surfaceWetness);
+	float finalRoughness = lerp(wetRoughness, 0.02f, puddleFactor);
+
+	// Water has an Index of Refraction of ~1.333, corresponding to ~0.25 specular in UE5
+	float finalSpecular = lerp(Specular, 0.25f, puddleFactor);
+	float finalMetallic = lerp(Metallic, 0.0f, puddleFactor);
+
+	// 5. Rain Ripples on Puddle Surfaces
+	float3 rippleTangentNormal = DW_ComputeRainRipples(
+		WorldUV, 
+		Time, 
+		RainIntensity * puddleFactor, 
+		RippleDensity, 
+		RippleSpeed
+	);
+
+	// Transform ripple normal from tangent space (assuming Up=(0,0,1)) into world normal
+	// In puddles, surface normal points predominantly straight Up (0,0,1)
+	float3 flatWorldUp = float3(0.0f, 0.0f, 1.0f);
+	float3 perturbedPuddleNormal = normalize(float3(
+		rippleTangentNormal.x * 0.4f,
+		rippleTangentNormal.y * 0.4f,
+		rippleTangentNormal.z
+	));
+
+	// Blend dry terrain normal with flat rain-perturbed puddle normal
+	float3 finalNormal = normalize(lerp(BaseWorldNormal, perturbedPuddleNormal, puddleFactor * 0.95f));
+
+	// Package outputs
+	Result.OutBaseColor   = finalBaseColor;
+	Result.OutWorldNormal = finalNormal;
+	Result.OutRoughness   = finalRoughness;
+	Result.OutMetallic    = finalMetallic;
+	Result.OutSpecular    = finalSpecular;
+	Result.PuddleMask     = puddleFactor;
+	Result.WetnessAmount  = surfaceWetness;
+
+	return Result;
+}
+
+// ----------------------------------------------------------------------------
+// PACKED HELPER FUNCTION FOR UE5 CUSTOM MATERIAL NODE
+// Output float4: (RGB = OutBaseColor, A = OutRoughness)
+// Output float4: (RGB = OutWorldNormal, A = PuddleMask)
+// ----------------------------------------------------------------------------
+float4 Dasi_DynamicWeatherPBR_AlbedoRoughness(
+	float3 BaseColor,
+	float3 BaseWorldNormal,
+	float  Roughness,
+	float  Metallic,
+	float  Specular,
+	float  HeightMap,
+	float  PuddleCavityMask,
+	float2 WorldUV,
+	float3 WorldPosition,
+	float  RainIntensity,
+	float  WetnessSaturation,
+	float  PuddleThreshold,
+	float  Time,
+	float  RippleDensity,
+	float  RippleSpeed)
+{
+	FDynamicWeatherResult R = Dasi_EvaluateDynamicWeatherTerrain(
+		BaseColor,
+		BaseWorldNormal,
+		Roughness,
+		Metallic,
+		Specular,
+		HeightMap,
+		PuddleCavityMask,
+		WorldUV,
+		WorldPosition,
+		RainIntensity,
+		WetnessSaturation,
+		PuddleThreshold,
+		Time,
+		RippleDensity,
+		RippleSpeed
+	);
+
+	return float4(R.OutBaseColor, R.OutRoughness);
+}
+
+float4 Dasi_DynamicWeatherPBR_NormalPuddle(
+	float3 BaseColor,
+	float3 BaseWorldNormal,
+	float  Roughness,
+	float  Metallic,
+	float  Specular,
+	float  HeightMap,
+	float  PuddleCavityMask,
+	float2 WorldUV,
+	float3 WorldPosition,
+	float  RainIntensity,
+	float  WetnessSaturation,
+	float  PuddleThreshold,
+	float  Time,
+	float  RippleDensity,
+	float  RippleSpeed)
+{
+	FDynamicWeatherResult R = Dasi_EvaluateDynamicWeatherTerrain(
+		BaseColor,
+		BaseWorldNormal,
+		Roughness,
+		Metallic,
+		Specular,
+		HeightMap,
+		PuddleCavityMask,
+		WorldUV,
+		WorldPosition,
+		RainIntensity,
+		WetnessSaturation,
+		PuddleThreshold,
+		Time,
+		RippleDensity,
+		RippleSpeed
+	);
+
+	return float4(R.OutWorldNormal, R.PuddleMask);
+}
+
+#endif // MF_DYNAMIC_WEATHER_INCLUDE_USH
