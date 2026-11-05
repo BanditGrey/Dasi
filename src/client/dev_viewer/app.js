@@ -4,6 +4,8 @@
  */
 
 import * as THREE from './libs/three.module.js';
+import { GLTFExporter } from './libs/GLTFExporter.js';
+import { buildEditedScenarioSnapshot } from './exportEditedScenario.js';
 import { Dasi3DFeatureViewer } from './dasi3dViewer.js';
 import { ARMORY_METADATA } from './dasi3dArmory.js';
 import { CLASSIC_CONCEPTS, conceptKeyForScenario, getScenarioConcept, getScenarioBlockout } from './classicConcepts.js';
@@ -2493,6 +2495,27 @@ class DevClientApp {
       const link = document.createElement('a');
       link.href = url; link.download = `${scenarioId.toLowerCase()}-tiles.json`; link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+
+    document.getElementById('tile-export-glb')?.addEventListener('click', async (event) => {
+      const viewer = this.viewer3DInstance;
+      if (viewer?.currentCategory !== 'ENVIRONMENT' || !viewer.activeEntity?.tileFloor) return;
+      const scenarioId = canonicalTileScenario(viewer.currentSubId);
+      const button = event.currentTarget;
+      button.disabled = true;
+      try {
+        // Snapshot sincronizado antes da exportação assíncrona: não altera a cena viva.
+        const snapshot = buildEditedScenarioSnapshot(THREE, viewer.activeEntity.group);
+        const buffer = await new GLTFExporter().parseAsync(snapshot, { binary: true, onlyVisible: true });
+        const url = URL.createObjectURL(new Blob([buffer], { type: 'model/gltf-binary' }));
+        const link = document.createElement('a');
+        link.href = url; link.download = `${scenarioId.toLowerCase()}-editado.glb`; link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        tileStatus.textContent = 'GLB visual exportado; colisões e efeitos dinâmicos não estão incluídos.';
+      } catch (error) {
+        console.error('Falha ao exportar GLB visual', error);
+        tileStatus.textContent = 'Não foi possível exportar o GLB visual.';
+      } finally { button.disabled = false; }
     });
 
     document.getElementById('tile-import')?.addEventListener('change', async (event) => {
