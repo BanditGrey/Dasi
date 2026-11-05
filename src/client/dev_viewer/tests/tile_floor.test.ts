@@ -5,7 +5,7 @@ import { SCENARIO_CATALOG } from '../../../server/world/CollisionSystem.ts';
 // @ts-ignore - módulos do visualizador
 import { createEnvironment } from '../dasi3dContent.js';
 // @ts-ignore - módulo JS compartilhado com o browser
-import { createTiledFloor, createTiledBoxTop, loadTileEdits, saveTileEdits, validateTileDocument, tileDocumentLayers, makeTileDocument } from '../tileFloor.js';
+import { createTiledFloor, createTiledBoxTop, createTiledRoundTop, loadTileEdits, saveTileEdits, validateTileDocument, tileDocumentLayers, makeTileDocument } from '../tileFloor.js';
 
 describe('Piso modular visual', () => {
   it('subdivide pisos sem ampliar bordas e troca apenas a célula escolhida', () => {
@@ -176,6 +176,38 @@ describe('Piso modular visual', () => {
     }
   });
 
+  it('limita os tiles circulares ao interior seguro e rejeita bordas e abismos', () => {
+    for (const id of ['ICA_01', 'ICA_02', 'EVT_02', 'EVT_04']) {
+      const env = createEnvironment(id, THREE);
+      const tiles = env.tileFloor!;
+      assert.ok(env.group.getObjectByName('scenario_tile_round_floor'), id);
+      assert.equal(tiles.isValidCell(0, 0), false, id);
+      assert.equal(tiles.setTile(0, 0, 'terra'), false, id);
+      assert.equal(tiles.setObject(0, 0, 'muro_x'), false, id);
+      const bad = { version: 2, scenarioId: id, tileSize: 4, cols: tiles.cols, rows: tiles.rows, floor: { '0,0': 'terra' }, objects: {} };
+      assert.equal(validateTileDocument(bad, id, tiles), false, id);
+      const centerCol = Math.floor(tiles.cols / 2), centerRow = Math.floor(tiles.rows / 2);
+      assert.equal(tiles.isValidCell(centerCol, centerRow), true, id);
+      assert.equal(tiles.setTile(centerCol, centerRow, 'pedra'), true, id);
+      tiles.mesh.updateMatrixWorld(true);
+      const r = tiles.width / 2;
+      const outside = new THREE.Raycaster(new THREE.Vector3(r + 1, 15, 0), new THREE.Vector3(0, -1, 0));
+      assert.equal(outside.intersectObject(tiles.mesh).length, 0, id);
+      const source = env.group.getObjectByName('scenario_tile_round_floor') as THREE.Mesh;
+      const params = (source.geometry as any).parameters;
+      const innerRadius = r * Math.cos(Math.PI / (params.radialSegments ?? params.segments));
+      for (let row = 0; row < tiles.rows; row++) for (let col = 0; col < tiles.cols; col++) {
+        if (!tiles.isValidCell(col, row)) continue;
+        const x0 = -r + col * 4, y0 = -r + row * 4;
+        for (const x of [x0, Math.min(x0 + 4, r)]) for (const y of [y0, Math.min(y0 + 4, r)])
+          assert.ok(Math.hypot(x, y) <= innerRadius + 1e-7, id);
+      }
+    }
+    const partial = new THREE.Mesh(new THREE.CircleGeometry(10, 16, 0, Math.PI), new THREE.MeshStandardMaterial());
+    partial.rotation.x = -Math.PI / 2;
+    assert.equal(createTiledRoundTop(THREE, partial), null);
+  });
+
   it('converte apenas pisos planos marcados e mantém arenas especiais intactas', () => {
     const supported: string[] = [];
     const unsupported: string[] = [];
@@ -187,7 +219,7 @@ describe('Piso modular visual', () => {
         assert.equal(env.group.getObjectByName('scenario_base_floor'), undefined);
       } else unsupported.push(scenario.id);
     }
-    assert.equal(supported.length, 51);
-    assert.deepEqual(unsupported, ['ICA_01', 'ICA_02', 'EVT_02', 'EVT_03', 'EVT_04']);
+    assert.equal(supported.length, 55);
+    assert.deepEqual(unsupported, ['EVT_03']);
   });
 });

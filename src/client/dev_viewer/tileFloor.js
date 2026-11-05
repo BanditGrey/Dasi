@@ -35,12 +35,41 @@ export function createTiledBoxTop(THREE, box) {
   return controller;
 }
 
+/** Grade conservadora no interior de uma superfície circular/poligonal.
+ * Mantém a borda original; somente células inteiras dentro do círculo inscrito são editáveis.
+ */
+export function createTiledRoundTop(THREE, surface) {
+  if (!surface || Array.isArray(surface.material) || !surface.scale.equals(new THREE.Vector3(1, 1, 1))) return null;
+  const p = surface.geometry?.parameters;
+  let radius, segments, top;
+  if (surface.geometry?.type === 'CylinderGeometry' && surface.rotation.x === 0 && surface.rotation.z === 0) {
+    radius = p.radiusTop; segments = p.radialSegments;
+    top = surface.position.y + p.height / 2;
+  } else if (surface.geometry?.type === 'CircleGeometry' && Math.abs(surface.rotation.x + Math.PI / 2) < 1e-8 && surface.rotation.y === 0 && surface.rotation.z === 0) {
+    radius = p.radius; segments = p.segments; top = surface.position.y;
+  } else return null;
+  if (!Number.isFinite(radius) || radius <= 0 || !Number.isInteger(segments) || segments < 3 || !Number.isFinite(top) || Math.abs((p.thetaLength ?? Math.PI * 2) - Math.PI * 2) > 1e-8) return null;
+  const innerRadius = radius * Math.cos(Math.PI / segments);
+  const plane = new THREE.Mesh(new THREE.PlaneGeometry(radius * 2, radius * 2), surface.material);
+  plane.position.set(surface.position.x, top + 0.002, surface.position.z);
+  plane.rotation.x = -Math.PI / 2;
+  const cellInside = (x0, y0, x1, y1) => [x0, x1].every(x => [y0, y1].every(y => x * x + y * y <= innerRadius * innerRadius + 1e-9));
+  const controller = createTiledFloor(THREE, plane, cellInside);
+  plane.geometry.dispose();
+  return controller;
+}
+
 /** Recebe a malha plana original, preservando posição, rotação e material. */
-export function createTiledFloor(THREE, floor) {
+export function createTiledFloor(THREE, floor, cellInside = () => true) {
   if (!floor || floor.geometry?.type !== 'PlaneGeometry' || Array.isArray(floor.material)) return null;
   const { width, height } = floor.geometry.parameters;
   if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return null;
   const cols = Math.ceil(width / TILE_SIZE), rows = Math.ceil(height / TILE_SIZE);
+  function isValidCell(col, row) {
+    if (!Number.isInteger(col) || !Number.isInteger(row) || col < 0 || row < 0 || col >= cols || row >= rows) return false;
+    const x0 = -width / 2 + col * TILE_SIZE, y0 = -height / 2 + row * TILE_SIZE;
+    return cellInside(x0, y0, Math.min(x0 + TILE_SIZE, width / 2), Math.min(y0 + TILE_SIZE, height / 2));
+  }
   const mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), floor.material.clone(), cols * rows);
   mesh.name = 'scenario_tiled_floor';
   mesh.position.copy(floor.position);
@@ -84,7 +113,7 @@ export function createTiledFloor(THREE, floor) {
       matrix.scale.set(w, h, 1);
       matrix.updateMatrix();
       const index = row * cols + col;
-      mesh.setMatrixAt(index, matrix.matrix);
+      mesh.setMatrixAt(index, isValidCell(col, row) ? matrix.matrix : hidden);
       mesh.setColorAt(index, color.setHex(TILE_VARIANTS.original));
       for (const module of Object.values(modules)) module.setMatrixAt(index, hidden);
     }
@@ -96,7 +125,7 @@ export function createTiledFloor(THREE, floor) {
     return setLayer(col, row, variant, 'objects');
   }
   function setLayer(col, row, variant, layer) {
-    if (!Number.isInteger(col) || !Number.isInteger(row) || col < 0 || row < 0 || col >= cols || row >= rows || typeof variant !== 'string' || !Object.hasOwn(TILE_VARIANTS, variant) || (variant !== 'original' && isObjectVariant(variant) !== (layer === 'objects'))) return false;
+    if (!isValidCell(col, row) || typeof variant !== 'string' || !Object.hasOwn(TILE_VARIANTS, variant) || (variant !== 'original' && isObjectVariant(variant) !== (layer === 'objects'))) return false;
     const index = row * cols + col;
     const edits = layer === 'objects' ? objects : variants;
     const previous = edits[`${col},${row}`];
@@ -151,7 +180,7 @@ export function createTiledFloor(THREE, floor) {
       }
     }
   }
-  return { mesh, cols, rows, width, height, setTile, setObject, applyEdits, clearEdits, getEdits: () => ({ ...variants }), getObjects: () => ({ ...objects }) };
+  return { mesh, cols, rows, width, height, isValidCell, setTile, setObject, applyEdits, clearEdits, getEdits: () => ({ ...variants }), getObjects: () => ({ ...objects }) };
 }
 
 /** Migra documentos antigos com uma única camada sem modificar os dados originais. */
@@ -197,7 +226,7 @@ export function validateTileDocument(data, scenarioId, controller) {
       if (!/^(0|[1-9]\d*),(0|[1-9]\d*)$/.test(key) || typeof variant !== 'string' || !Object.hasOwn(TILE_VARIANTS, variant)) return false;
       if (variant !== 'original' && layer !== 'legacy' && isObjectVariant(variant) !== (layer === 'objects')) return false;
       const [col, row] = key.split(',').map(Number);
-      return Number.isSafeInteger(col) && Number.isSafeInteger(row) && col < controller.cols && row < controller.rows;
+      return Number.isSafeInteger(col) && Number.isSafeInteger(row) && controller.isValidCell(col, row);
     });
   };
   return data.version === 1 ? validEntries(data.edits, 'legacy') : validEntries(data.floor, 'floor') && validEntries(data.objects, 'objects');

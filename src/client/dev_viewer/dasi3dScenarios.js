@@ -1661,6 +1661,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     // ICA_01: Levitation Citadel (Cidadela da Levitação & Pontes de Luz)
     // Ilha Flutuante Central com Vácuo Cósmico
     const island = new THREE.Mesh(new THREE.CylinderGeometry(9.5, 7.5, 3.0, 20), matNacar);
+    island.name = 'scenario_tile_round_floor';
     island.position.y = -1.5;
     envGroup.add(island);
 
@@ -1692,6 +1693,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'ICA_02') {
     // ICA_02: Dark Phoenix Lotus Nest (Ninho de Lótus do Dark Phoenix)
     const nestIsland = new THREE.Mesh(new THREE.CylinderGeometry(10.5, 8.5, 3.5, 20), matObsidian);
+    nestIsland.name = 'scenario_tile_round_floor';
     nestIsland.position.y = -1.75;
     envGroup.add(nestIsland);
 
@@ -2032,6 +2034,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'EVT_02') {
     // EVT_02: Devil Square — Praça Circular da Carnificina Pentagramal
     const square = new THREE.Mesh(new THREE.CircleGeometry(24.5, 48), matCobble);
+    square.name = 'scenario_tile_round_floor';
     square.rotation.x = -Math.PI / 2;
     square.position.y = 0.02;
     envGroup.add(square);
@@ -2124,6 +2127,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     // EVT_04: Coliseu de Duelos — Grande Arena da Glória (octogonal)
     const arenaStone = new THREE.MeshStandardMaterial({ color: 0x5c574f, roughness: 0.92, metalness: 0.03 });
     const octagon = new THREE.Mesh(new THREE.CylinderGeometry(17.5, 17.8, 1.0, 8), arenaStone);
+    octagon.name = 'scenario_tile_round_floor';
     octagon.position.y = 0.5;
     envGroup.add(octagon);
 

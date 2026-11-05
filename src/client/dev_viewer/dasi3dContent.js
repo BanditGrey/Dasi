@@ -13,7 +13,7 @@
 // PALETAS DE MATERIAIS & CORES GÓTICAS PBR
 // ============================================================================
 import { buildScenario3D } from './dasi3dScenarios.js';
-import { createTiledFloor, createTiledBoxTop, loadTileEdits } from './tileFloor.js';
+import { createTiledFloor, createTiledBoxTop, createTiledRoundTop, loadTileEdits } from './tileFloor.js';
 import { GLTFLoader } from './libs/GLTFLoader.js';
 
 // ============================================================================
@@ -1681,7 +1681,8 @@ export function createEnvironment(envType, THREE) {
     // Blocos sólidos mantêm sua geometria e recebem apenas uma grade no topo.
     const originalFloor = envGroup.getObjectByName('scenario_base_floor');
     const boxFloor = envGroup.getObjectByName('scenario_tile_box_floor');
-    const tileFloor = originalFloor ? createTiledFloor(THREE, originalFloor) : createTiledBoxTop(THREE, boxFloor);
+    const roundFloor = envGroup.getObjectByName('scenario_tile_round_floor');
+    const tileFloor = originalFloor ? createTiledFloor(THREE, originalFloor) : boxFloor ? createTiledBoxTop(THREE, boxFloor) : createTiledRoundTop(THREE, roundFloor);
     if (tileFloor) {
       const edits = loadTileEdits(envType, tileFloor);
       tileFloor.applyEdits(edits.floor);

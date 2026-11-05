@@ -2445,7 +2445,7 @@ class DevClientApp {
       const value = tileVariant?.value;
       const ok = value === 'remover_objeto' ? controller.setObject(col, row, 'original') : OBJECT_VARIANTS.includes(value) ? controller.setObject(col, row, value) : controller.setTile(col, row, value);
       if (!ok) {
-        tileStatus.textContent = 'Coluna, linha ou variante inválida.'; return;
+        tileStatus.textContent = 'Coluna, linha ou variante inválida, ou célula fora da área editável.'; return;
       }
       const saved = saveTileEdits(viewer.currentSubId, controller);
       tileStatus.textContent = saved ? `Tile ${col}, ${row} atualizado e salvo neste navegador.` : `Tile ${col}, ${row} atualizado, mas não foi possível salvar.`;
