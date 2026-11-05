@@ -203,7 +203,7 @@ export class BloodCastleInstance {
     }
 
     const timeRemainingMs = Math.max(0, this.endTime - now);
-    if (timeRemainingMs <= 0 && this.stage !== 'TRIUMPH') {
+    if (timeRemainingMs <= 0) {
       this.stage = 'FAILED';
       return { stage: 'FAILED', timeRemainingMs: 0, failed: true };
     }

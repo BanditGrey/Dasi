@@ -147,6 +147,27 @@ Os Opcodes são agrupados funcionalmente em intervalos hexadecimais:
 │ 0x90   │ 0x02    │ MSG_CHAOS_MACHINE_MIX_RES    │ S -> C      │ Resposta do Gnome com o item transformado  │
 │ 0x91   │ 0x01    │ MSG_TRADE_REQUEST            │ C -> S      │ Solicitação de troca com outro jogador     │
 │ 0x91   │ 0x02    │ MSG_TRADE_CONFIRM            │ C -> S      │ Trava e confirmação do comércio com 3s wait│
+│        │         │                              │             │                                            │
+│ 0xB0   │ 0x01    │ MSG_GUILD_STATUS_REQ         │ C -> S      │ Consulta guilda, cargo, alianças e tesouro │
+│ 0xB0   │ 0x02    │ MSG_GUILD_STATUS_RES         │ S -> C      │ Estado completo da guilda do jogador       │
+│ 0xB0   │ 0x03    │ MSG_GUILD_CREATE_REQ         │ C -> S      │ Funda guilda (nível 100 + 500 mil Zen)     │
+│ 0xB0   │ 0x05    │ MSG_GUILD_INVITE_REQ         │ C -> S      │ Convida jogador online por apelido         │
+│ 0xB0   │ 0x07    │ MSG_GUILD_RESPOND_INVITE_REQ │ C -> S      │ Aceita ou recusa convite pendente          │
+│ 0xB0   │ 0x09    │ MSG_GUILD_RANK_REQ           │ C -> S      │ Promove/rebaixa cargo ou transfere a guilda│
+│ 0xB0   │ 0x0B    │ MSG_GUILD_LEAVE_REQ          │ C -> S      │ Sai da guilda ou expulsa um membro         │
+│ 0xB0   │ 0x0D    │ MSG_GUILD_ALLIANCE_REQ       │ C -> S      │ Propõe ou rompe aliança (simétrica)        │
+│ 0xB0   │ 0x0F    │ MSG_GUILD_TREASURY_REQ       │ C -> S      │ Deposita Zen no tesouro da guilda          │
+│        │         │                              │             │                                            │
+│ 0xB1   │ 0x01    │ MSG_SIEGE_STATUS_REQ         │ C -> S      │ Consulta fase, estruturas e Selo da Coroa  │
+│ 0xB1   │ 0x02    │ MSG_SIEGE_STATUS_RES         │ S -> C      │ Snapshot do cerco (portão, estátuas, selo) │
+│ 0xB1   │ 0x03    │ MSG_SIEGE_REGISTER_REQ       │ C -> S      │ Inscreve a guilda na janela semanal        │
+│ 0xB1   │ 0x04    │ MSG_SIEGE_REGISTER_RES       │ S -> C      │ Confirmação da inscrição no cerco          │
+│ 0xB1   │ 0x05    │ MSG_SIEGE_ATTACK_STRUCTURE_REQ│ C -> S     │ Dano no portão ciclópico ou nas estátuas   │
+│ 0xB1   │ 0x06    │ MSG_SIEGE_ATTACK_STRUCTURE_RES│ S -> C     │ HP restante, destruição e estágio tático   │
+│ 0xB1   │ 0x07    │ MSG_SIEGE_PEDESTAL_REQ       │ C -> S      │ Ocupa/libera pedestal sagrado (oeste/leste)│
+│ 0xB1   │ 0x08    │ MSG_SIEGE_PEDESTAL_RES       │ S -> C      │ Resultado da ocupação + estado do selo     │
+│ 0xB1   │ 0x09    │ MSG_SIEGE_CROWN_SEAL_REQ     │ C -> S      │ Inicia ou interrompe a canalização do Selo │
+│ 0xB1   │ 0x0A    │ MSG_SIEGE_CROWN_SEAL_RES     │ S -> C      │ Progresso (0–100%) ou motivo da interrupção│
 └────────┴─────────┴──────────────────────────────┴─────────────┴────────────────────────────────────────────┘
 ```
 
@@ -227,6 +248,58 @@ struct MsgItemUseJewelReq {
     uint8_t  jewel_type;    // 1: Blessing, 2: Soul, 3: Life, 4: Harmony
 };
 ```
+
+---
+
+### 4.5 Selo da Coroa (`0xB1`, `0x09`: `MSG_SIEGE_CROWN_SEAL_REQ`)
+
+O Selo da Coroa é a única forma de trocar o dono do castelo. O servidor só aceita
+o pedido quando as **quatro** condições abaixo são verdadeiras
+(`CastleSiegeManager.beginCrownSeal`):
+
+1. a fase do cerco é `BATTLE` e o Salão do Trono (`VOL_05`) está liberado —
+   Portão Ciclópico (`25.000.000` HP, `VOL_02`) destruído e as 4 Estátuas da Vida
+   (`8.000.000` HP cada, `VOL_03`) pulverizadas;
+2. quem pede é `MASTER` de uma guilda **inscrita** no cerco;
+3. os dois pedestais sagrados estão ocupados por líderes distintos
+   (`SUB_LEADER`/`MASTER`) — `MSG_SIEGE_PEDESTAL_REQ` lados `west` e `east`;
+4. a canalização avança 30 segundos **contínuos** no `startGameLoop` (10 Hz).
+
+Interrupções (empurrão, atordoamento, morte do Mestre ou pedestal abandonado)
+zeram `progressMs`; o cliente recebe `MSG_SIEGE_CROWN_SEAL_RES` com o progresso 0.
+Ao atingir 100%, a guilda vencedora recebe o castelo — `GuildSystem.setCastleOwner`
+concede a Manta do Imperador Supremo (`cloak_of_supreme_emperor`) ao Mestre e passa
+a cobrar o **Imposto Territorial** (3%–7% por bioma) sobre compras e vendas em lojas
+de NPC (`NPCShopSystem.processBuy` / `processSell`).
+
+```
+struct MsgSiegeCrownSealReq {
+    uint8_t  header;        // 0xC1
+    uint8_t  length;        // 12 bytes
+    uint8_t  opcode;        // 0xB1
+    uint8_t  subcode;       // 0x09
+    uint32_t seq;
+    uint8_t  action;        // 0: BEGIN, 1: INTERRUPT
+};
+```
+
+### 4.6 Dano em Estrutura do Cerco (`0xB1`, `0x05`: `MSG_SIEGE_ATTACK_STRUCTURE_REQ`)
+
+```
+struct MsgSiegeAttackStructureReq {
+    uint8_t  header;        // 0xC1
+    uint8_t  length;
+    uint8_t  opcode;        // 0xB1
+    uint8_t  subcode;       // 0x05
+    uint32_t seq;
+    uint8_t  structure_id_len;
+    char     structure_id[24]; // "cyclopean_iron_gate", "life_statue_nw", ...
+    uint32_t damage;         // Dano autoritativo calculado pelo servidor
+};
+```
+
+O servidor recusa dano de guildas não inscritas, satura o dano no HP restante e
+registra o placar por guilda (`CastleSiegeManager.getScoreboard`).
 
 ---
 

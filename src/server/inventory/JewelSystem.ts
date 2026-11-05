@@ -217,6 +217,19 @@ export class JewelSystem {
   }
 
   /**
+   * Combinador de Joias (alias de compatibilidade usado pelo protocolo de rede
+   * para o refino de Caos em itens +9..+14). Delega toda a regra de risco para
+   * `applyChaosMachineUpgrade`.
+   */
+  public static applyChaosMachineCombination(
+    target: ItemInstance,
+    ingredients: ChaosMachineIngredients,
+    rngRoll?: number
+  ): UpgradeResult {
+    return JewelSystem.applyChaosMachineUpgrade(target, ingredients, rngRoll);
+  }
+
+  /**
    * Refinamento na Máquina do Caos (Níveis +10 até +15)
    * Baseado na tabela oficial de risco do documento Economy_and_Crafting.md
    */

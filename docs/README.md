@@ -3,7 +3,7 @@
 > **Servidor Autoritativo:** Node.js / TypeScript (`ws://localhost:8080` & `http://localhost:8080`)  
 > **Cliente WebGL 3D:** Three.js PBR (`src/client/dev_viewer/`)  
 > **Cliente Desktop AAA:** Unreal Engine 5.5 C++ (`src/client/ue5_project/`)  
-> **Status dos Testes:** 🟢 **89 / 89 Testes Aprovados (100% Green)**
+> **Status dos Testes:** 🟢 **133 / 133 Testes Aprovados em 41 suítes (100% Green)** + `npm run typecheck` sem erros
 
 ---
 
@@ -17,8 +17,9 @@
 - [`Bestiary_and_Bosses.md`](file:///d:/Dasi/docs/Bestiary_and_Bosses.md): Bestiário completo com monstros normais, elites, monstros dourados e chefes mundiais (Kundun, Gorgon, Balrog).
 - [`PVP_and_Castle_Siege.md`](file:///d:/Dasi/docs/PVP_and_Castle_Siege.md): Regras de PK, duelo de arenas, batalhas de guildas e o lendário cerco ao castelo (*Castle Siege*).
 
-### 1.2 Level Design & Os 47 Cenários dos 8 Biomas Canônicos
-- [`All_47_Scenarios_Master_Index.md`](file:///d:/Dasi/docs/level_design/All_47_Scenarios_Master_Index.md): Catálogo mestre dos 47 cenários interconectados de Continent of Legend com caixas AABB, cilindros, bounds e spawn points.
+### 1.2 Level Design & Os 56 Cenários Canônicos (8 Biomas + Cerco + Eventos)
+- [`All_56_Scenarios_Master_Index.md`](file:///d:/Dasi/docs/level_design/All_56_Scenarios_Master_Index.md): Catálogo mestre dos **56 cenários canônicos** (47 dos 8 biomas + 5 de Valley of Loren/Castle Siege + 4 Event Arenas) com caixas AABB, cilindros, bounds, spawn points e HP de estruturas destrutíveis.
+- **Fonte de verdade em código:** [`CollisionSystem.ts`](file:///d:/Dasi/src/server/world/CollisionSystem.ts) → `SCENARIO_CATALOG` (consumido também pelo Dev Viewer via import map `#dasi/server/`, validado por `scenario_parity.test.ts`).
 - [`Lorencia_Level_Design.md`](file:///d:/Dasi/docs/level_design/Lorencia_Level_Design.md): Planícies escuras, cidade murada gótica, tochas e paralelepípedos.
 - [`Noria_Feywood_Level_Design.md`](file:///d:/Dasi/docs/level_design/Noria_Feywood_Level_Design.md): Santuário élfico florestal, bioluminescência vegetal e santuário da Máquina do Caos.
 - [`Devias_Boreal_Level_Design.md`](file:///d:/Dasi/docs/level_design/Devias_Boreal_Level_Design.md): Fortaleza glacial ártica, tempestades de neve e monstros de gelo.
@@ -30,7 +31,7 @@
 ### 1.3 Arquitetura Técnica & Engenharia de Sistemas
 - [`Network_Protocol.md`](file:///d:/Dasi/docs/technical/Network_Protocol.md): Especificação completa do protocolo de rede binário multiplexado (Opcodes `0x01` a `0x75`).
 - [`CollisionSystem.ts`](file:///d:/Dasi/src/server/world/CollisionSystem.ts) & [`dasiCollisionEngine.js`](file:///d:/Dasi/src/client/dev_viewer/dasiCollisionEngine.js): Motor físico de colisão elástica com deslizamento contínuo, limites externos e wireframes de debug.
-- [`dasi3dScenarios.js`](file:///d:/Dasi/src/client/dev_viewer/dasi3dScenarios.js): Modelagem 3D procedural e partículas GPU dinâmicas a 60 FPS para todos os 47 cenários nos 8 biomas.
+- [`dasi3dScenarios.js`](file:///d:/Dasi/src/client/dev_viewer/dasi3dScenarios.js): Modelagem 3D procedural e partículas GPU dinâmicas a 60 FPS para os **56 cenários** (8 biomas + Castle Siege + Event Arenas).
 - [`HarmonicAudioSynthesizer.ts`](file:///d:/Dasi/src/client/gameplay/HarmonicAudioSynthesizer.ts): Síntese sonora harmônica procedural para 8 superfícies de passos e 8 vórtices de portais.
 - [`Chaos_Machine_and_Economy_Architecture.md`](file:///d:/Dasi/docs/technical/Chaos_Machine_and_Economy_Architecture.md): Arquitetura de forja alquímica, lojas de NPCs autoritativas e zero-trust.
 - [`Combat_and_Physics_Architecture.md`](file:///d:/Dasi/docs/technical/Combat_and_Physics_Architecture.md): Motor de combate autoritativo, Poise/Stagger, Knockback e IA de monstros.
@@ -57,7 +58,7 @@
 d:\Dasi\
 ├── docs/                               # Documentação oficial, GDD, Level Design e Specs Técnicas
 │   ├── art/                            # Artes conceituais e galeria visual dos biomas
-│   ├── level_design/                   # Especificações dos 47 cenários e 5 biomas
+│   ├── level_design/                   # Especificações dos 56 cenários (8 biomas + Cerco + Eventos)
 │   └── technical/                      # Especificações de rede, física, UE5 e manifesto de assets
 ├── src/
 │   ├── client/
@@ -91,11 +92,12 @@ d:\Dasi\
 
 ## ⚡ 3. COMO INICIALIZAR E TESTAR
 
-### 3.1 Executar a Suíte de Testes Automatizados (89 Testes)
+### 3.1 Executar a Suíte de Testes Automatizados (133 Testes em 41 suítes)
 ```powershell
 npm test
+npm run typecheck   # tsc --noEmit (strict) — 0 erros
 ```
-*Executa testes de inventário, economia, forja do caos, servidor de rede, motor de combate, gameplay de ação, caça 100% idle, catálogo dos 47 cenários e física de colisão com deslizamento.*
+*Executa testes de inventário, economia, forja do caos, servidor de rede, motor de combate, gameplay de ação, caça 100% idle, catálogo dos 56 cenários, física de colisão com deslizamento e **paridade do catálogo servidor ⇄ cliente**.*
 
 ### 3.2 Iniciar o Servidor de Jogo Autoritativo
 ```powershell

@@ -406,9 +406,10 @@ describe('Lógica das Joias Sagradas (Bless, Soul, Life, Chaos, Harmony)', () =>
     // Roll 0.50 (<= 0.80) -> Sucesso
     const res = JewelSystem.applyJewelOfHarmony(sword, 'CRITICAL_DAMAGE', 0.50);
     assert.equal(res.outcome, UpgradeOutcome.SUCCESS);
-    assert.notEqual(sword.harmonyOption, null);
-    assert.equal(sword.harmonyOption?.type, 'CRITICAL_DAMAGE');
-    assert.equal(sword.harmonyOption?.value, 25);
+    const harmony = sword.harmonyOption as { type: string; value: number } | null;
+    assert.ok(harmony, 'A opção de harmonia deveria ter sido aplicada');
+    assert.equal(harmony.type, 'CRITICAL_DAMAGE');
+    assert.equal(harmony.value, 25);
 
     // Tentar aplicar novamente deve ser rejeitado (já possui opção de harmonia)
     const rejected = JewelSystem.applyJewelOfHarmony(sword, 'ATTACK_SPEED', 0.10);

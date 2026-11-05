@@ -94,9 +94,14 @@ export interface HarmonyOption {
   value: number; // Valor numérico do bônus
 }
 
+/**
+ * Requisitos de equipamento. Apenas os atributos exigidos pelo item são
+ * declarados (ex.: cajados exigem Energia, espadas exigem Força/Agilidade).
+ * Atributos ausentes são tratados como 0.
+ */
 export interface ItemRequirements {
-  strength: number;
-  agility: number;
+  strength?: number;
+  agility?: number;
   vitality?: number;
   energy?: number;
   command?: number;

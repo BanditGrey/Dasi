@@ -217,7 +217,7 @@ describe('5. Gerenciador de Eventos (EventManager.ts)', () => {
     const eventManager = new EventManager();
     const sessionManager = new SessionManager();
     const session = sessionManager.createSession({} as any);
-    session.characterName = 'EventTester';
+    session.character.name = 'EventTester';
 
     // 1. Tenta entrar no Blood Castle sem Capa
     const bcFail = eventManager.enterEvent('BLOOD_CASTLE', session);

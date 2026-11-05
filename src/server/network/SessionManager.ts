@@ -44,6 +44,7 @@ export class SessionManager {
       agility: 120,
       vitality: 100,
       energy: 80,
+      command: 0,
       zen: 2000000, // 2 Milhões de Zen inicial para testes de forja e compras
       statPoints: 25, // 25 pontos livres para distribuição
     };

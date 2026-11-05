@@ -203,4 +203,4 @@ O ecossistema conta com testes unitários e de integração cobrindo 100% dos fl
 - **Chefes & Invasões (`src/server/bosses/tests/bosses.test.ts`):** Validação dos 5 chefes canônicos, fases de Górgona, absorção de dano por escudo rúnico, ciclo de telégrafos, imunidade em fúria, e dispersão da Box of Kundun (+1 a +5).
 - **Arenas de Eventos (`src/server/events/tests/events.test.ts`):** Validação dos 4 estágios de Blood Castle, ondas e pilares de Devil Square, colapso de anéis e física de repulsão de Chaos Castle, placar de 10 abates de Duelo 1v1, e validação de bilhetes no EventManager.
 - **Masmorras (`src/server/dungeons/tests/dungeons.test.ts`):** Validação da progressão de 3 andares das Catacumbas, chave de ossos, drenagem de lodo ácido, quebra de pilares rúnicos e cálculo de ranques S/A/B/C.
-- **Resultado Total:** **126 testes aprovados em 39 suítes (100% verde)**.
+- **Resultado Total:** **133 testes aprovados em 41 suítes (100% verde)** — inclui `collision.test.ts` (56 cenários), `scenario_parity.test.ts` (paridade servidor ⇄ cliente) e `scenario_3d_coverage.test.ts` (geometria 3D dos 56).

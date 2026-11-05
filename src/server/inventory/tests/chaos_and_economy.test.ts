@@ -29,6 +29,7 @@ describe('1. Máquina do Caos (Chaos Machine Crafting autoritativo)', () => {
       agility: 100,
       vitality: 100,
       energy: 80,
+      command: 0,
       zen,
       statPoints: 0,
     };

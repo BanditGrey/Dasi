@@ -4,9 +4,9 @@ Projeto de jogo MMORPG / ARPG de nova geração inspirado no clássico **Contine
 
 ---
 
-## 🏛️ Status do Projeto: 56 Cenários Mapeados, Concept Arts AAA & Modelos 3D GLB Reais
+## 🏛️ Status do Projeto: 56 Cenários Canônicos Implementados, Concept Arts AAA & Modelos 3D GLB Reais
 
-O projeto conta com arquitetura autoritativa completa, **100% de testes automatizados aprovados (126 testes em 39 suítes)** e modelos 3D compilados em alta fidelidade:
+O projeto conta com arquitetura autoritativa completa, **100% de testes automatizados aprovados (133 testes em 41 suítes)**, **type-check limpo (`tsc --noEmit`)** e modelos 3D compilados em alta fidelidade:
 
 ```text
 Dasi/
@@ -21,7 +21,7 @@ Dasi/
 │   │   ├── Scenery_Art_Gallery.md        # Catálogo Completo das 10 Concept Arts AAA
 │   │   └── scenery/                      # Imagens Panorâmicas 16:9 em Ultra-HD
 │   ├── level_design/
-│   │   ├── All_47_Scenarios_Master_Index.md  # Índice Geral dos 56 Cenários Canônicos
+│   │   ├── All_56_Scenarios_Master_Index.md  # Índice Geral dos 56 Cenários Canônicos
 │   │   ├── Lorencia_Level_Design.md      # Castelo de Loren & Cidadela de Lorencia
 │   │   ├── Noria_Feywood_Level_Design.md # Santuário Arbóreo de Feywood & Máquina do Caos
 │   │   ├── Devias_Boreal_Level_Design.md # Fortaleza Gélida & O Grande Braseiro Rei
@@ -89,3 +89,30 @@ Abra no navegador:
 - **Navegação pelos 10 Cenários Mestre:** Selecione qualquer um dos reinos no menu superior para carregar instantaneamente o modelo 3D real correspondente com partículas dinâmicas e iluminação PBR.
 - **Comparador Split-Screen:** Clique em **"Comparar com Concept Art"** para visualizar a tela dividida lado a lado (3D ao vivo vs Concept Art original).
 - **Inspeção de Colisão:** Ative o botão de colisão para visualizar os colisores físicos em tempo real.
+
+---
+
+## 🧭 Catálogo Único de Cenários (Servidor ⇄ Cliente)
+
+Os **56 cenários canônicos** vivem em uma **única fonte de verdade**:
+`src/server/world/CollisionSystem.ts` → `SCENARIO_CATALOG`.
+
+| Camada | Como consome |
+| :--- | :--- |
+| Servidor autoritativo | `CollisionSystem.resolveMovement()` usa o catálogo direto |
+| Dev Viewer (Three.js) | `dasiCollisionEngine.js` importa `#dasi/server/world/CollisionSystem.ts` (import map `#dasi/server/` → `/src/server/`) e registra o mesmo catálogo |
+| Geometria 3D | `dasi3dScenarios.js` constrói a cena procedural de cada um dos 56 IDs |
+
+- `scenario_parity.test.ts` falha o build se cliente e servidor divergirem em **ID, bounds, spawn point, quantidade de colisores ou resultado físico**.
+- Zonas de perigo (`HAZARD`: lava, ácido, areia movediça) são atravessáveis e reportadas em `hazardsHit`, sem bloquear o movimento.
+- Estruturas destrutíveis (`destructibleHp`): Portão Ciclópico 25M HP (`VOL_02`), 4 Estátuas da Vida 8M HP (`VOL_03`) e Portão do Arcanjo 5M HP (`EVT_01`).
+- Cenários de Castle Siege (`VOL_*`) e Event Arenas (`EVT_*`) são marcados com `instanced: true` (instâncias isoladas do mundo aberto).
+
+### Comandos principais
+
+```bash
+npm start          # Servidor autoritativo + Dev Viewer em http://localhost:8080
+npm test           # 133 testes / 41 suítes
+npm run typecheck  # tsc --noEmit (strict, 0 erros)
+npm run test:parity # paridade do catálogo servidor ⇄ cliente
+```

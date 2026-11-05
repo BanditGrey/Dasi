@@ -1,5 +1,5 @@
 /**
- * Dasi MMORPG - Testes Unitários de Colisão Física & Registro dos 47 Cenários Canônicos
+ * Dasi MMORPG - Testes Unitários de Colisão Física & Registro dos 56 Cenários Canônicos
  * Validação rigorosa de bounds, deslizamento em quinas, caixas AABB, cilindros e radiais.
  */
 
@@ -7,10 +7,10 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { CollisionSystem } from '../CollisionSystem.ts';
 
-describe('1. Catálogo Completo dos 47 Cenários Canônicos (CollisionSystem)', () => {
-  it('Possui todos os 47 cenários canônicos registrados com bounds e spawnPoints válidos', () => {
+describe('1. Catálogo Completo dos 56 Cenários Canônicos (CollisionSystem)', () => {
+  it('Possui todos os 56 cenários canônicos registrados com bounds e spawnPoints válidos', () => {
     const scenarios = CollisionSystem.getAllScenarios();
-    assert.strictEqual(scenarios.length, 47, `Deveria ter exatamente 47 cenários registrados, mas tem ${scenarios.length}`);
+    assert.strictEqual(scenarios.length, 56, `Deveria ter exatamente 56 cenários registrados, mas tem ${scenarios.length}`);
 
     const biomeCounts: Record<string, number> = {
       LORENCIA: 0,
@@ -21,6 +21,11 @@ describe('1. Catálogo Completo dos 47 Cenários Canônicos (CollisionSystem)', 
       ATLANS: 0,
       TARKAN: 0,
       ICARUS: 0,
+      VALLEY_OF_LOREN: 0,
+      BLOOD_CASTLE: 0,
+      DEVIL_SQUARE: 0,
+      CHAOS_CASTLE: 0,
+      DUEL_COLISEUM: 0,
     };
 
     for (const sc of scenarios) {
@@ -44,6 +49,42 @@ describe('1. Catálogo Completo dos 47 Cenários Canônicos (CollisionSystem)', 
     assert.strictEqual(biomeCounts['ATLANS'], 7, 'Atlans deve ter 7 cenários');
     assert.strictEqual(biomeCounts['TARKAN'], 5, 'Tarkan deve ter 5 cenários');
     assert.strictEqual(biomeCounts['ICARUS'], 2, 'Icarus deve ter 2 cenários');
+    assert.strictEqual(biomeCounts['VALLEY_OF_LOREN'], 5, 'Valley of Loren deve ter 5 cenários de Castle Siege');
+    assert.strictEqual(biomeCounts['BLOOD_CASTLE'], 1, 'Blood Castle deve ter 1 cenário');
+    assert.strictEqual(biomeCounts['DEVIL_SQUARE'], 1, 'Devil Square deve ter 1 cenário');
+    assert.strictEqual(biomeCounts['CHAOS_CASTLE'], 1, 'Chaos Castle deve ter 1 cenário');
+    assert.strictEqual(biomeCounts['DUEL_COLISEUM'], 1, 'Coliseu de Duelos deve ter 1 cenário');
+
+    const totalZones = Object.values(biomeCounts).reduce((a, b) => a + b, 0);
+    assert.strictEqual(totalZones, 56, `Soma dos cenários por zona deveria ser 56, obtido ${totalZones}`);
+  });
+
+  it('Registra os 5 cenários de Castle Siege e as 4 arenas de evento com spawn fora dos colisores', () => {
+    const siegeIds = ['VOL_01', 'VOL_02', 'VOL_03', 'VOL_04', 'VOL_05'];
+    const eventIds = ['EVT_01', 'EVT_02', 'EVT_03', 'EVT_04'];
+
+    for (const id of [...siegeIds, ...eventIds]) {
+      const sc = CollisionSystem.getScenario(id);
+      assert.ok(sc, `Cenário ${id} deve estar registrado`);
+      assert.strictEqual(sc.instanced, true, `${id} deve ser uma instância isolada (Castle Siege / Arena)`);
+
+      // O spawn deve estar dentro dos bounds
+      assert.ok(sc.spawnPoint.x > sc.bounds.minX && sc.spawnPoint.x < sc.bounds.maxX, `Spawn X de ${id} fora dos bounds`);
+      assert.ok(sc.spawnPoint.z > sc.bounds.minZ && sc.spawnPoint.z < sc.bounds.maxZ, `Spawn Z de ${id} fora dos bounds`);
+
+      // O spawn não pode estar dentro de nenhum colisor sólido (o jogador nasceria preso)
+      const resolved = CollisionSystem.resolveMovement(
+        id,
+        { x: sc.spawnPoint.x, z: sc.spawnPoint.z },
+        { x: sc.spawnPoint.x, z: sc.spawnPoint.z },
+        0.45
+      );
+      const drift = Math.hypot(resolved.x - sc.spawnPoint.x, resolved.z - sc.spawnPoint.z);
+      assert.ok(drift < 0.001, `Spawn de ${id} está dentro de um colisor (deslocado ${drift.toFixed(3)}m)`);
+    }
+
+    const gate = CollisionSystem.getScenario('VOL_02');
+    assert.strictEqual(gate?.destructibleHp?.['cyclopean_iron_gate'], 25_000_000, 'Portão ciclópico deve ter 25M de HP');
   });
 
   it('Resgata cenários por ID e por código canônico', () => {
@@ -64,6 +105,7 @@ describe('1. Catálogo Completo dos 47 Cenários Canônicos (CollisionSystem)', 
 describe('2. Física de Colisão & Deslizamento (Sliding Response)', () => {
   it('Clampa a posição do jogador dentro dos limites externos do mapa (Outer Bounds)', () => {
     const scenario = CollisionSystem.getScenario('LOR_01'); // bounds: minX: -20, maxX: 20, minZ: -20, maxZ: 20
+    assert.ok(scenario, 'LOR_01 deve estar registrado');
     const radius = 0.45;
 
     // Tentativa de escapar pela borda X positiva

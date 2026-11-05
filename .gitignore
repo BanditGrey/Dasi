@@ -19,3 +19,11 @@ build/
 Thumbs.db
 desktop.ini
 *.tmp
+
+# Bytecode Python (não versionar)
+__pycache__/
+*.pyc
+*.pyo
+
+# Coverage / relatórios de teste
+coverage/

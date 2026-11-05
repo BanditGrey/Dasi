@@ -32,6 +32,7 @@ describe('⚡ Sistemas Expandidos & Economia Avançada de Dasi', () => {
       agility: 220,
       vitality: 200,
       energy: 150,
+      command: 0,
       zen,
       statPoints: 0,
     };
@@ -253,10 +254,10 @@ describe('⚡ Sistemas Expandidos & Economia Avançada de Dasi', () => {
 
       const initialZen = char.zen;
       const sellRes = NPCShopSystem.processSell(fakeSession, itemToSell.uuid, () => ({
-        gridItems: [],
-        equipped: [],
         cols: 8,
         rows: 8,
+        items: [],
+        equipped: [],
       }));
 
       assert.equal(sellRes.success, true);

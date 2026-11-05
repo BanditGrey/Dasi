@@ -190,8 +190,17 @@ Para viabilizar a produção e aprofundamento das mecânicas, o GDD de **Dasi** 
 
 ## 11. PRÓXIMOS PASSOS IMEDIATOS
 
-1. [ ] Definição da Engine principal (recomendação: Unreal Engine 5.4+).
-2. [ ] Criação do projeto base e estrutura de pastas de desenvolvimento (`Client/`, `Server/`, `Assets/`, `Prototypes/`).
-3. [ ] Prototipação do controlador de personagem (movimentação, esquiva e ataque com impacto físico).
-4. [ ] Implementação do primeiro shader de brilho para armaduras (+0 a +15).
+1. [x] **Definição da Engine principal.** Unreal Engine 5.5 (cliente AAA, `src/client/ue5_project/`) + Three.js/WebGL como Dev Viewer jogável (`src/client/dev_viewer/`).
+2. [x] **Criação do projeto base e estrutura de pastas.** `src/client/`, `src/server/`, `src/shaders/`, `docs/`, `prototypes/` e `tools/` já versionados.
+3. [x] **Prototipação do controlador de personagem.** `KeyboardController.ts`, `CombatStateMachine.ts` e `dasiCollisionEngine.js` (movimentação WASD/click-to-move, esquiva com i-frames e colisão com deslizamento) + física de combate do `CombatEngine.ts` autoritativo.
+4. [x] **Primeiro shader de brilho para armaduras (+0 a +15).** `src/shaders/ItemGlowShader.hlsl` + auras PBR do Dev Viewer (`dasi3dViewer.js`, `dasi3dArmory.js`).
+
+### 11.1 Backlog de curto prazo (aberto)
+
+1. [x] **Sistema de Guildas & Alianças** — implementado em `src/server/guilds/GuildSystem.ts` (32 membros, 3 alianças, tesouro, Imposto Territorial 3%–7%) com opcodes `0xB0` e os 16 testes de `guilds.test.ts`.
+2. [ ] **Alinhamento moral / PK (karma)** — as 6 faixas de alinhamento (Herói → Carniceiro) e as penalidades de drop ainda são apenas design.
+3. [x] **Cerco ao Castelo como evento agendado** — `src/server/siege/CastleSiegeManager.ts` fecha o ciclo sobre `VOL_01..VOL_05`: janela de inscrição, portão de 25M HP, 4 Estátuas de 8M, pedestais + Selo da Coroa de 30s contínuos, opcodes `0xB1`, rotas `/api/castle-siege` e painel no Dev Viewer (19 testes em `castle_siege.test.ts`).
+4. [ ] **Persistência** — hoje o estado é em memória (`SessionManager`); o protocolo prevê Redis 7 + PostgreSQL 16.
+5. [ ] **GLB dedicados das arenas de evento** — `EVT_02`/`EVT_03`/`EVT_04` usam arte emprestada do bioma temático; faltam modelos próprios no `blender_dasi_world_builder.py`.
+6. [ ] **Pipeline UE5 executável** — o conteúdo C++ (59 arquivos) e os specs de animação estão no repo, mas o projeto ainda não foi compilado/validado em uma instalação de Unreal Engine.
 
