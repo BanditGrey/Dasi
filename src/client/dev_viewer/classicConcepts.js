@@ -68,6 +68,16 @@ export const SCENARIO_CONCEPTS = {
   ATL_05: { title: 'Atlans — Cemitério dos Leviatãs', description: 'Costelas fósseis gigantes formam arcos sobre a areia e um crânio antigo.' },
   ATL_06: { title: 'Atlans — Fendas Hidrotermais', description: 'Chaminés de basalto e fissuras quentes entre fumaça mineral e bolhas.' },
   ATL_07: { title: 'Atlans — Fossa da Hidra', description: 'Arena abissal circular com corais venenosos e três pedestais de cobertura.' },
+  TAR_01: { title: 'Tarkan — Dunas Carmesim', description: 'Dunas ocres com engrenagens e antigas máquinas de guerra soterradas.' },
+  TAR_02: { title: 'Tarkan — Oásis da Miragem', description: 'Lago sulfúrico entre troncos fossilizados e cactos escuros.' },
+  TAR_03: { title: 'Tarkan — Espinha do Deserto', description: 'Desfiladeiro de arenito vermelho com costelas e vértebras fósseis.' },
+  TAR_04: { title: 'Tarkan — Cemitério de Rodas', description: 'Campo de batalha com rodas mecânicas quebradas, catapultas e estacas.' },
+  TAR_05: { title: 'Tarkan — Cratera de Areia', description: 'Arena circular de dunas com areia movediça e obeliscos de rocha.' },
+  ICA_01: { title: 'Icarus — Cidadela Celeste', description: 'Platô flutuante com monólito central, ilhas satélites e passarelas luminosas.' },
+  ICA_02: { title: 'Icarus — Ninho de Lótus', description: 'Arena de obsidiana em forma de lótus sobre o abismo estelar.' },
+  VOL_01: { title: 'Valley of Loren — Campo de Guerra', description: 'Acampamento de cerco com catapultas, tendas, trincheiras e paliçadas.' },
+  VOL_02: { title: 'Valley of Loren — Portão Ciclópico', description: 'Portão monumental de ferro entre torres e muralhas fortificadas.' },
+  VOL_03: { title: 'Valley of Loren — Pátio das Estátuas', description: 'Pátio de cerco com quatro estátuas de alabastro e canhões defensivos.' },
 };
 
 export function getScenarioConcept(id) {

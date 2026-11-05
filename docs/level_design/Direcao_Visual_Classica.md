@@ -31,8 +31,8 @@ As imagens de família estão em `src/client/dev_viewer/art/classic/` e aparecem
 
 ## Concepts individuais — andamento
 
-- Concluídos: `LOR_01`–`LOR_07`, `NOR_01`–`NOR_07`, `DEV_01`–`DEV_06`, `DNG_01`–`DNG_06`, `LT_01`–`LT_07` e `ATL_01`–`ATL_07` (40 de 56).
-- Pendentes: `TAR_01`–`TAR_05`, `ICA_01`–`ICA_02`, `VOL_01`–`VOL_05` e `EVT_01`–`EVT_04` (16 de 56).
+- Concluídos: `LOR_01`–`LOR_07`, `NOR_01`–`NOR_07`, `DEV_01`–`DEV_06`, `DNG_01`–`DNG_06`, `LT_01`–`LT_07`, `ATL_01`–`ATL_07`, `TAR_01`–`TAR_05`, `ICA_01`–`ICA_02` e `VOL_01`–`VOL_03` (50 de 56).
+- Pendentes: `VOL_04`–`VOL_05` e `EVT_01`–`EVT_04` (6 de 56).
 - As imagens de família, inclusive as arenas, são guias preliminares e não contam como concepts individuais.
 - Concluir e revisar os 56 concepts individuais antes de iniciar a produção dos GLBs.
 
