@@ -141,3 +141,26 @@ it('Os sete blockouts de Noria carregam com GLTFLoader e o santuário preserva d
     }
   }
 });
+
+it('Os seis blockouts de Devias carregam e preservam detalhes da cidadela', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  for (let index = 1; index <= 6; index++) {
+    const id = `DEV_${String(index).padStart(2, '0')}`;
+    const bytes = readFileSync(`src/client/dev_viewer/models/scenarios/${id.toLowerCase()}.glb`);
+    const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    const gltf = await new GLTFLoader().parseAsync(buffer, '');
+    assert.ok(gltf.scene.getObjectByName(id), id);
+    let meshes = 0;
+    gltf.scene.traverse((obj: THREE.Object3D) => {
+      if ((obj as THREE.Mesh).isMesh) meshes++;
+      assert.ok(!(obj as THREE.Light).isLight && !(obj as THREE.Points).isPoints, id);
+    });
+    assert.ok(meshes > 0, id);
+    if (id === 'DEV_01') {
+      assert.ok(gltf.scene.getObjectByName('devias_thawed_stone'));
+      assert.ok(gltf.scene.getObjectByName('devias_brazier_flame'));
+      assert.ok(gltf.scene.getObjectByName('devias_battlements'));
+    }
+  }
+});

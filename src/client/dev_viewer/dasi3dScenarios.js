@@ -742,18 +742,29 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
+    // Pedra úmida ao redor do braseiro: detalhe plano, sem novos obstáculos.
+    const thawedStone = new THREE.Mesh(
+      new THREE.CircleGeometry(7.2, 40),
+      new THREE.MeshStandardMaterial({ color: 0x4d5354, roughness: 0.34, metalness: 0.12 })
+    );
+    thawedStone.name = 'devias_thawed_stone';
+    thawedStone.rotation.x = -Math.PI / 2;
+    thawedStone.position.y = 0.015;
+    envGroup.add(thawedStone);
+
     // O Grande Braseiro Real
     const brazier = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.8, 1.2, 24), matIron);
     brazier.position.y = 0.6;
     envGroup.add(brazier);
 
     // Chama do Braseiro
-    const flame = new THREE.Mesh(new THREE.ConeGeometry(1.6, 2.8, 12), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
+    const flame = new THREE.Mesh(new THREE.ConeGeometry(1.6, 2.8, 12), new THREE.MeshBasicMaterial({ color: 0xf59e0b }));
+    flame.name = 'devias_brazier_flame';
     flame.position.y = 2.2;
     envGroup.add(flame);
     animParts.kingFlame = flame;
 
-    const fireLight = new THREE.PointLight(0x38bdf8, 4.5, 14);
+    const fireLight = new THREE.PointLight(0xf59e0b, 4.5, 14);
     fireLight.position.set(0, 2.5, 0);
     envGroup.add(fireLight);
     dynamicLights.push(fireLight);
@@ -765,6 +776,18 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     const wallNE = new THREE.Mesh(new THREE.BoxGeometry(8.0, 5.5, 16.0), matStoneDark);
     wallNE.position.set(14, 2.75, -10);
     envGroup.add(wallNE);
+
+    // Ameias sobre a projeção existente das muralhas.
+    const battlements = new THREE.Group();
+    battlements.name = 'devias_battlements';
+    for (const x of [-14, 14]) {
+      for (let i = -3; i <= 3; i++) {
+        const merlon = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 1.2), matStoneDark);
+        merlon.position.set(x, 5.95, -10 + i * 2.0);
+        battlements.add(merlon);
+      }
+    }
+    envGroup.add(battlements);
 
     // 4 Pilares de Gelo Glacial
     const iceCoords = [[-7, -8], [7, -8], [-7, 6], [7, 6]];

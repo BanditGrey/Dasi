@@ -92,9 +92,9 @@ export function getScenarioConcept(id) {
 }
 
 /** Blockouts exportados a partir de geometria procedural, não modelos finais. */
-export const SCENARIO_BLOCKOUTS = ['LOR_01', 'LOR_02', 'LOR_03', 'LOR_04', 'LOR_05', 'LOR_06', 'LOR_07', 'NOR_01', 'NOR_02', 'NOR_03', 'NOR_04', 'NOR_05', 'NOR_06', 'NOR_07'];
+export const SCENARIO_BLOCKOUTS = ['LOR_01', 'LOR_02', 'LOR_03', 'LOR_04', 'LOR_05', 'LOR_06', 'LOR_07', 'NOR_01', 'NOR_02', 'NOR_03', 'NOR_04', 'NOR_05', 'NOR_06', 'NOR_07', 'DEV_01', 'DEV_02', 'DEV_03', 'DEV_04', 'DEV_05', 'DEV_06'];
 export function getScenarioBlockout(id) {
-  const scenarioId = ({ LORENCIA: 'LOR_01', NORIA: 'NOR_01' })[id] || id;
+  const scenarioId = ({ LORENCIA: 'LOR_01', NORIA: 'NOR_01', DEVIAS: 'DEV_01' })[id] || id;
   return SCENARIO_BLOCKOUTS.includes(scenarioId)
     ? `models/scenarios/${scenarioId.toLowerCase()}.glb`
     : null;

@@ -47,7 +47,8 @@ test('concepts individuais pertencem ao catálogo e possuem arquivos próprios',
 test('os downloads de blockout apontam para arquivos de cenários disponíveis', () => {
   assert.equal(getScenarioBlockout('LORENCIA'), getScenarioBlockout('LOR_01'));
   assert.equal(getScenarioBlockout('NORIA'), getScenarioBlockout('NOR_01'));
-  assert.equal(getScenarioBlockout('DEV_01'), null);
+  assert.equal(getScenarioBlockout('DEVIAS'), getScenarioBlockout('DEV_01'));
+  assert.equal(getScenarioBlockout('DNG_01'), null);
   for (const id of SCENARIO_BLOCKOUTS) {
     assert.ok(SCENARIO_CATALOG.some((scenario) => scenario.id === id));
     assert.ok(existsSync(`src/client/dev_viewer/${getScenarioBlockout(id)}`));
