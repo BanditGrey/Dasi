@@ -13,6 +13,7 @@
 // PALETAS DE MATERIAIS & CORES GÓTICAS PBR
 // ============================================================================
 import { buildScenario3D } from './dasi3dScenarios.js';
+import { createTiledFloor, loadTileEdits } from './tileFloor.js';
 import { GLTFLoader } from './libs/GLTFLoader.js';
 
 // ============================================================================
@@ -1677,6 +1678,15 @@ export function createEnvironment(envType, THREE) {
     const dynamicLights = [];
     const animParts = {};
     buildScenario3D(envType, THREE, envGroup, dynamicLights, animParts);
+    // Apenas pisos planos identificados são convertidos; arenas especiais preservam a geometria.
+    const originalFloor = envGroup.getObjectByName('scenario_base_floor');
+    const tileFloor = createTiledFloor(THREE, originalFloor);
+    if (tileFloor) {
+      tileFloor.applyEdits(loadTileEdits(envType));
+      envGroup.remove(originalFloor);
+      originalFloor.geometry.dispose();
+      envGroup.add(tileFloor.mesh);
+    }
     // A geometria específica do cenário deve permanecer visível. O GLB de bioma
     // é genérico e sua substituição assíncrona apagava mapas e colisores distintos.
     // Os GLBs continuam disponíveis via loadBiomeGLB para usos explícitos.
@@ -1684,6 +1694,7 @@ export function createEnvironment(envType, THREE) {
       group: envGroup,
       dynamicLights,
       animParts,
+      tileFloor,
       updateAnim: (...args) => {
         let time = 0, dt = 0.016;
         if (args.length >= 3) { time = typeof args[1] === 'number' ? args[1] : 0; dt = typeof args[2] === 'number' ? args[2] : 0.016; }

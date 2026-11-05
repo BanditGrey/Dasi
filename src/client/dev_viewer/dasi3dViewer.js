@@ -276,6 +276,7 @@ export class Dasi3DFeatureViewer {
   selectEntity(category, id, options = {}) {
     this.currentCategory = category;
     this.currentSubId = id;
+    if (category !== 'ENVIRONMENT') this.onTileFloorChanged?.(null, id);
     if (options.setTier) this.currentSetTier = options.setTier;
 
     if (this.activeEntity && this.activeEntity.group) {
@@ -326,6 +327,7 @@ export class Dasi3DFeatureViewer {
       const env = createEnvironment(id, THREE);
       this.activeEntity = env;
       this.scene.add(env.group);
+      this.onTileFloorChanged?.(env.tileFloor, id);
 
       // Reconstroi wireframes de debug de colisão física se ativo
       if (this.debugCollidersMesh) {

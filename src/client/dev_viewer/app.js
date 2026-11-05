@@ -3,9 +3,11 @@
  * WebSocket Client, Drag & Drop Handler, Audio Synthesizer & Canvas Glow Shader Engine.
  */
 
+import * as THREE from './libs/three.module.js';
 import { Dasi3DFeatureViewer } from './dasi3dViewer.js';
 import { ARMORY_METADATA } from './dasi3dArmory.js';
 import { CLASSIC_CONCEPTS, conceptKeyForScenario, getScenarioConcept, getScenarioBlockout } from './classicConcepts.js';
+import { canonicalTileScenario, saveTileEdits, validateTileDocument } from './tileFloor.js';
 import { Dasi3DAvatarRenderer, DasiHeroClassModal, CLASS_DEFINITIONS } from './dasi3dAvatar.js';
 import { Dasi3DRealtimeArena } from './dasi3dRealtimeArena.js';
 import {
@@ -2421,6 +2423,96 @@ class DevClientApp {
     let currentEnv = initialEnv || 'LORENCIA';
     let currentArmorySub = 'WEAPON';
     let currentArmoryItem = 'DRAGON_BLADE';
+
+    const tileStatus = document.getElementById('tile-floor-status');
+    const tileCol = document.getElementById('tile-col');
+    const tileRow = document.getElementById('tile-row');
+    const tileVariant = document.getElementById('tile-variant');
+    const updateTileStatus = (controller, id) => {
+      if (!tileStatus) return;
+      tileStatus.textContent = controller
+        ? `${canonicalTileScenario(id)}: ${controller.cols} colunas × ${controller.rows} linhas (tiles de até 4 m).`
+        : 'Este cenário ainda não possui piso plano modular.';
+      if (tileCol) { tileCol.max = controller ? String(controller.cols - 1) : '0'; tileCol.value = '0'; }
+      if (tileRow) { tileRow.max = controller ? String(controller.rows - 1) : '0'; tileRow.value = '0'; }
+    };
+    this.viewer3DInstance.onTileFloorChanged = updateTileStatus;
+    updateTileStatus(this.viewer3DInstance.activeEntity?.tileFloor, initialEnv);
+    const applyTile = (col, row) => {
+      const viewer = this.viewer3DInstance;
+      const controller = viewer?.currentCategory === 'ENVIRONMENT' && viewer.activeEntity?.tileFloor;
+      if (!controller) { updateTileStatus(null, viewer?.currentSubId); return; }
+      if (!controller.setTile(col, row, tileVariant?.value)) {
+        tileStatus.textContent = 'Coluna, linha ou variante inválida.'; return;
+      }
+      const saved = saveTileEdits(viewer.currentSubId, controller);
+      tileStatus.textContent = saved ? `Tile ${col}, ${row} atualizado e salvo neste navegador.` : `Tile ${col}, ${row} atualizado, mas não foi possível salvar.`;
+    };
+    document.getElementById('tile-apply')?.addEventListener('click', () => {
+      if (tileCol?.value === '' || tileRow?.value === '') { tileStatus.textContent = 'Informe coluna e linha.'; return; }
+      applyTile(Number(tileCol?.value), Number(tileRow?.value));
+    });
+    this.viewer3DInstance.renderer.domElement.addEventListener('dblclick', (event) => {
+      const viewer = this.viewer3DInstance;
+      const controller = viewer?.currentCategory === 'ENVIRONMENT' && viewer.activeEntity?.tileFloor;
+      if (!controller) return;
+      const rect = viewer.renderer.domElement.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const pointer = new THREE.Vector2((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
+      const ray = new THREE.Raycaster();
+      ray.setFromCamera(pointer, viewer.camera);
+      const hit = ray.intersectObject(controller.mesh)[0];
+      if (hit?.instanceId === undefined) return;
+      const col = hit.instanceId % controller.cols;
+      const row = Math.floor(hit.instanceId / controller.cols);
+      if (tileCol) tileCol.value = String(col);
+      if (tileRow) tileRow.value = String(row);
+      applyTile(col, row);
+    });
+    document.getElementById('tile-reset')?.addEventListener('click', () => {
+      const viewer = this.viewer3DInstance;
+      const controller = viewer?.currentCategory === 'ENVIRONMENT' && viewer.activeEntity?.tileFloor;
+      if (!controller) return;
+      for (const key of Object.keys(controller.getEdits())) {
+        const [col, row] = key.split(',').map(Number);
+        controller.setTile(col, row, 'original');
+      }
+      const saved = saveTileEdits(viewer.currentSubId, controller);
+      tileStatus.textContent = saved ? 'Alterações locais removidas.' : 'Alterações removidas da tela, mas não foi possível salvar.';
+    });
+    document.getElementById('tile-export')?.addEventListener('click', () => {
+      const viewer = this.viewer3DInstance;
+      const controller = viewer?.currentCategory === 'ENVIRONMENT' && viewer.activeEntity?.tileFloor;
+      if (!controller) return;
+      const scenarioId = canonicalTileScenario(viewer.currentSubId);
+      const payload = { version: 1, scenarioId, tileSize: 4, cols: controller.cols, rows: controller.rows, edits: controller.getEdits() };
+      const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
+      const link = document.createElement('a');
+      link.href = url; link.download = `${scenarioId.toLowerCase()}-tiles.json`; link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+
+    document.getElementById('tile-import')?.addEventListener('change', async (event) => {
+      const input = event.target;
+      const viewer = this.viewer3DInstance;
+      const controller = viewer?.currentCategory === 'ENVIRONMENT' && viewer.activeEntity?.tileFloor;
+      const file = input.files?.[0];
+      if (!controller || !file) return;
+      if (file.size > 200000) { tileStatus.textContent = 'Arquivo de tiles muito grande.'; input.value = ''; return; }
+      try {
+        const data = JSON.parse(await file.text());
+        // A seleção pode mudar enquanto o arquivo é lido.
+        if (viewer.activeEntity?.tileFloor !== controller || !validateTileDocument(data, viewer.currentSubId, controller)) throw new Error('Documento inválido');
+        for (const key of Object.keys(controller.getEdits())) {
+          const [col, row] = key.split(',').map(Number);
+          controller.setTile(col, row, 'original');
+        }
+        controller.applyEdits(data.edits);
+        tileStatus.textContent = saveTileEdits(viewer.currentSubId, controller) ? 'Tiles importados e salvos neste navegador.' : 'Tiles importados, mas não foi possível salvar.';
+      } catch {
+        tileStatus.textContent = 'Arquivo inválido ou incompatível com este cenário; nada foi alterado.';
+      } finally { input.value = ''; }
+    });
 
     const glowDescriptions = {
       0: 'Metal PBR fosco/polido sem emissão arcana (+0 a +6).',

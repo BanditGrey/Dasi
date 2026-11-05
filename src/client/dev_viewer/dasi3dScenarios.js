@@ -131,6 +131,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   if (id === 'LOR_01') {
     // LOR_01: Citadel Plaza & Fountain (Praça Central, Fonte do Arcanjo e Bazar)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(42, 42, 16, 16), matCobble);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     envGroup.add(floor);
@@ -272,6 +273,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LOR_02') {
     // LOR_02: East Gate & Plains (Muralha Oriental, Portão de Vigia e Rochas das Bestas)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(52, 52, 16, 16), new THREE.MeshStandardMaterial({ color: 0x2e382d, roughness: 0.9 }));
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -349,6 +351,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LOR_03') {
     // LOR_03: West Gate & Spider Woods (Bosque das Aranhas, Teias e Pântano)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(52, 52, 16, 16), new THREE.MeshStandardMaterial({ color: 0x1c211a, roughness: 0.95 }));
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -414,6 +417,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LOR_04') {
     // LOR_04: North Gate & Castle Bridge (Ponte Levadiça sobre Fosso Abissal)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 50, 16, 16), matStoneDark);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     floor.position.z = -10;
     envGroup.add(floor);
@@ -450,6 +454,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LOR_05') {
     // LOR_05: South Cemetery (Cemitério dos Heróis Caídos)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 46, 16, 16), new THREE.MeshStandardMaterial({ color: 0x181e18, roughness: 0.95 }));
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -489,6 +494,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LOR_06') {
     // LOR_06: Tavern Interior (A Taverna da Lareira)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(24, 20, 8, 8), matWood);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -525,6 +531,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LOR_07') {
     // LOR_07: Blacksmith Forge (A Forja de Hanzo)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(20, 20, 8, 8), matStoneDark);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -561,6 +568,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'NOR_01') {
     // NOR_01: Sanctuary Mother Tree (Árvore Mãe & Praça Élfica)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 46, 16, 16), matFeyMoss);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -639,6 +647,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'NOR_02') {
     // NOR_02: Chaos Machine Workshop (Oficina dos Duendes e Chaos Forge)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30, 8, 8), matStoneDark);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -679,6 +688,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'NOR_03') {
     // NOR_03: Queen Lúthien's Altar (Altar Élfico & Lago de Néctar)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(38, 38, 12, 12), matFeyMoss);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -707,6 +717,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'NOR_04') {
     // NOR_04: East Groves (Bosque das Ninfas)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(50, 50, 16, 16), matFeyMoss);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -733,6 +744,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'NOR_05') {
     // NOR_05: Giant Mushroom Glade (Clareira dos Cogumelos Colossais)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(42, 42, 16, 16), new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.9 }));
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -762,6 +774,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'NOR_06') {
     // NOR_06: Deep Canyon & Rope Bridge (Cânion Abissal e Ponte Pênsil)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(32, 58, 12, 16), matFeyMoss);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -789,6 +802,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'NOR_07') {
     // NOR_07: Creeper Hollow (Covil do Stone Golem)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 46, 16, 16), matFeyMoss);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -814,6 +828,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DEV_01') {
     // DEV_01: Glacial Citadel & King's Hearth (A Fortaleza & Grande Braseiro do Rei)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 46, 16, 16), matSnow);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -875,6 +890,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DEV_02') {
     // DEV_02: Cathedral Facade (Fachada da Basílica Boreal)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(42, 42, 16, 16), matSnow);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -898,6 +914,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DEV_03') {
     // DEV_03: North Snowfields (Campos de Neve do Norte & Naufrágio Congelado)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(54, 54, 16, 16), matSnow);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -923,6 +940,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DEV_04') {
     // DEV_04: Ice Shard Ridge (Crista dos Espinhos de Gelo Perfurantes)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 46, 16, 16), matSnow);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -942,6 +960,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DEV_05') {
     // DEV_05: Frozen Abyss Bridge (Ponte de Gelo sobre o Abismo Congelado)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 54, 12, 16), matSnow);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -969,6 +988,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DEV_06') {
     // DEV_06: Ice Queen Palace (Trono Lapidado da Rainha do Gelo)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(38, 38, 12, 12), matGlacialIce);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -998,6 +1018,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DNG_01') {
     // DNG_01: Entrance & Ossuary (Entrada das Catacumbas & Ossuário)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(38, 38, 12, 12), matStoneDark);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1034,6 +1055,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DNG_02') {
     // DNG_02: Prison Corridors (Celas de Grade e Grilhões)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(42, 42, 12, 12), matStoneDark);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1057,6 +1079,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DNG_03') {
     // DNG_03: Poison Crypts (Criptas Venenosas & Lodo Ácido)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(42, 42, 12, 12), matStoneDark);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1082,6 +1105,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DNG_04') {
     // DNG_04: Torture Pit (Poço de Tortura & Forjas de Sangue)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(38, 38, 12, 12), matStoneDark);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1107,6 +1131,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DNG_05') {
     // DNG_05: Lost Souls Maze (Labirinto das Almas Perdidas)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 46, 16, 16), matStoneDark);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1136,6 +1161,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'DNG_06') {
     // DNG_06: Gorgon's Lair (O Covil Abissal da Górgona)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(50, 50, 16, 16), matStoneDark);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1169,6 +1195,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LT_01') {
     // LT_01: Obsidian Gateway (Portal de Obsidiana & Chamas)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(38, 38, 12, 12), matObsidian);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1198,6 +1225,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LT_02') {
     // LT_02: Runed Corridors (Corredores Rúnicos Incandescentes)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(34, 58, 12, 16), matObsidian);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1220,6 +1248,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LT_03') {
     // LT_03: Magma Grates Abyss (Grelhas sobre Mar de Lava)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(42, 42, 12, 12), matIron);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1245,6 +1274,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LT_04') {
     // LT_04: Demon Balcony (Mirante Demoníaco & Gárgulas)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 36, 12, 12), matObsidian);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1264,6 +1294,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LT_05') {
     // LT_05: Spiral Colonnade (Colunata Espiral Ascendente)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(42, 42, 12, 12), matObsidian);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1283,6 +1314,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LT_06') {
     // LT_06: Infernal Ramparts (Muralhas Infernais & Balistas)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 46, 12, 12), matObsidian);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1302,6 +1334,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'LT_07') {
     // LT_07: Balrog's Throne (O Trono de Fogo do Balrog)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(50, 50, 16, 16), matObsidian);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1331,6 +1364,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'ATL_01') {
     // ATL_01: Shallows & Caustics (Águas Rasas & Recifes)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 46, 16, 16), new THREE.MeshStandardMaterial({ color: 0x0891b2, roughness: 0.2, metalness: 0.3 }));
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1354,6 +1388,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'ATL_02') {
     // ATL_02: Nacar Sanctuary (Cúpula de Ar Élfica)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(38, 38, 12, 12), matNacar);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1379,6 +1414,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'ATL_03') {
     // ATL_03: Coral Labyrinth (Labirinto de Corais & Anêmonas)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 46, 16, 16), new THREE.MeshStandardMaterial({ color: 0x0e7490, roughness: 0.3 }));
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1401,6 +1437,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'ATL_04') {
     // ATL_04: Slipstream Trench (Trincheira das Correntes & Anéis Marinhos)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(34, 62, 12, 16), new THREE.MeshStandardMaterial({ color: 0x0369a1, roughness: 0.2 }));
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1423,6 +1460,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'ATL_05') {
     // ATL_05: Leviathan Graveyard (Cemitério de Leviatãs & Galeão)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(50, 50, 16, 16), new THREE.MeshStandardMaterial({ color: 0x075985, roughness: 0.4 }));
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1452,6 +1490,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'ATL_06') {
     // ATL_06: Hydrothermal Fissures (Fendas Hidrotermais & Basalto Vulcânico)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(42, 42, 12, 12), matStoneDark);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1476,6 +1515,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'ATL_07') {
     // ATL_07: Hydra's Abyssal Maw (O Fosso Abissal da Grande Hydra)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(50, 50, 16, 16), new THREE.MeshStandardMaterial({ color: 0x022c43, roughness: 0.5 }));
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1499,6 +1539,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'TAR_01') {
     // TAR_01: Crimson Dunes (Dunas de Areia Carmesim & Tempestades)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(52, 52, 16, 16), matSandCrimson);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1524,6 +1565,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'TAR_02') {
     // TAR_02: Boiling Oasis (Oásis Fervilhante & Palmeiras Secas)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 46, 16, 16), matSandCrimson);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1544,6 +1586,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'TAR_03') {
     // TAR_03: Leviathan Spine Ridge (Espinhaço do Grande Verme)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 58, 16, 16), matSandCrimson);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1563,6 +1606,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'TAR_04') {
     // TAR_04: Iron Wheel Scrapyard (Cemitério de Autômatos de Ferro)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(50, 50, 16, 16), matSandCrimson);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1584,6 +1628,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'TAR_05') {
     // TAR_05: Zaikan's Sand Crater (A Cratera de Areia Movediça de Zaikan)
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(54, 54, 16, 16), matSandCrimson);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     envGroup.add(floor);
 
@@ -1677,6 +1722,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'VOL_01') {
     // VOL_01: Valley of Loren - O Baluarte do Castle Siege
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 50), matStoneDark);
+    floor.name = 'scenario_base_floor';
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = 0.01;
     envGroup.add(floor);

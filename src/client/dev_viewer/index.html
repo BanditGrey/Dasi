@@ -551,6 +551,20 @@
                 <option value="EVT_04">EVT_04: Coliseu de Duelos (Arena da Glória) (6 colisores)</option>
               </optgroup>
             </select>
+            <fieldset style="border:1px solid #475569; border-radius:6px; padding:8px; margin:8px 0;">
+              <legend style="color:#a7f3d0;">Tiles visuais (experimental)</legend>
+              <p id="tile-floor-status" style="font-size:12px;color:#cbd5e1;">Selecione um cenário.</p>
+              <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+                <label>Coluna <input id="tile-col" type="number" value="0" min="0" style="width:52px;"></label>
+                <label>Linha <input id="tile-row" type="number" value="0" min="0" style="width:52px;"></label>
+                <select id="tile-variant" aria-label="Variante visual"><option value="original">Original</option><option value="escuro">Escuro</option><option value="claro">Claro</option><option value="musgo">Musgo</option><option value="terra">Terra</option></select>
+                <button type="button" id="tile-apply">Aplicar</button>
+                <button type="button" id="tile-reset">Limpar</button>
+                <button type="button" id="tile-export">Exportar JSON</button>
+                <label>Importar JSON <input id="tile-import" type="file" accept=".json,application/json" style="max-width:140px;"></label>
+              </div>
+              <p style="font-size:11px;color:#94a3b8;">Duplo clique no piso para aplicar. Somente visual, salvo neste navegador; não altera colisões nem GLBs.</p>
+            </fieldset>
             <div class="sub-buttons-grid">
               <button class="btn-sub-entity active" data-cat="ENVIRONMENT" data-id="LORENCIA">🏰 Lorencia (7 Cenários)</button>
               <button class="btn-sub-entity" data-cat="ENVIRONMENT" data-id="NORIA">🌿 Noria (7 Cenários)</button>
