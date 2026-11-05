@@ -8,6 +8,9 @@ export const TILE_VARIANTS = Object.freeze({
   terra: 0xc4a682,
   laje: 0xffffff,
   pedra: 0xffffff,
+  muro_x: 0xffffff,
+  muro_y: 0xffffff,
+  arbusto: 0xffffff,
 });
 
 const ALIASES = { LORENCIA: 'LOR_01', NORIA: 'NOR_01', DEVIAS: 'DEV_01', DUNGEON: 'DNG_01', LOST_TOWER: 'LT_01', ATLANS: 'ATL_01', TARKAN: 'TAR_01', ICARUS: 'ICA_01', VALLEY_OF_LOREN: 'VOL_01', BLOOD_CASTLE: 'EVT_01' };
@@ -35,8 +38,13 @@ export function createTiledFloor(THREE, floor) {
   const modules = {
     laje: new THREE.InstancedMesh(slabGeometry, new THREE.MeshStandardMaterial({ color: 0x77736e, roughness: 0.95 }), cols * rows),
     pedra: new THREE.InstancedMesh(stoneGeometry, new THREE.MeshStandardMaterial({ color: 0x554e48, roughness: 1 }), cols * rows),
+    muro_x: new THREE.InstancedMesh(new THREE.BoxGeometry(0.96, 0.12, 1.6), new THREE.MeshStandardMaterial({ color: 0x66615b, roughness: 1 }), cols * rows),
+    muro_y: new THREE.InstancedMesh(new THREE.BoxGeometry(0.12, 0.96, 1.6), new THREE.MeshStandardMaterial({ color: 0x66615b, roughness: 1 }), cols * rows),
+    arbusto: new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.5, 0), new THREE.MeshStandardMaterial({ color: 0x455d35, roughness: 1 }), cols * rows),
   };
+  const moduleCounts = Object.fromEntries(Object.keys(modules).map(name => [name, 0]));
   for (const [name, module] of Object.entries(modules)) {
+    module.visible = false;
     module.name = `scenario_tile_${name}`;
     module.frustumCulled = false;
     module.receiveShadow = true;
@@ -64,17 +72,25 @@ export function createTiledFloor(THREE, floor) {
   function setTile(col, row, variant) {
     if (!Number.isInteger(col) || !Number.isInteger(row) || col < 0 || row < 0 || col >= cols || row >= rows || typeof variant !== 'string' || !Object.hasOwn(TILE_VARIANTS, variant)) return false;
     const index = row * cols + col;
+    const previous = variants[`${col},${row}`];
     mesh.setColorAt(index, color.setHex(TILE_VARIANTS[variant]));
     mesh.instanceColor.needsUpdate = true;
     const w = Math.min(TILE_SIZE, width - col * TILE_SIZE);
     const h = Math.min(TILE_SIZE, height - row * TILE_SIZE);
     for (const [name, module] of Object.entries(modules)) {
       if (variant === name) {
-        matrix.position.set(-width / 2 + col * TILE_SIZE + w / 2, -height / 2 + row * TILE_SIZE + h / 2, name === 'laje' ? 0.11 : 0.13);
-        matrix.scale.set(w, h, 1);
+        const elevation = name === 'laje' ? 0.11 : name === 'pedra' ? 0.13 : name === 'arbusto' ? 0.65 : 0.85;
+        matrix.position.set(-width / 2 + col * TILE_SIZE + w / 2, -height / 2 + row * TILE_SIZE + h / 2, elevation);
+        // Arbustos conservam porte menor em células grandes.
+        matrix.scale.set(name === 'arbusto' ? Math.min(w, 2) : w, name === 'arbusto' ? Math.min(h, 2) : h, name === 'arbusto' ? 1.2 : 1);
         matrix.updateMatrix();
         module.setMatrixAt(index, matrix.matrix);
       } else module.setMatrixAt(index, hidden);
+      if (previous !== variant) {
+        if (previous === name) moduleCounts[name]--;
+        if (variant === name) moduleCounts[name]++;
+      }
+      module.visible = moduleCounts[name] > 0;
       module.instanceMatrix.needsUpdate = true;
     }
     // O tile alterado aparece acima de detalhes planos (como o calçamento), sem alterar física.

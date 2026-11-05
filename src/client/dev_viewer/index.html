@@ -557,13 +557,13 @@
               <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
                 <label>Coluna <input id="tile-col" type="number" value="0" min="0" style="width:52px;"></label>
                 <label>Linha <input id="tile-row" type="number" value="0" min="0" style="width:52px;"></label>
-                <select id="tile-variant" aria-label="Variante visual"><option value="original">Original</option><option value="escuro">Escuro</option><option value="claro">Claro</option><option value="musgo">Musgo</option><option value="terra">Terra</option><option value="laje">Laje 3D</option><option value="pedra">Pedra 3D</option></select>
+                <select id="tile-variant" aria-label="Variante visual"><option value="original">Original</option><option value="escuro">Escuro</option><option value="claro">Claro</option><option value="musgo">Musgo</option><option value="terra">Terra</option><option value="laje">Laje 3D</option><option value="pedra">Pedra 3D</option><option value="muro_x">Muro 3D horizontal</option><option value="muro_y">Muro 3D vertical</option><option value="arbusto">Arbusto 3D</option></select>
                 <button type="button" id="tile-apply">Aplicar</button>
                 <button type="button" id="tile-reset">Limpar</button>
                 <button type="button" id="tile-export">Exportar JSON</button>
                 <label>Importar JSON <input id="tile-import" type="file" accept=".json,application/json" style="max-width:140px;"></label>
               </div>
-              <p style="font-size:11px;color:#94a3b8;">Duplo clique no piso para aplicar. Somente visual, salvo neste navegador; não altera colisões nem GLBs.</p>
+              <p style="font-size:11px;color:#94a3b8;">Duplo clique no piso para aplicar. Uma opção por célula; somente visual, salvo neste navegador. Muros e arbustos não criam colisões nem alteram GLBs.</p>
             </fieldset>
             <div class="sub-buttons-grid">
               <button class="btn-sub-entity active" data-cat="ENVIRONMENT" data-id="LORENCIA">🏰 Lorencia (7 Cenários)</button>

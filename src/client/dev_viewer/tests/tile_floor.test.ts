@@ -55,6 +55,39 @@ describe('Piso modular visual', () => {
     assert.deepEqual(tiles.getEdits(), {});
   });
 
+  it('posiciona, substitui e restaura muros e vegetação sem afetar outras células', () => {
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.MeshStandardMaterial());
+    const tiles = createTiledFloor(THREE, floor)!;
+    const wallX = tiles.mesh.getObjectByName('scenario_tile_muro_x') as THREE.InstancedMesh;
+    const wallY = tiles.mesh.getObjectByName('scenario_tile_muro_y') as THREE.InstancedMesh;
+    const bush = tiles.mesh.getObjectByName('scenario_tile_arbusto') as THREE.InstancedMesh;
+    assert.equal(wallX.visible, false);
+    assert.ok(tiles.setTile(0, 0, 'muro_x'));
+    assert.ok(tiles.setTile(1, 0, 'muro_x'));
+    assert.ok(tiles.setTile(1, 0, 'muro_x')); // reaplicar não altera a contagem
+    assert.ok(tiles.setTile(0, 0, 'arbusto'));
+    assert.equal(wallX.visible, true);
+    assert.equal(bush.visible, true);
+    assert.ok(tiles.setTile(1, 0, 'muro_y'));
+    assert.equal(wallX.visible, false);
+    assert.equal(wallY.visible, true);
+    assert.deepEqual(tiles.getEdits(), { '0,0': 'arbusto', '1,0': 'muro_y' });
+    const matrix = new THREE.Matrix4();
+    bush.getMatrixAt(0, matrix);
+    assert.equal(matrix.elements[0], 2);
+    wallY.getMatrixAt(1, matrix);
+    assert.equal(matrix.elements[0], 4);
+    assert.ok(tiles.setTile(0, 0, 'original'));
+    assert.equal(bush.visible, false);
+    assert.equal(wallY.visible, true);
+    const document = { version: 1, scenarioId: 'LOR_01', tileSize: 4, cols: 2, rows: 2, edits: tiles.getEdits() };
+    assert.equal(validateTileDocument(document, 'LOR_01', tiles), true);
+    const restored = createTiledFloor(THREE, floor)!;
+    restored.applyEdits(document.edits);
+    assert.deepEqual(restored.getEdits(), { '1,0': 'muro_y' });
+    assert.equal(restored.mesh.getObjectByName('scenario_tile_muro_y')!.visible, true);
+  });
+
   it('permite selecionar uma célula do piso com raycast', () => {
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.MeshStandardMaterial());
     floor.rotation.x = -Math.PI / 2;

@@ -26,3 +26,7 @@ Colisões, perigos, spawn e regras continuam exclusivamente em `src/server/world
 ## Primeiras peças 3D de piso
 
 Nos 46 pisos planos, as opções **Laje 3D** e **Pedra 3D** adicionam peças procedurais com geometria própria por célula; a opção Original remove a peça. Cada tipo usa uma malha instanciada, não uma malha independente por célula. As peças se ajustam às células menores nas bordas e são incluídas no mesmo JSON local de versão 1. São protótipos visuais: não recortam o piso subjacente, não adicionam colisão e não são incluídas nos GLBs. A seleção continua usando o plano do piso por baixo das peças. Paredes, estruturas, vegetação e os dez cenários especiais ainda não foram convertidos.
+
+## Estruturas e vegetação experimentais
+
+O mesmo seletor oferece **Muro 3D horizontal**, **Muro 3D vertical** e **Arbusto 3D**. São formas procedurais simples, posicionadas no centro da célula, e ficam disponíveis nos mesmos 46 pisos planos. As duas orientações do muro seguem os eixos locais do piso. Cada célula ainda comporta apenas uma opção: escolher um muro ou arbusto substitui a variante de piso anterior naquela célula, sem apagar células vizinhas. As peças não alteram o piso subjacente nem interagem com o ambiente existente; podem sobrepor estruturas já presentes. São apenas protótipos visuais: **muros não bloqueiam movimento**, arbustos não têm comportamento e nenhuma peça muda colisões ou GLBs. O JSON local registra a opção escolhida, sem sincronização no servidor.
