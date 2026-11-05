@@ -40,6 +40,8 @@ import { BossManager } from '../bosses/BossManager.ts';
 import { BoxOfKundun } from '../bosses/BoxOfKundun.ts';
 import { EventManager } from '../events/EventManager.ts';
 import { DungeonManager } from '../dungeons/DungeonManager.ts';
+import { GuildSystem, TERRITORIAL_TAX_BY_BIOME } from '../guilds/GuildSystem.ts';
+import { CastleSiegeManager } from '../siege/CastleSiegeManager.ts';
 import { Item } from '../inventory/Item.ts';
 import { JewelSystem } from '../inventory/JewelSystem.ts';
 import { ChaosMachine } from '../inventory/ChaosMachine.ts';
@@ -71,6 +73,8 @@ export class GameServer {
   public readonly bossManager: BossManager;
   public readonly eventManager: EventManager;
   public readonly dungeonManager: DungeonManager;
+  public readonly guildSystem: GuildSystem;
+  public readonly castleSiege: CastleSiegeManager;
   public readonly combatEngine: CombatEngine;
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private gameLoopTimer: NodeJS.Timeout | null = null;
@@ -85,6 +89,8 @@ export class GameServer {
     this.bossManager = new BossManager();
     this.eventManager = new EventManager();
     this.dungeonManager = new DungeonManager();
+    this.guildSystem = new GuildSystem();
+    this.castleSiege = new CastleSiegeManager(this.guildSystem);
     this.combatEngine = new CombatEngine(undefined, this.bossManager);
   }
 
@@ -358,6 +364,62 @@ export class GameServer {
 
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: true, message: `Evento ${eventType} configurado no EventManager` }));
+        } catch (err: any) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+        }
+      });
+      return;
+    }
+
+    // Rota da API para Guildas, Alianças e Imposto Territorial
+    if (pathname === '/api/guilds') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          ...this.guildSystem.toJSON(),
+          territorialTaxByBiome: TERRITORIAL_TAX_BY_BIOME,
+        })
+      );
+      return;
+    }
+
+    // Rota da API para o Cerco ao Castelo (fase, estruturas, Selo da Coroa)
+    if (pathname === '/api/castle-siege') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(this.castleSiege.toJSON()));
+      return;
+    }
+
+    // Controle do Cerco via API POST (abrir inscrições / iniciar batalha)
+    if (pathname === '/api/castle-siege/control' && req.method === 'POST') {
+      let body = '';
+      req.on('data', (chunk) => { body += chunk; });
+      req.on('end', () => {
+        try {
+          const data = body ? JSON.parse(body) : {};
+          const action = data.action;
+
+          if (action === 'OPEN_REGISTRATION') {
+            this.castleSiege.openRegistration();
+          } else if (action === 'START_BATTLE') {
+            const started = this.castleSiege.startBattle();
+            if (!started.success) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ success: false, error: started.error }));
+              return;
+            }
+          } else if (action === 'RESET') {
+            this.castleSiege.reset();
+          } else {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: `Ação de cerco desconhecida: ${action}` }));
+            return;
+          }
+
+          this.broadcastSiegeState();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, siege: this.castleSiege.toJSON() }));
         } catch (err: any) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: err.message }));
@@ -696,6 +758,62 @@ export class GameServer {
     // 22. Catacumbas / Dungeons: Progresso de Andar (0x82:0x03)
     if (opcode === Opcodes.MSG_DUNGEON_PROGRESS_REQ.opcode && subcode === Opcodes.MSG_DUNGEON_PROGRESS_REQ.subcode) {
       this.handleDungeonProgressReq(session, payload as any);
+      return;
+    }
+
+    // 23. Social / Guildas (0xB0) — consulta, fundação, convites, cargos, alianças e tesouro
+    if (opcode === Opcodes.MSG_GUILD_STATUS_REQ.opcode && subcode === Opcodes.MSG_GUILD_STATUS_REQ.subcode) {
+      this.handleGuildStatusReq(session);
+      return;
+    }
+    if (opcode === Opcodes.MSG_GUILD_CREATE_REQ.opcode && subcode === Opcodes.MSG_GUILD_CREATE_REQ.subcode) {
+      this.handleGuildCreateReq(session, payload as any);
+      return;
+    }
+    if (opcode === Opcodes.MSG_GUILD_INVITE_REQ.opcode && subcode === Opcodes.MSG_GUILD_INVITE_REQ.subcode) {
+      this.handleGuildInviteReq(session, payload as any);
+      return;
+    }
+    if (opcode === Opcodes.MSG_GUILD_RESPOND_INVITE_REQ.opcode && subcode === Opcodes.MSG_GUILD_RESPOND_INVITE_REQ.subcode) {
+      this.handleGuildRespondInviteReq(session, payload as any);
+      return;
+    }
+    if (opcode === Opcodes.MSG_GUILD_RANK_REQ.opcode && subcode === Opcodes.MSG_GUILD_RANK_REQ.subcode) {
+      this.handleGuildRankReq(session, payload as any);
+      return;
+    }
+    if (opcode === Opcodes.MSG_GUILD_LEAVE_REQ.opcode && subcode === Opcodes.MSG_GUILD_LEAVE_REQ.subcode) {
+      this.handleGuildLeaveReq(session, payload as any);
+      return;
+    }
+    if (opcode === Opcodes.MSG_GUILD_ALLIANCE_REQ.opcode && subcode === Opcodes.MSG_GUILD_ALLIANCE_REQ.subcode) {
+      this.handleGuildAllianceReq(session, payload as any);
+      return;
+    }
+    if (opcode === Opcodes.MSG_GUILD_TREASURY_REQ.opcode && subcode === Opcodes.MSG_GUILD_TREASURY_REQ.subcode) {
+      this.handleGuildTreasuryReq(session, payload as any);
+      return;
+    }
+
+    // 24. Cerco ao Castelo (0xB1) — status, inscrição, estruturas, pedestais e Selo
+    if (opcode === Opcodes.MSG_SIEGE_STATUS_REQ.opcode && subcode === Opcodes.MSG_SIEGE_STATUS_REQ.subcode) {
+      this.handleSiegeStatusReq(session);
+      return;
+    }
+    if (opcode === Opcodes.MSG_SIEGE_REGISTER_REQ.opcode && subcode === Opcodes.MSG_SIEGE_REGISTER_REQ.subcode) {
+      this.handleSiegeRegisterReq(session);
+      return;
+    }
+    if (opcode === Opcodes.MSG_SIEGE_ATTACK_STRUCTURE_REQ.opcode && subcode === Opcodes.MSG_SIEGE_ATTACK_STRUCTURE_REQ.subcode) {
+      this.handleSiegeAttackStructureReq(session, payload as any);
+      return;
+    }
+    if (opcode === Opcodes.MSG_SIEGE_PEDESTAL_REQ.opcode && subcode === Opcodes.MSG_SIEGE_PEDESTAL_REQ.subcode) {
+      this.handleSiegePedestalReq(session, payload as any);
+      return;
+    }
+    if (opcode === Opcodes.MSG_SIEGE_CROWN_SEAL_REQ.opcode && subcode === Opcodes.MSG_SIEGE_CROWN_SEAL_REQ.subcode) {
+      this.handleSiegeCrownSealReq(session, payload as any);
       return;
     }
 
@@ -1241,7 +1359,8 @@ export class GameServer {
     const result = NPCShopSystem.processBuy(
       session,
       req,
-      (s) => this.sessionManager.getSerializedInventoryState(s)
+      (s) => this.sessionManager.getSerializedInventoryState(s),
+      this.territorialTaxCollector
     );
 
     this.sendPacket(
@@ -1259,7 +1378,9 @@ export class GameServer {
     const result = NPCShopSystem.processSell(
       session,
       req.itemUuid,
-      (s) => this.sessionManager.getSerializedInventoryState(s)
+      (s) => this.sessionManager.getSerializedInventoryState(s),
+      this.territorialTaxCollector,
+      this.getSessionBiome(session)
     );
 
     this.sendPacket(
@@ -1578,6 +1699,239 @@ export class GameServer {
   }
 
   // ==========================================
+  // HANDLERS DE GUILDAS (0xB0) & CERCO AO CASTELO (0xB1)
+  // ==========================================
+
+  /**
+   * Imposto Territorial: liga as lojas de NPC ao tesouro da guilda que controla
+   * o castelo. A alíquota vem do bioma da loja (`TERRITORIAL_TAX_BY_BIOME`).
+   */
+  private get territorialTaxCollector() {
+    return (biome: string, grossZen: number) => this.guildSystem.applyTerritorialTax(biome, grossZen);
+  }
+
+  /** Bioma associado à sessão — hoje, Lorencia como praça central do servidor. */
+  private getSessionBiome(session: ClientSession): string {
+    return (session as any).mapBiome ?? 'LORENCIA';
+  }
+
+  /** Atores de guilda são projeções da sessão (o GuildSystem não conhece sockets). */
+  private guildActor(session: ClientSession) {
+    return { sessionId: session.sessionId, character: session.character };
+  }
+
+  /** Localiza a sessão de outro jogador pelo apelido (para convites). */
+  private findSessionByCharacterName(name: string): ClientSession | undefined {
+    const normalized = (name || '').trim().toLowerCase();
+    return this.sessionManager
+      .getAllSessions()
+      .find((s) => s.character.name.toLowerCase() === normalized);
+  }
+
+  private sendGuildStatus(session: ClientSession, extra: Record<string, unknown> = {}): void {
+    const guild = this.guildSystem.getGuildOfSession(session.sessionId);
+    this.sendPacket(session, Opcodes.MSG_GUILD_STATUS_RES.opcode, Opcodes.MSG_GUILD_STATUS_RES.subcode, {
+      success: true,
+      ...extra,
+      guild: guild
+        ? {
+            id: guild.id,
+            name: guild.name,
+            masterSessionId: guild.masterSessionId,
+            members: Array.from(guild.members.values()),
+            allies: Array.from(guild.allies),
+            treasuryZen: guild.treasuryZen,
+            totalTaxCollected: guild.totalTaxCollected,
+          }
+        : null,
+      rank: this.guildSystem.getRank(session.sessionId),
+      pendingInvitations: this.guildSystem.getPendingInvitations(session.sessionId),
+      hasCrownCloak: this.guildSystem.isCrownCloakHolder(session.sessionId),
+      castleOwner: this.guildSystem.getCastleOwner()?.name ?? null,
+    });
+  }
+
+  private broadcastSiegeState(): void {
+    this.broadcastPacket(
+      Opcodes.MSG_SIEGE_STATUS_RES.opcode,
+      Opcodes.MSG_SIEGE_STATUS_RES.subcode,
+      { siege: this.castleSiege.toJSON() }
+    );
+  }
+
+  private handleGuildStatusReq(session: ClientSession): void {
+    this.sendGuildStatus(session);
+  }
+
+  private handleGuildCreateReq(session: ClientSession, payload: { name?: string }): void {
+    const result = this.guildSystem.createGuild(this.guildActor(session), payload?.name ?? '');
+    this.sendGuildStatus(session, { success: result.success, error: result.error, message: result.message });
+  }
+
+  private handleGuildInviteReq(session: ClientSession, payload: { targetName?: string }): void {
+    const target = this.findSessionByCharacterName(payload?.targetName ?? '');
+    if (!target) {
+      this.sendGuildStatus(session, { success: false, error: 'Jogador não encontrado online.' });
+      return;
+    }
+
+    const result = this.guildSystem.inviteMember(this.guildActor(session), this.guildActor(target));
+    if (result.success) {
+      this.sendGuildStatus(target, { message: `${session.character.name} convidou você para "${result.guild?.name}".` });
+    }
+    this.sendGuildStatus(session, { success: result.success, error: result.error, message: result.message });
+  }
+
+  private handleGuildRespondInviteReq(
+    session: ClientSession,
+    payload: { accept?: boolean; guildId?: string }
+  ): void {
+    const accept = payload?.accept !== false;
+    const result = accept
+      ? this.guildSystem.acceptInvitation(this.guildActor(session), payload?.guildId)
+      : this.guildSystem.declineInvitation(this.guildActor(session), payload?.guildId);
+
+    this.sendGuildStatus(session, { success: result.success, error: result.error, message: result.message });
+  }
+
+  private handleGuildRankReq(
+    session: ClientSession,
+    payload: { targetName?: string; rank?: 'MASTER' | 'SUB_LEADER' | 'MEMBER'; transfer?: boolean }
+  ): void {
+    const target = this.findSessionByCharacterName(payload?.targetName ?? '');
+    if (!target) {
+      this.sendGuildStatus(session, { success: false, error: 'Jogador não encontrado online.' });
+      return;
+    }
+
+    const result = payload?.transfer
+      ? this.guildSystem.transferLeadership(this.guildActor(session), target.sessionId)
+      : this.guildSystem.setRank(this.guildActor(session), target.sessionId, payload?.rank ?? 'MEMBER');
+
+    if (result.success && target.sessionId !== session.sessionId) {
+      this.sendGuildStatus(target, { message: result.message, messageFrom: session.character.name });
+    }
+    this.sendGuildStatus(session, { success: result.success, error: result.error, message: result.message });
+  }
+
+  private handleGuildLeaveReq(session: ClientSession, payload: { targetName?: string }): void {
+    const target = payload?.targetName ? this.findSessionByCharacterName(payload.targetName) : undefined;
+    const result = target
+      ? this.guildSystem.removeMember(this.guildActor(session), target.sessionId)
+      : this.guildSystem.leaveGuild(this.guildActor(session));
+
+    this.sendGuildStatus(session, { success: result.success, error: result.error, message: result.message });
+  }
+
+  private handleGuildAllianceReq(
+    session: ClientSession,
+    payload: { targetGuildId?: string; breakAlliance?: boolean }
+  ): void {
+    const guildId = payload?.targetGuildId ?? '';
+    const result = payload?.breakAlliance
+      ? this.guildSystem.breakAlliance(this.guildActor(session), guildId)
+      : this.guildSystem.proposeAlliance(this.guildActor(session), guildId);
+
+    this.sendGuildStatus(session, { success: result.success, error: result.error, message: result.message });
+  }
+
+  private handleGuildTreasuryReq(session: ClientSession, payload: { amountZen?: number }): void {
+    const result = this.guildSystem.depositToTreasury(this.guildActor(session), payload?.amountZen ?? 0);
+    this.sendGuildStatus(session, { success: result.success, error: result.error, message: result.message });
+  }
+
+  private handleSiegeStatusReq(session: ClientSession): void {
+    this.sendPacket(session, Opcodes.MSG_SIEGE_STATUS_RES.opcode, Opcodes.MSG_SIEGE_STATUS_RES.subcode, {
+      siege: this.castleSiege.toJSON(),
+    });
+  }
+
+  private handleSiegeRegisterReq(session: ClientSession): void {
+    const guild = this.guildSystem.getGuildOfSession(session.sessionId);
+    if (!guild) {
+      this.sendPacket(session, Opcodes.MSG_SIEGE_REGISTER_RES.opcode, Opcodes.MSG_SIEGE_REGISTER_RES.subcode, {
+        success: false,
+        error: 'Você precisa pertencer a uma guilda para se inscrever no cerco.',
+      });
+      return;
+    }
+    if (!this.guildSystem.isLeadership(session.sessionId)) {
+      this.sendPacket(session, Opcodes.MSG_SIEGE_REGISTER_RES.opcode, Opcodes.MSG_SIEGE_REGISTER_RES.subcode, {
+        success: false,
+        error: 'Apenas o Mestre e os Sub-líderes podem inscrever a guilda.',
+      });
+      return;
+    }
+
+    const result = this.castleSiege.registerGuild(guild.id);
+    if (result.success) this.broadcastSiegeState();
+    this.sendPacket(session, Opcodes.MSG_SIEGE_REGISTER_RES.opcode, Opcodes.MSG_SIEGE_REGISTER_RES.subcode, {
+      ...result,
+      siege: this.castleSiege.toJSON(),
+    });
+  }
+
+  private handleSiegeAttackStructureReq(
+    session: ClientSession,
+    payload: { structureId?: string; damage?: number }
+  ): void {
+    const guild = this.guildSystem.getGuildOfSession(session.sessionId);
+    if (!guild) {
+      this.sendPacket(session, Opcodes.MSG_SIEGE_ATTACK_STRUCTURE_RES.opcode, Opcodes.MSG_SIEGE_ATTACK_STRUCTURE_RES.subcode, {
+        success: false,
+        error: 'Apenas membros de guildas inscritas podem atacar as estruturas do castelo.',
+      });
+      return;
+    }
+
+    const hit = this.castleSiege.damageStructure(guild.id, payload?.structureId ?? '', payload?.damage ?? 0);
+    this.broadcastPacket(
+      Opcodes.MSG_SIEGE_ATTACK_STRUCTURE_RES.opcode,
+      Opcodes.MSG_SIEGE_ATTACK_STRUCTURE_RES.subcode,
+      {
+        success: hit.applied > 0,
+        structureId: payload?.structureId,
+        applied: hit.applied,
+        hp: hit.hp,
+        destroyed: hit.destroyed,
+        stage: this.castleSiege.stage,
+      }
+    );
+  }
+
+  private handleSiegePedestalReq(session: ClientSession, payload: { side?: 'west' | 'east'; release?: boolean }): void {
+    if (payload?.release) {
+      this.castleSiege.releasePedestal(session.sessionId);
+      this.sendPacket(session, Opcodes.MSG_SIEGE_PEDESTAL_RES.opcode, Opcodes.MSG_SIEGE_PEDESTAL_RES.subcode, {
+        success: true,
+        side: payload?.side ?? null,
+        siege: this.castleSiege.toJSON(),
+      });
+      return;
+    }
+
+    const result = this.castleSiege.occupyPedestal(session.sessionId, payload?.side === 'east' ? 'east' : 'west');
+    if (result.success) this.broadcastSiegeState();
+    this.sendPacket(session, Opcodes.MSG_SIEGE_PEDESTAL_RES.opcode, Opcodes.MSG_SIEGE_PEDESTAL_RES.subcode, {
+      ...result,
+      side: payload?.side ?? 'west',
+      siege: this.castleSiege.toJSON(),
+    });
+  }
+
+  private handleSiegeCrownSealReq(session: ClientSession, payload: { action?: 'BEGIN' | 'INTERRUPT' }): void {
+    const result = payload?.action === 'INTERRUPT'
+      ? { success: true, ...this.castleSiege.interruptCrownSeal('interrompido manualmente') }
+      : this.castleSiege.beginCrownSeal(session.sessionId);
+
+    this.broadcastPacket(
+      Opcodes.MSG_SIEGE_CROWN_SEAL_RES.opcode,
+      Opcodes.MSG_SIEGE_CROWN_SEAL_RES.subcode,
+      { ...result, siege: this.castleSiege.toJSON() }
+    );
+  }
+
+  // ==========================================
   // HELPERS DE ENVIO DE PACOTES & BROADCAST
   // ==========================================
 
@@ -1649,6 +2003,13 @@ export class GameServer {
       // Ciclo das Arenas de Evento & Dungeons
       this.eventManager.update(now, 0.1);
       this.dungeonManager.update(now);
+
+      // Ciclo do Cerco ao Castelo (canalização do Selo da Coroa e prazo da batalha)
+      const previousPhase = this.castleSiege.phase;
+      const siegeState = this.castleSiege.update(now);
+      if (siegeState.phase !== previousPhase || siegeState.sealPercent > 0) {
+        this.broadcastSiegeState();
+      }
     }, 100);
   }
 

@@ -197,9 +197,9 @@ Para viabilizar a produção e aprofundamento das mecânicas, o GDD de **Dasi** 
 
 ### 11.1 Backlog de curto prazo (aberto)
 
-1. [ ] **Sistema de Guildas & Alianças** — `docs/PVP_and_Castle_Siege.md` descreve alianças, tesouro de guilda e tributo continental; ainda não há `GuildSystem.ts` nem opcodes de guilda no protocolo.
+1. [x] **Sistema de Guildas & Alianças** — implementado em `src/server/guilds/GuildSystem.ts` (32 membros, 3 alianças, tesouro, Imposto Territorial 3%–7%) com opcodes `0xB0` e os 16 testes de `guilds.test.ts`.
 2. [ ] **Alinhamento moral / PK (karma)** — as 6 faixas de alinhamento (Herói → Carniceiro) e as penalidades de drop ainda são apenas design.
-3. [ ] **Cerco ao Castelo como evento agendado** — `VOL_01..VOL_05` já existem com colisores, HP de portão/estátuas e instâncias isoladas, mas falta o `CastleSiegeManager` (janela semanal, dono do castelo, Selo da Coroa de 30s).
+3. [x] **Cerco ao Castelo como evento agendado** — `src/server/siege/CastleSiegeManager.ts` fecha o ciclo sobre `VOL_01..VOL_05`: janela de inscrição, portão de 25M HP, 4 Estátuas de 8M, pedestais + Selo da Coroa de 30s contínuos, opcodes `0xB1`, rotas `/api/castle-siege` e painel no Dev Viewer (19 testes em `castle_siege.test.ts`).
 4. [ ] **Persistência** — hoje o estado é em memória (`SessionManager`); o protocolo prevê Redis 7 + PostgreSQL 16.
 5. [ ] **GLB dedicados das arenas de evento** — `EVT_02`/`EVT_03`/`EVT_04` usam arte emprestada do bioma temático; faltam modelos próprios no `blender_dasi_world_builder.py`.
 6. [ ] **Pipeline UE5 executável** — o conteúdo C++ (59 arquivos) e os specs de animação estão no repo, mas o projeto ainda não foi compilado/validado em uma instalação de Unreal Engine.

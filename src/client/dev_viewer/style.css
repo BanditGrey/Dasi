@@ -3327,6 +3327,7 @@ body {
 .event-card.cc-card { border-left: 3px solid #a855f7; }
 .event-card.duel-card { border-left: 3px solid #38bdf8; }
 .event-card.dungeon-card { border-left: 3px solid #10b981; }
+.event-card.siege-card { border-left: 3px solid #eab308; }
 
 .event-card-header {
   display: flex;

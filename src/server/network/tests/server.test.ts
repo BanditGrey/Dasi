@@ -551,6 +551,138 @@ describe('Servidor de Jogo Dasi (WebSocket / HTTP Dev Server)', () => {
   });
 
   // ==========================================
+  // GUILDAS (0xB0) & CERCO AO CASTELO (0xB1)
+  // ==========================================
+  test('HTTP: /api/guilds e /api/castle-siege expõem o estado de guilda e cerco', async () => {
+    const resGuilds = await fetch(`${HTTP_URL}/api/guilds`);
+    assert.equal(resGuilds.status, 200);
+    const guilds = await resGuilds.json();
+    assert.equal(guilds.castleOwner, null);
+    assert.equal(guilds.territorialTaxByBiome.VALLEY_OF_LOREN, 0.07);
+
+    const resSiege = await fetch(`${HTTP_URL}/api/castle-siege`);
+    assert.equal(resSiege.status, 200);
+    const siege = await resSiege.json();
+    assert.equal(siege.phase, 'CLOSED');
+    assert.equal(siege.gate.maxHp, 25_000_000);
+    assert.equal(siege.lifeStatues.length, 4);
+
+    // Abre a janela de inscrição pelo painel de controle
+    const control = await fetch(`${HTTP_URL}/api/castle-siege/control`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'OPEN_REGISTRATION' }),
+    });
+    assert.equal(control.status, 200);
+    const controlJson = await control.json();
+    assert.equal(controlJson.success, true);
+    assert.equal(controlJson.siege.phase, 'REGISTRATION');
+  });
+
+  test('Guildas por WebSocket: fundação, convite, aceite e promoção a Sub-líder', async () => {
+    // Mestre funda a guilda
+    const master = await createTestClient();
+    const masterSync = waitForPacket(master, Opcodes.MSG_INVENTORY_SYNC_ALL.opcode, Opcodes.MSG_INVENTORY_SYNC_ALL.subcode);
+    sendPacket(master, Opcodes.MSG_AUTH_LOGIN_REQ, { username: 'GuildMaster' });
+    await masterSync;
+
+    const createdPromise = waitForPacket(master, Opcodes.MSG_GUILD_STATUS_RES.opcode, Opcodes.MSG_GUILD_STATUS_RES.subcode);
+    sendPacket(master, Opcodes.MSG_GUILD_CREATE_REQ, { name: 'Aurora' });
+    const created = await createdPromise;
+    assert.equal(created.success, true, created.error ?? '');
+    assert.equal(created.guild.name, 'Aurora');
+    assert.equal(created.rank, 'MASTER');
+
+    // Recruta autentica e recebe o convite
+    const recruit = await createTestClient();
+    const recruitSync = waitForPacket(recruit, Opcodes.MSG_INVENTORY_SYNC_ALL.opcode, Opcodes.MSG_INVENTORY_SYNC_ALL.subcode);
+    sendPacket(recruit, Opcodes.MSG_AUTH_LOGIN_REQ, { username: 'Recruit' });
+    await recruitSync;
+
+    const invitePush = waitForPacket(recruit, Opcodes.MSG_GUILD_STATUS_RES.opcode, Opcodes.MSG_GUILD_STATUS_RES.subcode);
+    sendPacket(master, Opcodes.MSG_GUILD_INVITE_REQ, { targetName: 'Recruit' });
+    const invited = await invitePush;
+    assert.equal(invited.pendingInvitations.length, 1);
+    assert.equal(invited.pendingInvitations[0].guildId, created.guild.id);
+
+    const acceptPromise = waitForPacket(recruit, Opcodes.MSG_GUILD_STATUS_RES.opcode, Opcodes.MSG_GUILD_STATUS_RES.subcode);
+    sendPacket(recruit, Opcodes.MSG_GUILD_RESPOND_INVITE_REQ, { accept: true, guildId: created.guild.id });
+    const accepted = await acceptPromise;
+    assert.equal(accepted.success, true);
+    assert.equal(accepted.guild.members.length, 2);
+    assert.equal(accepted.rank, 'MEMBER');
+
+    const promotedPromise = waitForPacket(master, Opcodes.MSG_GUILD_STATUS_RES.opcode, Opcodes.MSG_GUILD_STATUS_RES.subcode);
+    sendPacket(master, Opcodes.MSG_GUILD_RANK_REQ, { targetName: 'Recruit', rank: 'SUB_LEADER' });
+    const promoted = await promotedPromise;
+    assert.equal(promoted.success, true);
+    const promotedMember = promoted.guild.members.find((m: any) => m.characterName === 'Recruit');
+    assert.equal(promotedMember.rank, 'SUB_LEADER');
+
+    master.close();
+    recruit.close();
+  });
+
+  test('Cerco por WebSocket: inscrição da guilda e dano no Portão Ciclópico', async () => {
+    const master = await createTestClient();
+    const masterSync = waitForPacket(master, Opcodes.MSG_INVENTORY_SYNC_ALL.opcode, Opcodes.MSG_INVENTORY_SYNC_ALL.subcode);
+    sendPacket(master, Opcodes.MSG_AUTH_LOGIN_REQ, { username: 'SiegeLord' });
+    await masterSync;
+
+    // Funda a própria guilda e inscreve no cerco
+    const guildCreated = waitForPacket(master, Opcodes.MSG_GUILD_STATUS_RES.opcode, Opcodes.MSG_GUILD_STATUS_RES.subcode);
+    sendPacket(master, Opcodes.MSG_GUILD_CREATE_REQ, { name: 'Bastion' });
+    const founded = await guildCreated;
+    assert.equal(founded.success, true, founded.error ?? '');
+
+    // Inscrição — somente liderança pode inscrever a guilda
+    const registerPromise = waitForPacket(
+      master,
+      Opcodes.MSG_SIEGE_REGISTER_RES.opcode,
+      Opcodes.MSG_SIEGE_REGISTER_RES.subcode
+    );
+    sendPacket(master, Opcodes.MSG_SIEGE_REGISTER_REQ, {});
+    const registered = await registerPromise;
+    assert.equal(registered.success, true, registered.error ?? '');
+    assert.ok(registered.siege.registeredGuilds.length >= 1);
+
+    // Inicia a batalha pelo painel de controle
+    const start = await fetch(`${HTTP_URL}/api/castle-siege/control`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'START_BATTLE' }),
+    });
+    assert.equal(start.status, 200);
+
+    const attackPromise = waitForPacket(
+      master,
+      Opcodes.MSG_SIEGE_ATTACK_STRUCTURE_RES.opcode,
+      Opcodes.MSG_SIEGE_ATTACK_STRUCTURE_RES.subcode
+    );
+    sendPacket(master, Opcodes.MSG_SIEGE_ATTACK_STRUCTURE_REQ, {
+      structureId: 'cyclopean_iron_gate',
+      damage: 25_000_000,
+    });
+    const attack = await attackPromise;
+    assert.equal(attack.success, true);
+    assert.equal(attack.destroyed, true);
+    assert.equal(attack.stage, 'COURTYARD_STATUES');
+
+    // Salão do Trono ainda selado pelas Estátuas da Vida
+    const pedestalPromise = waitForPacket(
+      master,
+      Opcodes.MSG_SIEGE_PEDESTAL_RES.opcode,
+      Opcodes.MSG_SIEGE_PEDESTAL_RES.subcode
+    );
+    sendPacket(master, Opcodes.MSG_SIEGE_PEDESTAL_REQ, { side: 'west' });
+    const pedestal = await pedestalPromise;
+    assert.equal(pedestal.success, false);
+    assert.match(pedestal.error, /selado/);
+
+    master.close();
+  });
+
+  // ==========================================
   // TESTE DE CARGA & CONCORRÊNCIA
   // ==========================================
   test('Teste de Carga: 20 conexões simultâneas realizam Handshake, Login e Sync sem falhas', async () => {

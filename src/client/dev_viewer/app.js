@@ -75,6 +75,29 @@ const OPCODES = {
   DUNGEON_ENTER_RES: { opcode: 0x82, subcode: 0x02 },
   DUNGEON_PROGRESS_REQ: { opcode: 0x82, subcode: 0x03 },
   DUNGEON_PROGRESS_RES: { opcode: 0x82, subcode: 0x04 },
+
+  // Social / Guildas (0xB0)
+  GUILD_STATUS_REQ: { opcode: 0xb0, subcode: 0x01 },
+  GUILD_STATUS_RES: { opcode: 0xb0, subcode: 0x02 },
+  GUILD_CREATE_REQ: { opcode: 0xb0, subcode: 0x03 },
+  GUILD_INVITE_REQ: { opcode: 0xb0, subcode: 0x05 },
+  GUILD_RESPOND_INVITE_REQ: { opcode: 0xb0, subcode: 0x07 },
+  GUILD_RANK_REQ: { opcode: 0xb0, subcode: 0x09 },
+  GUILD_LEAVE_REQ: { opcode: 0xb0, subcode: 0x0b },
+  GUILD_ALLIANCE_REQ: { opcode: 0xb0, subcode: 0x0d },
+  GUILD_TREASURY_REQ: { opcode: 0xb0, subcode: 0x0f },
+
+  // Cerco ao Castelo (0xB1)
+  SIEGE_STATUS_REQ: { opcode: 0xb1, subcode: 0x01 },
+  SIEGE_STATUS_RES: { opcode: 0xb1, subcode: 0x02 },
+  SIEGE_REGISTER_REQ: { opcode: 0xb1, subcode: 0x03 },
+  SIEGE_REGISTER_RES: { opcode: 0xb1, subcode: 0x04 },
+  SIEGE_ATTACK_STRUCTURE_REQ: { opcode: 0xb1, subcode: 0x05 },
+  SIEGE_ATTACK_STRUCTURE_RES: { opcode: 0xb1, subcode: 0x06 },
+  SIEGE_PEDESTAL_REQ: { opcode: 0xb1, subcode: 0x07 },
+  SIEGE_PEDESTAL_RES: { opcode: 0xb1, subcode: 0x08 },
+  SIEGE_CROWN_SEAL_REQ: { opcode: 0xb1, subcode: 0x09 },
+  SIEGE_CROWN_SEAL_RES: { opcode: 0xb1, subcode: 0x0a },
 };
 
 const LOCATION_TYPE = {
@@ -471,6 +494,8 @@ class DevClientApp {
     this.activeInvasions = [];
     this.eventsStatus = null;
     this.dungeonsStatus = [];
+    this.guildStatus = null;
+    this.siegeStatus = null;
     this.viewer3DInstance = null;
     this.arena3D = null;
     this.use3DRenderer = true;
@@ -832,6 +857,39 @@ class DevClientApp {
     // 27. Atualização de Masmorra / Dungeon Catacumbas (0x82:0x04)
     if (opcode === OPCODES.DUNGEON_PROGRESS_RES.opcode && subcode === OPCODES.DUNGEON_PROGRESS_RES.subcode) {
       this.updateDungeonUI(payload);
+      return;
+    }
+
+    // 28. Estado de Guilda (0xB0:0x02)
+    if (opcode === OPCODES.GUILD_STATUS_RES.opcode && subcode === OPCODES.GUILD_STATUS_RES.subcode) {
+      this.handleGuildStatusUpdate(payload);
+      return;
+    }
+
+    // 29. Estado do Cerco ao Castelo (0xB1:0x02)
+    if (opcode === OPCODES.SIEGE_STATUS_RES.opcode && subcode === OPCODES.SIEGE_STATUS_RES.subcode) {
+      this.updateSiegeUI(payload.siege || payload);
+      return;
+    }
+    if (opcode === OPCODES.SIEGE_REGISTER_RES.opcode && subcode === OPCODES.SIEGE_REGISTER_RES.subcode) {
+      this.log(
+        payload.success ? '📜 Guilda inscrita no Cerco ao Castelo!' : `📜 ${payload.error || 'Falha na inscrição.'}`,
+        payload.success ? 'success' : 'error'
+      );
+      if (payload.siege) this.updateSiegeUI(payload.siege);
+      return;
+    }
+    if (opcode === OPCODES.SIEGE_ATTACK_STRUCTURE_RES.opcode && subcode === OPCODES.SIEGE_ATTACK_STRUCTURE_RES.subcode) {
+      this.log(`💥 Estrutura ${payload.structureId}: ${payload.hp} HP restantes.`, 'info');
+      this.refreshSiegeStatus();
+      return;
+    }
+    if (opcode === OPCODES.SIEGE_CROWN_SEAL_RES.opcode && subcode === OPCODES.SIEGE_CROWN_SEAL_RES.subcode) {
+      this.log(
+        payload.success ? '👑 Selo da Coroa em canalização...' : `👑 ${payload.error || 'Canalização interrompida.'}`,
+        payload.success ? 'success' : 'error'
+      );
+      if (payload.siege) this.updateSiegeUI(payload.siege);
       return;
     }
   }
@@ -4376,6 +4434,137 @@ class DevClientApp {
     if (btnDngDrain) btnDngDrain.addEventListener('click', () => this.sendDungeonAction('DRAIN_VALVE'));
     const btnDngPillar = document.getElementById('btn-dng-pillar');
     if (btnDngPillar) btnDngPillar.addEventListener('click', () => this.sendDungeonAction('BREAK_PILLAR'));
+
+    // Castle Siege Actions
+    const btnSiegeRegister = document.getElementById('btn-siege-register');
+    if (btnSiegeRegister) btnSiegeRegister.addEventListener('click', () => this.sendSiegeAction('REGISTER'));
+    const btnSiegeGate = document.getElementById('btn-siege-hit-gate');
+    if (btnSiegeGate) btnSiegeGate.addEventListener('click', () => this.sendSiegeAction('HIT_GATE'));
+    const btnSiegeStatue = document.getElementById('btn-siege-hit-statue');
+    if (btnSiegeStatue) btnSiegeStatue.addEventListener('click', () => this.sendSiegeAction('HIT_STATUE'));
+    const btnSiegeWest = document.getElementById('btn-siege-pedestal-west');
+    if (btnSiegeWest) btnSiegeWest.addEventListener('click', () => this.sendSiegeAction('PEDESTAL_WEST'));
+    const btnSiegeEast = document.getElementById('btn-siege-pedestal-east');
+    if (btnSiegeEast) btnSiegeEast.addEventListener('click', () => this.sendSiegeAction('PEDESTAL_EAST'));
+    const btnSiegeCrown = document.getElementById('btn-siege-crown');
+    if (btnSiegeCrown) btnSiegeCrown.addEventListener('click', () => this.sendSiegeAction('CROWN_SEAL'));
+  }
+
+  // ==========================================================================
+  // AÇÕES DE CERCO AO CASTELO (0xB1) & PAINEL DE GUILDA
+  // ==========================================================================
+  sendSiegeAction(action) {
+    this.log(`🏰 [Cerco] Ação: ${action}...`, 'info');
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+
+    if (action === 'REGISTER') {
+      this.sendPacket(OPCODES.SIEGE_REGISTER_REQ, {});
+    } else if (action === 'HIT_GATE') {
+      this.sendPacket(OPCODES.SIEGE_ATTACK_STRUCTURE_REQ, {
+        structureId: 'cyclopean_iron_gate',
+        damage: 500000,
+      });
+    } else if (action === 'HIT_STATUE') {
+      this.sendPacket(OPCODES.SIEGE_ATTACK_STRUCTURE_REQ, {
+        structureId: 'life_statue_nw',
+        damage: 400000,
+      });
+    } else if (action === 'PEDESTAL_WEST') {
+      this.sendPacket(OPCODES.SIEGE_PEDESTAL_REQ, { side: 'west' });
+    } else if (action === 'PEDESTAL_EAST') {
+      this.sendPacket(OPCODES.SIEGE_PEDESTAL_REQ, { side: 'east' });
+    } else if (action === 'CROWN_SEAL') {
+      this.sendPacket(OPCODES.SIEGE_CROWN_SEAL_REQ, { action: 'BEGIN' });
+    }
+  }
+
+  handleGuildStatusUpdate(payload) {
+    this.guildStatus = payload;
+    if (payload.message) {
+      this.log(`🛡️ [Guilda] ${payload.message}`, payload.success === false ? 'error' : 'success');
+    }
+  }
+
+  async refreshSiegeStatus() {
+    try {
+      const res = await fetch('/api/castle-siege');
+      const data = await res.json();
+      this.updateSiegeUI(data);
+    } catch (err) {
+      console.warn('Erro ao consultar o Cerco ao Castelo:', err);
+    }
+  }
+
+  updateSiegeUI(siege) {
+    if (!siege) return;
+    this.siegeStatus = siege;
+
+    const formatNumber = (value) => Number(value ?? 0).toLocaleString('pt-BR');
+    const setText = (id, text) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
+
+    const phaseLabels = {
+      CLOSED: 'FECHADO',
+      REGISTRATION: 'INSCRIÇÕES',
+      BATTLE: 'EM BATALHA',
+      CONCLUDED: 'CONCLUÍDO',
+    };
+    setText('siege-status-tag', phaseLabels[siege.phase] ?? siege.phase);
+
+    const totalSeconds = Math.floor((siege.timeRemainingMs ?? 0) / 1000);
+    const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+    const seconds = String(totalSeconds % 60).padStart(2, '0');
+    setText('siege-timer-val', `${minutes}:${seconds}`);
+
+    const gate = siege.gate;
+    if (gate) {
+      const pct = gate.maxHp ? Math.round((gate.hp / gate.maxHp) * 100) : 0;
+      setText('siege-gate-hp', `${formatNumber(gate.hp)} / ${formatNumber(gate.maxHp)} (${pct}%)`);
+    }
+
+    const standing = siege.standingStatues ?? 0;
+    setText('siege-statues-val', `${standing} / 4 de pé`);
+
+    const respawnLabels = { VOL_03: 'Pátio (VOL_03)', VOL_04: 'Ponte (VOL_04)', VOL_01: 'Campo (VOL_01)' };
+    setText('siege-respawn-val', respawnLabels[siege.defenderRespawnScenario] ?? siege.defenderRespawnScenario ?? '—');
+
+    const seal = siege.crownSeal || {};
+    const pedestals = [seal.pedestalWest, seal.pedestalEast].filter(Boolean).length;
+    setText('siege-seal-val', `${seal.progressPercent ?? 0}% (${pedestals}/2 pedestais)`);
+
+    setText('siege-owner-val', siege.castleOwner ? siege.castleOwner.name : 'Sem dono');
+
+    // Estepper de estágios
+    const stageOrder = ['GATE_ASSAULT', 'COURTYARD_STATUES', 'DRAWBRIDGE_CROSSING', 'CROWN_SEAL'];
+    const currentIndex = stageOrder.indexOf(siege.stage);
+    [1, 2, 3, 4].forEach((n) => {
+      const el = document.getElementById(`siege-step-${n}`);
+      if (!el) return;
+      el.classList.toggle('active', siege.stage === 'TRIUMPH' || n - 1 === currentIndex);
+      el.classList.toggle('done', siege.stage === 'TRIUMPH' || n - 1 < currentIndex);
+    });
+
+    // Placar de guildas
+    const boardEl = document.getElementById('siege-scoreboard');
+    if (boardEl) {
+      const scoreboard = siege.scoreboard || [];
+      boardEl.innerHTML = '';
+      if (scoreboard.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-list-notice';
+        empty.textContent = 'Placar vazio — nenhum dano registrado.';
+        boardEl.appendChild(empty);
+      } else {
+        scoreboard.slice(0, 5).forEach((entry, index) => {
+          const row = document.createElement('div');
+          row.className = 'detail-row';
+          row.innerHTML = `<span>#${index + 1} ${entry.guildName || entry.guildId}</span><strong>${formatNumber(entry.damage)} dano</strong>`;
+          boardEl.appendChild(row);
+        });
+      }
+    }
   }
 
   async sendEventAction(eventType, action) {
@@ -4432,6 +4621,8 @@ class DevClientApp {
       if (dngList && dngList.length > 0) {
         this.updateDungeonUI(dngList[0]);
       }
+
+      await this.refreshSiegeStatus();
     } catch (err) {
       console.warn('Erro ao buscar status de eventos:', err);
     }

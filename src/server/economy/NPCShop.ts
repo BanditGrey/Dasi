@@ -106,6 +106,18 @@ export const NPC_SHOPS: Record<string, NPCShopDefinition> = {
   },
 };
 
+/**
+ * Coletor opcional de **Imposto Territorial** injetado pelo servidor.
+ * Recebe o bioma da loja e o valor bruto movimentado; devolve o imposto e o
+ * valor líquido. Sem coletor (testes/economia isolada) a taxa é zero.
+ *
+ * Ver `GuildSystem.applyTerritorialTax` e `docs/PVP_and_Castle_Siege.md` §3.2.
+ */
+export type TerritorialTaxCollector = (
+  biome: string,
+  grossZen: number
+) => { tax: number; netZen: number; rate?: number };
+
 export class NPCShopSystem {
   public static getShop(npcId: string): NPCShopDefinition | undefined {
     return NPC_SHOPS[npcId];
@@ -116,12 +128,25 @@ export class NPCShopSystem {
   }
 
   /**
+   * Bioma da loja — define a alíquota do Imposto Territorial (3%–7%).
+   * `Lorencia` → `LORENCIA`, `Noria` → `NORIA`, `Devias` → `DEVIAS`, etc.
+   */
+  public static getBiomeForShop(shop: NPCShopDefinition): string {
+    return shop.zone.trim().toUpperCase().replace(/\s+/g, '_');
+  }
+
+  /**
    * Processa compra autoritativa de item de loja de NPC.
+   *
+   * @param taxCollector Coletor opcional do Imposto Territorial; quando presente,
+   *   o imposto é cobrado **além** do preço de tabela e vai para o tesouro da
+   *   guilda que controla o castelo.
    */
   public static processBuy(
     session: ClientSession,
     req: NpcShopBuyReqPayload,
-    getInventoryState: (session: ClientSession) => SerializedInventoryState
+    getInventoryState: (session: ClientSession) => SerializedInventoryState,
+    taxCollector?: TerritorialTaxCollector
   ): NpcShopBuyResPayload {
     const { npcId, itemDefId, targetX, targetY } = req;
     const shop = this.getShop(npcId);
@@ -147,14 +172,19 @@ export class NPCShopSystem {
       };
     }
 
+    // Imposto Territorial: cobrado sobre o valor movimentado na loja
+    const biome = this.getBiomeForShop(shop);
+    const taxInfo = taxCollector ? taxCollector(biome, listing.priceZen) : { tax: 0, netZen: listing.priceZen };
+    const totalCost = listing.priceZen + Math.max(0, taxInfo.tax);
+
     const currentZen = session.character.zen ?? 0;
-    if (currentZen < listing.priceZen) {
+    if (currentZen < totalCost) {
       return {
         success: false,
         npcId,
         itemDefId,
         zenRemaining: currentZen,
-        error: `Zen insuficiente! Você precisa de ${listing.priceZen.toLocaleString()} Zen (Possui: ${currentZen.toLocaleString()}).`,
+        error: `Zen insuficiente! Você precisa de ${totalCost.toLocaleString()} Zen (Possui: ${currentZen.toLocaleString()}).`,
       };
     }
 
@@ -183,10 +213,12 @@ export class NPCShopSystem {
       };
     }
 
-    // Debita o Zen
-    session.character.zen = currentZen - listing.priceZen;
+    // Debita o Zen (preço de tabela + Imposto Territorial, quando houver)
+    session.character.zen = currentZen - totalCost;
 
     const inventoryState = getInventoryState(session);
+
+    const taxNote = taxInfo.tax > 0 ? ` (Imposto Territorial: ${taxInfo.tax.toLocaleString('pt-BR')} Zen)` : '';
 
     return {
       success: true,
@@ -194,7 +226,8 @@ export class NPCShopSystem {
       itemDefId,
       boughtItem: newItem,
       zenRemaining: session.character.zen,
-      message: `${Item.getDefinition(newItem).name} comprado com sucesso por ${listing.priceZen.toLocaleString()} Zen de ${shop.npcName}!`,
+      taxPaid: Math.max(0, taxInfo.tax),
+      message: `${Item.getDefinition(newItem).name} comprado com sucesso por ${listing.priceZen.toLocaleString()} Zen de ${shop.npcName}!${taxNote}`,
       inventoryState,
       character: session.character,
     };
@@ -234,8 +267,10 @@ export class NPCShopSystem {
   public static processSell(
     session: ClientSession,
     itemUuid: string,
-    getInventoryState: (session: ClientSession) => SerializedInventoryState
-  ): { success: boolean; zenGained: number; zenRemaining: number; message: string; inventoryState?: SerializedInventoryState; error?: string } {
+    getInventoryState: (session: ClientSession) => SerializedInventoryState,
+    taxCollector?: TerritorialTaxCollector,
+    biome = 'LORENCIA'
+  ): { success: boolean; zenGained: number; zenRemaining: number; message: string; inventoryState?: SerializedInventoryState; error?: string; taxPaid?: number } {
     const placed = session.inventory.getPlacedItem(itemUuid);
     if (!placed) {
       return {
@@ -250,14 +285,19 @@ export class NPCShopSystem {
     const price = this.getSellPrice(placed.item);
     const itemName = Item.getDefinition(placed.item).name;
 
+    // Imposto Territorial descontado do valor recebido pela venda
+    const taxInfo = taxCollector ? taxCollector(biome, price) : { tax: 0, netZen: price };
+    const netPrice = Math.max(0, taxInfo.netZen);
+
     session.inventory.removeItem(itemUuid);
-    session.character.zen = (session.character.zen ?? 0) + price;
+    session.character.zen = (session.character.zen ?? 0) + netPrice;
 
     const inventoryState = getInventoryState(session);
 
     return {
       success: true,
-      zenGained: price,
+      zenGained: netPrice,
+      taxPaid: Math.max(0, taxInfo.tax),
       zenRemaining: session.character.zen,
       message: `${itemName} vendido com sucesso por ${price.toLocaleString()} Zen!`,
       inventoryState,

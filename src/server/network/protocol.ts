@@ -25,6 +25,8 @@ export const OpcodeGroup = {
   BOSS_SYSTEM: 0x80,
   EVENT_ARENA: 0x81,
   DUNGEON_SYSTEM: 0x82,
+  SOCIAL_GUILD: 0xB0,
+  CASTLE_SIEGE: 0xB1,
 } as const;
 
 export const Opcodes = {
@@ -121,6 +123,36 @@ export const Opcodes = {
   MSG_DUNGEON_ENTER_RES: { opcode: 0x82, subcode: 0x02 },
   MSG_DUNGEON_PROGRESS_REQ: { opcode: 0x82, subcode: 0x03 },
   MSG_DUNGEON_PROGRESS_RES: { opcode: 0x82, subcode: 0x04 },
+
+  // Guildas & Alianças (0xB0) — docs/technical/Network_Protocol.md §3
+  MSG_GUILD_STATUS_REQ: { opcode: 0xB0, subcode: 0x01 },
+  MSG_GUILD_STATUS_RES: { opcode: 0xB0, subcode: 0x02 },
+  MSG_GUILD_CREATE_REQ: { opcode: 0xB0, subcode: 0x03 },
+  MSG_GUILD_CREATE_RES: { opcode: 0xB0, subcode: 0x04 },
+  MSG_GUILD_INVITE_REQ: { opcode: 0xB0, subcode: 0x05 },
+  MSG_GUILD_INVITE_RES: { opcode: 0xB0, subcode: 0x06 },
+  MSG_GUILD_RESPOND_INVITE_REQ: { opcode: 0xB0, subcode: 0x07 },
+  MSG_GUILD_RESPOND_INVITE_RES: { opcode: 0xB0, subcode: 0x08 },
+  MSG_GUILD_RANK_REQ: { opcode: 0xB0, subcode: 0x09 },
+  MSG_GUILD_RANK_RES: { opcode: 0xB0, subcode: 0x0a },
+  MSG_GUILD_LEAVE_REQ: { opcode: 0xB0, subcode: 0x0b },
+  MSG_GUILD_LEAVE_RES: { opcode: 0xB0, subcode: 0x0c },
+  MSG_GUILD_ALLIANCE_REQ: { opcode: 0xB0, subcode: 0x0d },
+  MSG_GUILD_ALLIANCE_RES: { opcode: 0xB0, subcode: 0x0e },
+  MSG_GUILD_TREASURY_REQ: { opcode: 0xB0, subcode: 0x0f },
+  MSG_GUILD_TREASURY_RES: { opcode: 0xB0, subcode: 0x10 },
+
+  // Cerco ao Castelo (0xB1)
+  MSG_SIEGE_STATUS_REQ: { opcode: 0xB1, subcode: 0x01 },
+  MSG_SIEGE_STATUS_RES: { opcode: 0xB1, subcode: 0x02 },
+  MSG_SIEGE_REGISTER_REQ: { opcode: 0xB1, subcode: 0x03 },
+  MSG_SIEGE_REGISTER_RES: { opcode: 0xB1, subcode: 0x04 },
+  MSG_SIEGE_ATTACK_STRUCTURE_REQ: { opcode: 0xB1, subcode: 0x05 },
+  MSG_SIEGE_ATTACK_STRUCTURE_RES: { opcode: 0xB1, subcode: 0x06 },
+  MSG_SIEGE_PEDESTAL_REQ: { opcode: 0xB1, subcode: 0x07 },
+  MSG_SIEGE_PEDESTAL_RES: { opcode: 0xB1, subcode: 0x08 },
+  MSG_SIEGE_CROWN_SEAL_REQ: { opcode: 0xB1, subcode: 0x09 },
+  MSG_SIEGE_CROWN_SEAL_RES: { opcode: 0xB1, subcode: 0x0a },
 } as const;
 
 export const LocationType = {
@@ -262,6 +294,8 @@ export interface NpcShopBuyResPayload {
   itemDefId: string;
   boughtItem?: ItemInstance | null;
   zenRemaining: number;
+  /** Imposto Territorial recolhido nesta transação (0 quando não há castelo) */
+  taxPaid?: number;
   message?: string;
   error?: string;
   inventoryState?: SerializedInventoryState;
@@ -277,6 +311,8 @@ export interface NpcShopSellResPayload {
   itemUuid?: string;
   zenGained?: number;
   zenRemaining: number;
+  /** Imposto Territorial descontado desta venda (0 quando não há castelo) */
+  taxPaid?: number;
   message?: string;
   error?: string;
   inventoryState?: SerializedInventoryState;

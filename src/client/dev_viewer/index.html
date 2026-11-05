@@ -1022,6 +1022,80 @@
             <button class="btn-event-action" id="btn-dng-pillar">💥 Quebrar Pilar</button>
           </div>
         </div>
+
+        <!-- 6. Castle Siege Card (Valley of Loren) -->
+        <div class="event-card siege-card">
+          <div class="event-card-header">
+            <div class="event-card-title-wrap">
+              <span class="event-icon">🏰</span>
+              <div>
+                <h4>Cerco ao Castelo</h4>
+                <span class="event-sub">Vale de Loren &bull; Semanal (90 min) &bull; Selo da Coroa 30s</span>
+              </div>
+            </div>
+            <span class="event-status-tag" id="siege-status-tag">FECHADO</span>
+          </div>
+
+          <div class="event-timer-box">
+            <span class="timer-lbl">TEMPO RESTANTE:</span>
+            <strong class="timer-val" id="siege-timer-val">--:--</strong>
+          </div>
+
+          <div class="stage-stepper">
+            <div class="stage-step" id="siege-step-1">
+              <span class="step-num">1</span>
+              <span class="step-lbl">Portão</span>
+            </div>
+            <div class="stage-step" id="siege-step-2">
+              <span class="step-num">2</span>
+              <span class="step-lbl">Estátuas</span>
+            </div>
+            <div class="stage-step" id="siege-step-3">
+              <span class="step-num">3</span>
+              <span class="step-lbl">Ponte</span>
+            </div>
+            <div class="stage-step" id="siege-step-4">
+              <span class="step-num">4</span>
+              <span class="step-lbl">Selo</span>
+            </div>
+          </div>
+
+          <div class="event-progress-details">
+            <div class="detail-row">
+              <span>Portão Ciclópico (VOL_02):</span>
+              <strong id="siege-gate-hp">25.000.000 / 25.000.000</strong>
+            </div>
+            <div class="detail-row">
+              <span>Estátuas da Vida (VOL_03):</span>
+              <strong id="siege-statues-val">4 / 4 de pé</strong>
+            </div>
+            <div class="detail-row">
+              <span>Respawn defensor:</span>
+              <strong id="siege-respawn-val">Pátio (VOL_03)</strong>
+            </div>
+            <div class="detail-row">
+              <span>Selo da Coroa:</span>
+              <strong id="siege-seal-val">0% (0/2 pedestais)</strong>
+            </div>
+            <div class="detail-row">
+              <span>Guilda do Castelo:</span>
+              <strong id="siege-owner-val">Sem dono</strong>
+            </div>
+          </div>
+
+          <div class="event-actions-row">
+            <button class="btn-event-action" id="btn-siege-register">📜 Inscrever Guilda</button>
+            <button class="btn-event-action" id="btn-siege-hit-gate">💥 Golpear Portão</button>
+            <button class="btn-event-action" id="btn-siege-hit-statue">🗿 Derrubar Estátua</button>
+            <button class="btn-event-action" id="btn-siege-pedestal-west">🕯️ Pedestal Oeste</button>
+            <button class="btn-event-action" id="btn-siege-pedestal-east">🕯️ Pedestal Leste</button>
+            <button class="btn-event-action" id="btn-siege-crown">👑 Canalizar Selo</button>
+          </div>
+
+          <div class="active-bosses-list" id="siege-scoreboard">
+            <div class="empty-list-notice">Placar vazio — nenhum dano registrado.</div>
+          </div>
+        </div>
       </div>
     </section>
 

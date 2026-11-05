@@ -77,3 +77,46 @@ O evento máximo de guildas acontece todo domingo à noite, onde as maiores alia
 - **Imposto Territorial:** Uma porcentagem de todo o ouro (*Zen*) movimentado em vendas e serviços de todas as cidades vai para o tesouro da guilda dona do castelo.
 - **Acesso à Terra das Provações (*Land of Trials*):** Uma região exclusiva repleta de monstros especiais com chances elevadas de soltar itens excelentes e joias raras.
 - **Asas da Coroa:** O mestre da guilda vencedora pode equipar a *Manta do Imperador Supremo* até a próxima batalha semanal.
+
+---
+
+## 4. IMPLEMENTAÇÃO NO SERVIDOR AUTORITATIVO
+
+Esta seção mapeia cada regra acima para o código TypeScript já existente. A fonte
+de verdade é sempre o catálogo de cenários (`SCENARIO_CATALOG`), nunca cópias de HP.
+
+### 4.1 Mapa de código
+
+| Regra (design) | Implementação |
+| :--- | :--- |
+| Fundação, convites, cargos, alianças, tesouro | `src/server/guilds/GuildSystem.ts` |
+| Limites (32 membros, 3 alianças, nível 100, 500 mil Zen) | `GuildSystem.GUILD_LIMITS` |
+| Imposto Territorial 3%–7% | `GuildSystem.TERRITORIAL_TAX_BY_BIOME` + `applyTerritorialTax` |
+| Manta do Imperador Supremo | `GuildSystem.CROWN_CLOAK_DEF_ID` (`cloak_of_supreme_emperor`) |
+| Janela semanal (inscrição 24h + batalha 90 min) | `CastleSiegeManager.openRegistration/startBattle/update` |
+| Portão ciclópico 25M HP | `VOL_02.destructibleHp.cyclopean_iron_gate` → `damageStructure` |
+| 4 Estátuas da Vida 8M HP | `VOL_03.destructibleHp.life_statue_*` → `getStandingStatuesCount` |
+| Respawn defensor empurrado | `getDefenderRespawnScenario()` → `VOL_03` / `VOL_04` / `VOL_01` |
+| Invulnerabilidade dos defensores | `defendersHaveInvulnerability()` (verdadeiro com ≥1 estátua) |
+| Dois pedestais + 30s contínuos | `occupyPedestal` + `beginCrownSeal` + `crownSealDurationMs` |
+| Reset ao ser empurrado/atordoado/morto | `interruptCrownSeal()` e `validatePedestals()` |
+| Sucessão do castelo | `CastleSiegeManager.concludeSiege` → `GuildSystem.setCastleOwner` |
+| Cobrança em lojas de NPC | `NPCShopSystem.processBuy/processSell` com `TerritorialTaxCollector` |
+
+### 4.2 Fluxo de rede
+
+- `0xB0` **Social/Guildas**: status, fundação, convite, resposta, cargos, saída,
+  aliança e tesouro (`docs/technical/Network_Protocol.md` §3.1).
+- `0xB1` **Cerco ao Castelo**: status, inscrição, dano em estrutura, pedestal e Selo.
+- Rotas de desenvolvimento: `GET /api/guilds`, `GET /api/castle-siege` e
+  `POST /api/castle-siege/control` (`OPEN_REGISTRATION` | `START_BATTLE` | `RESET`).
+- O `startGameLoop` (10 Hz) chama `CastleSiegeManager.update(now)`, que acumula a
+  canalização apenas enquanto os **dois** pedestais seguem ocupados por liderança.
+
+### 4.3 Limites conhecidos
+
+- O estado é 100% em memória (pendência de persistência Redis/PostgreSQL do GDD §11.1).
+- A **Land of Trials** ainda não tem cenário próprio no catálogo; hoje o privilégio
+  está registrado apenas como direito da guilda dona do castelo.
+- O agendador semanal usa o relógio do servidor; em produção deve ser movido para um
+  cron externo que chame `POST /api/castle-siege/control`.
