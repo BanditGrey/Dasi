@@ -1,4 +1,6 @@
-# Pisos modulares — primeira etapa
+# Pisos modulares — editor experimental
+
+A lista de etapas e critérios de conclusão está em [Plano_Mapas_Modulares.md](Plano_Mapas_Modulares.md).
 
 O Dev Viewer divide pisos planos identificados na geometria procedural em peças visuais de até 4 × 4 unidades; no EVT_03 cada célula acompanha uma laje de 6,6 × 6,6 unidades. O limite do piso original, incluindo peças menores nas bordas, é preservado. Nos pisos contínuos as peças usam `InstancedMesh`; no EVT_03 cada laje tem sua própria malha para acompanhar suas transformações, o que requer avaliação de desempenho.
 
