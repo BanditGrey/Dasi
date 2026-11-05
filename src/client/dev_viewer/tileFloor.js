@@ -60,15 +60,15 @@ export function createTiledRoundTop(THREE, surface) {
 }
 
 /** Recebe a malha plana original, preservando posição, rotação e material. */
-export function createTiledFloor(THREE, floor, cellInside = () => true) {
+export function createTiledFloor(THREE, floor, cellInside = () => true, cellSize = TILE_SIZE) {
   if (!floor || floor.geometry?.type !== 'PlaneGeometry' || Array.isArray(floor.material)) return null;
   const { width, height } = floor.geometry.parameters;
   if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return null;
-  const cols = Math.ceil(width / TILE_SIZE), rows = Math.ceil(height / TILE_SIZE);
+  const cols = Math.ceil(width / cellSize), rows = Math.ceil(height / cellSize);
   function isValidCell(col, row) {
     if (!Number.isInteger(col) || !Number.isInteger(row) || col < 0 || row < 0 || col >= cols || row >= rows) return false;
-    const x0 = -width / 2 + col * TILE_SIZE, y0 = -height / 2 + row * TILE_SIZE;
-    return cellInside(x0, y0, Math.min(x0 + TILE_SIZE, width / 2), Math.min(y0 + TILE_SIZE, height / 2));
+    const x0 = -width / 2 + col * cellSize, y0 = -height / 2 + row * cellSize;
+    return cellInside(x0, y0, Math.min(x0 + cellSize, width / 2), Math.min(y0 + cellSize, height / 2));
   }
   const mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), floor.material.clone(), cols * rows);
   mesh.name = 'scenario_tiled_floor';
@@ -107,9 +107,9 @@ export function createTiledFloor(THREE, floor, cellInside = () => true) {
   const objects = {};
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
-      const w = Math.min(TILE_SIZE, width - col * TILE_SIZE);
-      const h = Math.min(TILE_SIZE, height - row * TILE_SIZE);
-      matrix.position.set(-width / 2 + col * TILE_SIZE + w / 2, -height / 2 + row * TILE_SIZE + h / 2, 0);
+      const w = Math.min(cellSize, width - col * cellSize);
+      const h = Math.min(cellSize, height - row * cellSize);
+      matrix.position.set(-width / 2 + col * cellSize + w / 2, -height / 2 + row * cellSize + h / 2, 0);
       matrix.scale.set(w, h, 1);
       matrix.updateMatrix();
       const index = row * cols + col;
@@ -133,13 +133,13 @@ export function createTiledFloor(THREE, floor, cellInside = () => true) {
       mesh.setColorAt(index, color.setHex(TILE_VARIANTS[variant]));
       mesh.instanceColor.needsUpdate = true;
     }
-    const w = Math.min(TILE_SIZE, width - col * TILE_SIZE);
-    const h = Math.min(TILE_SIZE, height - row * TILE_SIZE);
+    const w = Math.min(cellSize, width - col * cellSize);
+    const h = Math.min(cellSize, height - row * cellSize);
     for (const [name, module] of Object.entries(modules)) {
       if (isObjectVariant(name) !== (layer === 'objects')) continue;
       if (variant === name) {
         const elevation = name === 'laje' ? 0.11 : name === 'pedra' ? 0.13 : name === 'arbusto' ? 0.65 : 0.85;
-        matrix.position.set(-width / 2 + col * TILE_SIZE + w / 2, -height / 2 + row * TILE_SIZE + h / 2, elevation);
+        matrix.position.set(-width / 2 + col * cellSize + w / 2, -height / 2 + row * cellSize + h / 2, elevation);
         // Arbustos conservam porte menor em células grandes.
         matrix.scale.set(name === 'arbusto' ? Math.min(w, 2) : w, name === 'arbusto' ? Math.min(h, 2) : h, name === 'arbusto' ? 1.2 : 1);
         matrix.updateMatrix();
@@ -180,7 +180,52 @@ export function createTiledFloor(THREE, floor, cellInside = () => true) {
       }
     }
   }
-  return { mesh, cols, rows, width, height, isValidCell, setTile, setObject, applyEdits, clearEdits, getEdits: () => ({ ...variants }), getObjects: () => ({ ...objects }) };
+  return { mesh, cols, rows, width, height, tileSize: cellSize, isValidCell, setTile, setObject, applyEdits, clearEdits, getEdits: () => ({ ...variants }), getObjects: () => ({ ...objects }) };
+}
+
+/** EVT_03: cada célula acompanha sua própria laje, inclusive movimento e visibilidade. */
+export function createTiledSlabGrid(THREE, slabs) {
+  const cols = 6, rows = 6, size = 6.6;
+  if (!Array.isArray(slabs) || slabs.length !== cols * rows || slabs.some(slab => {
+    const p = slab?.geometry?.parameters;
+    return slab?.geometry?.type !== 'BoxGeometry' || Array.isArray(slab.material) ||
+      Math.abs(p.width - size) > 1e-8 || Math.abs(p.depth - size) > 1e-8 || !Number.isFinite(p.height);
+  })) return null;
+  const children = slabs.map(slab => {
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(size, size), slab.material);
+    plane.position.y = slab.geometry.parameters.height / 2 + 0.002;
+    plane.rotation.x = -Math.PI / 2;
+    const controller = createTiledFloor(THREE, plane, undefined, size);
+    plane.geometry.dispose();
+    slab.add(controller.mesh);
+    return controller;
+  });
+  const isValidCell = (col, row) => Number.isInteger(col) && Number.isInteger(row) && col >= 0 && row >= 0 && col < cols && row < rows;
+  const childAt = (col, row) => isValidCell(col, row) ? children[row * cols + col] : null;
+  const setTile = (col, row, variant) => childAt(col, row)?.setTile(0, 0, variant) ?? false;
+  const setObject = (col, row, variant) => childAt(col, row)?.setObject(0, 0, variant) ?? false;
+  const getLayer = method => Object.fromEntries(children.flatMap((child, i) => {
+    const variant = child[method]()['0,0'];
+    return variant ? [[`${i % cols},${Math.floor(i / cols)}`, variant]] : [];
+  }));
+  function applyEdits(edits, layer = 'floor') {
+    if (!edits || typeof edits !== 'object' || Array.isArray(edits)) return;
+    for (const [key, variant] of Object.entries(edits)) {
+      if (!/^(0|[1-9]\d*),(0|[1-9]\d*)$/.test(key)) continue;
+      const [col, row] = key.split(',').map(Number);
+      (layer === 'objects' ? setObject : setTile)(col, row, variant);
+    }
+  }
+  function pickCell(ray) {
+    const meshes = children.filter((child, i) => slabs[i].visible && slabs[i].parent).map(child => child.mesh);
+    const hit = ray.intersectObjects(meshes, false)[0];
+    if (!hit) return null;
+    const index = children.findIndex(child => child.mesh === hit.object);
+    return index < 0 ? null : { col: index % cols, row: Math.floor(index / cols) };
+  }
+  return { attached: true, cols, rows, tileSize: size, isValidCell, setTile, setObject, applyEdits,
+    clearEdits: () => children.forEach(child => child.clearEdits()),
+    getEdits: () => getLayer('getEdits'), getObjects: () => getLayer('getObjects'), pickCell };
 }
 
 /** Migra documentos antigos com uma única camada sem modificar os dados originais. */
@@ -194,7 +239,7 @@ export function tileDocumentLayers(data) {
 }
 
 export function makeTileDocument(id, controller) {
-  return { version: 2, scenarioId: canonicalTileScenario(id), tileSize: TILE_SIZE, cols: controller.cols, rows: controller.rows, floor: controller.getEdits(), objects: controller.getObjects() };
+  return { version: 2, scenarioId: canonicalTileScenario(id), tileSize: controller.tileSize, cols: controller.cols, rows: controller.rows, floor: controller.getEdits(), objects: controller.getObjects() };
 }
 
 export function loadTileEdits(id, controller) {
@@ -217,7 +262,7 @@ export function saveTileEdits(id, controller) {
 /** Valida integralmente antes de modificar qualquer camada. */
 export function validateTileDocument(data, scenarioId, controller) {
   if (!data || ![1, 2].includes(data.version) || data.scenarioId !== canonicalTileScenario(scenarioId) ||
-      data.tileSize !== TILE_SIZE || data.cols !== controller.cols || data.rows !== controller.rows) return false;
+      data.tileSize !== controller.tileSize || data.cols !== controller.cols || data.rows !== controller.rows) return false;
   const validEntries = (edits, layer) => {
     if (!edits || typeof edits !== 'object' || Array.isArray(edits)) return false;
     const entries = Object.entries(edits);

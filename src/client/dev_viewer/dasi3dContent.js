@@ -13,7 +13,7 @@
 // PALETAS DE MATERIAIS & CORES GÓTICAS PBR
 // ============================================================================
 import { buildScenario3D } from './dasi3dScenarios.js';
-import { createTiledFloor, createTiledBoxTop, createTiledRoundTop, loadTileEdits } from './tileFloor.js';
+import { createTiledFloor, createTiledBoxTop, createTiledRoundTop, createTiledSlabGrid, loadTileEdits } from './tileFloor.js';
 import { GLTFLoader } from './libs/GLTFLoader.js';
 
 // ============================================================================
@@ -1682,7 +1682,7 @@ export function createEnvironment(envType, THREE) {
     const originalFloor = envGroup.getObjectByName('scenario_base_floor');
     const boxFloor = envGroup.getObjectByName('scenario_tile_box_floor');
     const roundFloor = envGroup.getObjectByName('scenario_tile_round_floor');
-    const tileFloor = originalFloor ? createTiledFloor(THREE, originalFloor) : boxFloor ? createTiledBoxTop(THREE, boxFloor) : createTiledRoundTop(THREE, roundFloor);
+    const tileFloor = originalFloor ? createTiledFloor(THREE, originalFloor) : boxFloor ? createTiledBoxTop(THREE, boxFloor) : roundFloor ? createTiledRoundTop(THREE, roundFloor) : createTiledSlabGrid(THREE, animParts.chaosTiles);
     if (tileFloor) {
       const edits = loadTileEdits(envType, tileFloor);
       tileFloor.applyEdits(edits.floor);
@@ -1691,7 +1691,7 @@ export function createEnvironment(envType, THREE) {
         envGroup.remove(originalFloor);
         originalFloor.geometry.dispose();
       }
-      envGroup.add(tileFloor.mesh);
+      if (!tileFloor.attached) envGroup.add(tileFloor.mesh);
     }
     // A geometria específica do cenário deve permanecer visível. O GLB de bioma
     // é genérico e sua substituição assíncrona apagava mapas e colisores distintos.

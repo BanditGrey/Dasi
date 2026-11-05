@@ -179,7 +179,7 @@ describe('Piso modular visual', () => {
   it('limita os tiles circulares ao interior seguro e rejeita bordas e abismos', () => {
     for (const id of ['ICA_01', 'ICA_02', 'EVT_02', 'EVT_04']) {
       const env = createEnvironment(id, THREE);
-      const tiles = env.tileFloor!;
+      const tiles = env.tileFloor as any;
       assert.ok(env.group.getObjectByName('scenario_tile_round_floor'), id);
       assert.equal(tiles.isValidCell(0, 0), false, id);
       assert.equal(tiles.setTile(0, 0, 'terra'), false, id);
@@ -208,6 +208,37 @@ describe('Piso modular visual', () => {
     assert.equal(createTiledRoundTop(THREE, partial), null);
   });
 
+  it('edita cada laje do Chaos Castle sem cobrir lacunas e acompanha movimento', () => {
+    const env = createEnvironment('EVT_03', THREE);
+    const tiles = env.tileFloor as any;
+    const slabs = (env.animParts as any).chaosTiles;
+    assert.equal(tiles.cols, 6);
+    assert.equal(tiles.rows, 6);
+    assert.equal(tiles.tileSize, 6.6);
+    assert.equal(slabs.length, 36);
+    assert.ok(tiles.setTile(0, 0, 'pedra'));
+    assert.ok(tiles.setObject(0, 0, 'arbusto'));
+    assert.deepEqual(tiles.getEdits(), { '0,0': 'pedra' });
+    assert.deepEqual(tiles.getObjects(), { '0,0': 'arbusto' });
+    assert.equal(validateTileDocument(makeTileDocument('EVT_03', tiles), 'EVT_03', tiles), true);
+    assert.equal(validateTileDocument({ ...makeTileDocument('EVT_03', tiles), tileSize: 4 }, 'EVT_03', tiles), false);
+    env.group.updateMatrixWorld(true);
+    const ray = (x: number, z: number) => new THREE.Raycaster(new THREE.Vector3(x, 10, z), new THREE.Vector3(0, -1, 0));
+    assert.deepEqual(tiles.pickCell(ray(-14, -14)), { col: 0, row: 0 });
+    assert.equal(tiles.pickCell(ray(-10.5, -14)), null);
+    const overlay = slabs[0].getObjectByName('scenario_tiled_floor');
+    const before = new THREE.Vector3(); overlay.getWorldPosition(before);
+    slabs[0].position.y -= 5;
+    env.group.updateMatrixWorld(true);
+    const after = new THREE.Vector3(); overlay.getWorldPosition(after);
+    assert.ok(Math.abs(before.y - after.y - 5) < 1e-8);
+    slabs[0].visible = false;
+    assert.equal(tiles.pickCell(ray(-14, -14)), null);
+    tiles.clearEdits();
+    assert.deepEqual(tiles.getEdits(), {});
+    assert.deepEqual(tiles.getObjects(), {});
+  });
+
   it('converte apenas pisos planos marcados e mantém arenas especiais intactas', () => {
     const supported: string[] = [];
     const unsupported: string[] = [];
@@ -219,7 +250,7 @@ describe('Piso modular visual', () => {
         assert.equal(env.group.getObjectByName('scenario_base_floor'), undefined);
       } else unsupported.push(scenario.id);
     }
-    assert.equal(supported.length, 55);
-    assert.deepEqual(unsupported, ['EVT_03']);
+    assert.equal(supported.length, 56);
+    assert.deepEqual(unsupported, []);
   });
 });

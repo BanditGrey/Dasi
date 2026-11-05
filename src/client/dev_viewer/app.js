@@ -2431,7 +2431,7 @@ class DevClientApp {
     const updateTileStatus = (controller, id) => {
       if (!tileStatus) return;
       tileStatus.textContent = controller
-        ? `${canonicalTileScenario(id)}: ${controller.cols} colunas × ${controller.rows} linhas (tiles de até 4 m).`
+        ? `${canonicalTileScenario(id)}: ${controller.cols} colunas × ${controller.rows} linhas (tiles de até ${controller.tileSize} m).`
         : 'Este cenário ainda não possui piso plano modular.';
       if (tileCol) { tileCol.max = controller ? String(controller.cols - 1) : '0'; tileCol.value = '0'; }
       if (tileRow) { tileRow.max = controller ? String(controller.rows - 1) : '0'; tileRow.value = '0'; }
@@ -2463,10 +2463,14 @@ class DevClientApp {
       const pointer = new THREE.Vector2((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
       const ray = new THREE.Raycaster();
       ray.setFromCamera(pointer, viewer.camera);
-      const hit = ray.intersectObject(controller.mesh)[0];
-      if (hit?.instanceId === undefined) return;
-      const col = hit.instanceId % controller.cols;
-      const row = Math.floor(hit.instanceId / controller.cols);
+      let cell = controller.pickCell?.(ray);
+      if (!controller.pickCell) {
+        const hit = ray.intersectObject(controller.mesh)[0];
+        if (hit?.instanceId === undefined) return;
+        cell = { col: hit.instanceId % controller.cols, row: Math.floor(hit.instanceId / controller.cols) };
+      }
+      if (!cell) return;
+      const { col, row } = cell;
       if (tileCol) tileCol.value = String(col);
       if (tileRow) tileRow.value = String(row);
       applyTile(col, row);
