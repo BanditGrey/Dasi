@@ -6,9 +6,11 @@
 import * as THREE from './libs/three.module.js';
 import { GLTFExporter } from './libs/GLTFExporter.js';
 import { buildEditedScenarioSnapshot } from './exportEditedScenario.js';
+import { exportScenarioBatch } from './exportScenarioBatch.js';
+import { createEnvironment } from './dasi3dContent.js';
 import { Dasi3DFeatureViewer } from './dasi3dViewer.js';
 import { ARMORY_METADATA } from './dasi3dArmory.js';
-import { CLASSIC_CONCEPTS, conceptKeyForScenario, getScenarioConcept, getScenarioBlockout } from './classicConcepts.js';
+import { CLASSIC_CONCEPTS, SCENARIO_BLOCKOUTS, conceptKeyForScenario, getScenarioConcept, getScenarioBlockout } from './classicConcepts.js';
 import { canonicalTileScenario, saveTileEdits, validateTileDocument, makeTileDocument, tileDocumentLayers, OBJECT_VARIANTS } from './tileFloor.js';
 import { Dasi3DAvatarRenderer, DasiHeroClassModal, CLASS_DEFINITIONS } from './dasi3dAvatar.js';
 import { Dasi3DRealtimeArena } from './dasi3dRealtimeArena.js';
@@ -2515,6 +2517,26 @@ class DevClientApp {
       } catch (error) {
         console.error('Falha ao exportar GLB visual', error);
         tileStatus.textContent = 'Não foi possível exportar o GLB visual.';
+      } finally { button.disabled = false; }
+    });
+
+    document.getElementById('tile-export-all')?.addEventListener('click', async (event) => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      try {
+        const zip = await exportScenarioBatch({
+          THREE, scenarioIds: SCENARIO_BLOCKOUTS, storage: globalThis.localStorage,
+          createEnvironment, Exporter: GLTFExporter,
+          onProgress: ({ id, completed, total }) => { tileStatus.textContent = id ? `Gerando ${id}: ${completed + 1}/${total}…` : `Gerados ${total} cenários.`; },
+        });
+        const url = URL.createObjectURL(zip);
+        const link = document.createElement('a');
+        link.href = url; link.download = 'dasi-cenarios-editados.zip'; link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        tileStatus.textContent = 'Lote exportado com as edições salvas neste navegador; sem colisões.';
+      } catch (error) {
+        console.error('Falha na exportação em lote', error);
+        tileStatus.textContent = `Lote não exportado: ${error.message || 'erro inesperado'}.`;
       } finally { button.disabled = false; }
     });
 

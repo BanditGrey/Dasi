@@ -6,7 +6,7 @@ Este plano acompanha a evolução dos 56 cenários. A cobertura do editor **não
 
 - [x] 56 concepts individuais e 56 blockouts GLB procedurais iniciais; não são arte final aprovada.
 - [x] Editor visual em 56 cenários, com duas camadas por célula e persistência local/JSON; nas arenas circulares apenas o interior é editável.
-- [x] Exportação de GLB visual estático separado dos arquivos-base; não exporta colisões ou dinâmica.
+- [x] Exportação de GLB visual estático separado dos arquivos-base e lote ZIP com os 56 cenários e manifesto; não exporta colisões ou dinâmica.
 - [ ] Revisão visual dos cenários e da exportação no navegador, em todos os biomas.
 
 ## Lista ordenada
@@ -14,7 +14,7 @@ Este plano acompanha a evolução dos 56 cenários. A cobertura do editor **não
 1. **Confiabilidade do editor e da exportação**
    - [x] Exercitar todos os 56 cenários com edições de piso e objeto e verificar os snapshots exportáveis, mantendo cobertura dos formatos especiais.
    - [x] Serializar e recarregar GLBs editados dos 56 cenários, incluindo superfícies especiais; verificar peças, cores e transformações. Teste automatizado não substitui revisão visual.
-   - [ ] Testar os fluxos de edição, importação, exportação e troca de cenário no navegador; registrar capturas e defeitos.
+   - [ ] Testar os fluxos de edição, importação, exportação individual e em lote e troca de cenário no navegador; registrar capturas e defeitos.
    - [ ] Medir tempo de geração, tamanho dos arquivos, memória e quadros por segundo em cenários representativos, especialmente EVT_03 e pisos grandes.
 2. **Bordas e superfícies especiais**
    - [ ] Criar peças de borda recortadas para círculos e octógonos sem ultrapassar a geometria original nem preencher abismos.
@@ -35,3 +35,5 @@ Este plano acompanha a evolução dos 56 cenários. A cobertura do editor **não
 ## Critérios gerais
 
 Nenhum módulo visual deve ser declarado colisor até ser validado e carregado pelo servidor. Não preencher vazios nem alterar spawn ou perigos silenciosamente. GLB estático não substitui dados de colisão nem comportamento dinâmico. Mudanças de conteúdo publicadas devem ser reproduzíveis e reversíveis. O servidor atual continua sendo um protótipo sem autenticação real, persistência completa ou autoridade integral de posição.
+
+A preparação da próxima etapa está em [Plano_Personagens.md](../art/Plano_Personagens.md); isso não encerra as pendências dos mapas.
