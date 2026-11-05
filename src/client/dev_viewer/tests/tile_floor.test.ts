@@ -29,6 +29,32 @@ describe('Piso modular visual', () => {
     assert.deepEqual(tiles.getEdits(), {});
   });
 
+  it('troca peças 3D individualmente, inclusive na borda, e mantém seleção do piso', () => {
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(10, 9), new THREE.MeshStandardMaterial());
+    floor.rotation.x = -Math.PI / 2;
+    const tiles = createTiledFloor(THREE, floor)!;
+    const slab = tiles.mesh.getObjectByName('scenario_tile_laje') as THREE.InstancedMesh;
+    const stone = tiles.mesh.getObjectByName('scenario_tile_pedra') as THREE.InstancedMesh;
+    const transform = new THREE.Matrix4();
+    assert.ok(tiles.setTile(2, 2, 'laje'));
+    slab.getMatrixAt(8, transform);
+    assert.ok(Math.abs(transform.elements[0] - 2) < 1e-6);
+    assert.ok(Math.abs(transform.elements[5] - 1) < 1e-6);
+    assert.ok(tiles.setTile(2, 2, 'pedra'));
+    slab.getMatrixAt(8, transform);
+    assert.equal(transform.elements[0], 0);
+    stone.getMatrixAt(8, transform);
+    assert.equal(transform.elements[0], 2);
+    tiles.mesh.updateMatrixWorld(true);
+    const hit = new THREE.Raycaster(new THREE.Vector3(4, 5, -4), new THREE.Vector3(0, -1, 0)).intersectObject(tiles.mesh)[0];
+    assert.equal(hit.instanceId, 8);
+    assert.equal(hit.object, tiles.mesh);
+    assert.ok(tiles.setTile(2, 2, 'original'));
+    stone.getMatrixAt(8, transform);
+    assert.equal(transform.elements[0], 0);
+    assert.deepEqual(tiles.getEdits(), {});
+  });
+
   it('permite selecionar uma célula do piso com raycast', () => {
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.MeshStandardMaterial());
     floor.rotation.x = -Math.PI / 2;
@@ -62,7 +88,7 @@ describe('Piso modular visual', () => {
 
   it('valida importação antes de aplicar e rejeita cenário e célula incorretos', () => {
     const tiles = createTiledFloor(THREE, new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.MeshStandardMaterial()))!;
-    const document = { version: 1, scenarioId: 'LOR_01', tileSize: 4, cols: 2, rows: 2, edits: { '1,1': 'musgo' } };
+    const document = { version: 1, scenarioId: 'LOR_01', tileSize: 4, cols: 2, rows: 2, edits: { '1,1': 'pedra' } };
     assert.equal(validateTileDocument(document, 'LORENCIA', tiles), true);
     assert.equal(validateTileDocument({ ...document, scenarioId: 'LOR_02' }, 'LOR_01', tiles), false);
     assert.equal(validateTileDocument({ ...document, edits: { '2,0': 'musgo' } }, 'LOR_01', tiles), false);

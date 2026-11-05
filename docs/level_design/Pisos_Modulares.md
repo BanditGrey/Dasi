@@ -8,7 +8,7 @@ O Dev Viewer divide pisos planos identificados na geometria procedural em peças
 2. Em **Tiles visuais (experimental)**, escolha uma variante e dê duplo clique no piso, ou informe coluna e linha e clique em **Aplicar**. As coordenadas são índices locais do piso, começando em zero; não são coordenadas do mundo.
 3. **Limpar** restaura todas as células do cenário. **Exportar JSON** permite guardar ou compartilhar as alterações; **Importar JSON** aceita somente documentos compatíveis com o cenário e dimensões atuais.
 
-As edições são armazenadas no `localStorage` deste navegador, por ID canônico do cenário, e não são publicadas no servidor. A variante é uma tonalidade visual do material existente; não é ainda uma troca de modelo, textura ou colisor. As alterações **não são aplicadas aos GLBs baixados**. Alguns objetos ou decorações já existentes podem encobrir parcialmente o piso; as peças alteradas são desenhadas ligeiramente acima para facilitar a visualização.
+As edições são armazenadas no `localStorage` deste navegador, por ID canônico do cenário, e não são publicadas no servidor. As variantes de cor são tonalidades do material existente; Laje 3D e Pedra 3D são peças procedurais visuais sobre o piso, sem alteração de colisor. As alterações **não são aplicadas aos GLBs baixados**. Alguns objetos ou decorações já existentes podem encobrir parcialmente o piso; as peças alteradas são desenhadas ligeiramente acima para facilitar a visualização.
 
 ## Cobertura e limitações
 
@@ -22,3 +22,7 @@ Colisões, perigos, spawn e regras continuam exclusivamente em `src/server/world
 - Definir um formato de mapa versionado compartilhado entre servidor e cliente, com identificação de peças, rotação, camadas e colisores; validar os dados antes de publicar.
 - Migrar os dez pisos especiais com recortes e comportamento dinâmico apropriados; validar posição de obstáculos, perigos, spawn e desempenho em cada mapa.
 - Integrar a exportação de mapas aprovados aos GLBs e fornecer armazenamento e colaboração no servidor.
+
+## Primeiras peças 3D de piso
+
+Nos 46 pisos planos, as opções **Laje 3D** e **Pedra 3D** adicionam peças procedurais com geometria própria por célula; a opção Original remove a peça. Cada tipo usa uma malha instanciada, não uma malha independente por célula. As peças se ajustam às células menores nas bordas e são incluídas no mesmo JSON local de versão 1. São protótipos visuais: não recortam o piso subjacente, não adicionam colisão e não são incluídas nos GLBs. A seleção continua usando o plano do piso por baixo das peças. Paredes, estruturas, vegetação e os dez cenários especiais ainda não foram convertidos.
