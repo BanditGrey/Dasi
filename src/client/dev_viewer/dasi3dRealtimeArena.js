@@ -487,6 +487,7 @@ export class Dasi3DRealtimeArena {
     const drop = this.app.groundDrops.get(dropId);
     if (!drop) return;
 
+    this.harmonicAudio?.playItemPickupSound();
     this.app.sendPacket(this.app.OPCODES.GROUND_ITEM_PICKUP_REQ, {
       dropId: drop.dropId,
       playerX: this.app.playerX,
@@ -606,16 +607,17 @@ export class Dasi3DRealtimeArena {
 
       if (!mob3D) {
         let type3D = 'SPIDER';
-        if (mobData.type === 'hound') type3D = 'BUDGE_DRAGON';
+        if (mobData.type === 'spider') type3D = 'SPIDER';
+        else if (mobData.type === 'hound' || mobData.type === 'budge_dragon') type3D = 'BUDGE_DRAGON';
         else if (mobData.type === 'bull_fighter') type3D = 'BULL_FIGHTER';
         else if (mobData.type === 'skeleton') type3D = 'SKELETON';
-        else if (mobData.type === 'boss_gorgon') type3D = 'SPIDER';
-        else if (mobData.type === 'boss_ice_queen') type3D = 'SKELETON';
-        else if (mobData.type === 'boss_balrog') type3D = 'BULL_FIGHTER';
-        else if (mobData.type === 'boss_zaikan') type3D = 'BULL_FIGHTER';
-        else if (mobData.type === 'boss_kundun') type3D = 'SKELETON';
+        else if (mobData.type === 'boss_gorgon') type3D = 'GORGON';
+        else if (mobData.type === 'boss_ice_queen') type3D = 'ICE_QUEEN';
+        else if (mobData.type === 'boss_balrog') type3D = 'BALROG';
+        else if (mobData.type === 'boss_zaikan') type3D = 'BALROG';
+        else if (mobData.type === 'boss_kundun') type3D = 'BALROG';
         else if (isGolden) {
-          type3D = mobData.type.includes('dragon') ? 'BUDGE_DRAGON' : (mobData.type.includes('titan') || mobData.type.includes('tantalos') ? 'BULL_FIGHTER' : 'SKELETON');
+          type3D = mobData.type.includes('dragon') ? 'BUDGE_DRAGON' : (mobData.type.includes('titan') || mobData.type.includes('tantalos') ? 'GOLDEN_TITAN' : 'GOLDEN_TITAN');
         }
 
         const entity = createMonster(type3D, THREE);
@@ -769,6 +771,9 @@ export class Dasi3DRealtimeArena {
           const dropLight = new THREE.PointLight(jewelColor, 2.5, 5);
           dropLight.position.set(0, 0.6, 0);
           dropGroup.add(dropLight);
+
+          const jewelKey = dropData.item?.defId || 'bless';
+          this.harmonicAudio?.playJewelDropSound(jewelKey);
         }
 
         this.scene.add(dropGroup);

@@ -25,6 +25,18 @@ O nome de cada peça é `<classe>_<slot>_<variante>.glb`, por exemplo `dk_chest_
 
 Para regenerar os arquivos no repositório: `node tools/export_modular_heroes.mjs ALL`; use `DK`, `DW`, `ELF`, `MG` ou `DL` para uma classe. O script sobrescreve apenas os arquivos correspondentes em `models/modular_heroes/`, não os modelos antigos. A origem do protótipo é `src/client/dev_viewer/modularHero.js`.
 
+## Evolução recente
+
+- Os **5 heróis modulares**, as **60 peças de armadura** e as **12 armas modulares** foram implementados em `src/client/dev_viewer/modularHero.js` e compilados em `src/client/dev_viewer/models/modular_heroes/`.
+- **Armas Modulares Intercambiáveis:** Foi implementado `CLASS_WEAPONS` e a função `createWeaponModule(THREE, heroClass, weaponId)`, permitindo trocar dinamicamente de arma em runtime no Dev Viewer (`hero.setWeapon(weaponId)`):
+  - **DK:** Dragon Blade, Sword of Archangel, Chaos Dragon Axe, Sword of Destruction.
+  - **DW:** Staff of Kundun, Chaos Lightning Staff.
+  - **ELF:** Celestial Bow, Great Reign Crossbow.
+  - **MG:** Rune Blade of Aether, Dual Elemental (Fogo e Trovão).
+  - **DL:** Imperial Lord Scepter (com Pavise Shield), Radiant Lord Scepter (com Eagle Shield).
+- Cada arma modular é exportada como GLB independente (`<classe>_weapon_<arma>.glb`) com nó raiz identificado em `userData` (`kind: 'weapon_module'`, `heroClass`, `weaponId`, `formatVersion: 1`).
+- Foi integrado o sistema de asas translúcidas articuladas (Wings of Dragon, Wings of Soul, Wings of Spirits, Wings of Darkness e Manto da Monarquia) e o motor de animações vivas (`updateAnim`), suportando respiração orgânica, ondulação das asas, rotação de orbes/anéis astrais, pulsação de armas elementais e reatividade a skills no Dev Viewer.
+
 ## Limitações e próximos passos
 
 - Os personagens usam formas geométricas simples, não possuem UVs/texturas artísticas, rig esquelético, skinning ou clips de animação; as armas são indicativas e fixas. A prévia modular é estática e ignora os controles existentes de animação e refinamento. As formas não foram validadas visualmente contra os concepts.

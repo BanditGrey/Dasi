@@ -267,5 +267,16 @@ describe('5. Sintetizador de Áudio Harmônico Procedural (HarmonicAudioSynthesi
     assert.doesNotThrow(() => synth.playPotionSound('mana'));
     assert.doesNotThrow(() => synth.playDodgeSound());
     assert.doesNotThrow(() => synth.playSkillSound('cyclone'));
+    assert.doesNotThrow(() => synth.playSkillSound('evil_spirits'));
+    assert.doesNotThrow(() => synth.playSkillSound('ice_storm'));
+    assert.doesNotThrow(() => synth.playSkillSound('triple_shot'));
+    assert.doesNotThrow(() => synth.playSkillSound('fire_slash'));
+    assert.doesNotThrow(() => synth.playSkillSound('fireburst'));
+    assert.doesNotThrow(() => synth.playSkillSound('earthquake'));
+    assert.doesNotThrow(() => synth.playJewelDropSound('bless'));
+    assert.doesNotThrow(() => synth.playJewelDropSound('soul'));
+    assert.doesNotThrow(() => synth.playJewelDropSound('life'));
+    assert.doesNotThrow(() => synth.playJewelDropSound('chaos'));
+    assert.doesNotThrow(() => synth.playItemPickupSound());
   });
 });

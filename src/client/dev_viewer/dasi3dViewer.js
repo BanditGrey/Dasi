@@ -322,6 +322,18 @@ export class Dasi3DFeatureViewer {
       } else if (id === 'SKELETON') {
         this.controls.target.set(0, 1.35, 0);
         this.camera.position.set(0, 2.0, 4.0);
+      } else if (id === 'ICE_QUEEN') {
+        this.controls.target.set(0, 1.4, 0);
+        this.camera.position.set(0, 2.1, 4.2);
+      } else if (id === 'GORGON') {
+        this.controls.target.set(0, 1.4, 0);
+        this.camera.position.set(0, 2.2, 4.8);
+      } else if (id === 'BALROG') {
+        this.controls.target.set(0, 1.8, 0);
+        this.camera.position.set(0, 2.6, 5.6);
+      } else if (id === 'GOLDEN_TITAN') {
+        this.controls.target.set(0, 1.8, 0);
+        this.camera.position.set(0, 2.6, 5.4);
       }
 
     } else if (category === 'ENVIRONMENT') {

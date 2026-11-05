@@ -475,7 +475,170 @@ export class HarmonicAudioSynthesizer {
       gain.connect(this.masterGain);
       osc.start(now);
       osc.stop(now + 0.4);
+    } else if (skillId === 'evil_spirits' || skillId === 'EVIL_SPIRITS') {
+      // Evil Spirits: Coro Espectral Wailing Sweep
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.exponentialRampToValueAtTime(740, now + 0.25);
+      osc.frequency.exponentialRampToValueAtTime(220, now + 0.6);
+
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(now);
+      osc.stop(now + 0.7);
+    } else if (skillId === 'ice_storm' || skillId === 'ICE_STORM') {
+      // Ice Storm: Estilhaço Glacial e Chime Gélido
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1480, now);
+      osc.frequency.exponentialRampToValueAtTime(2400, now + 0.1);
+      osc.frequency.exponentialRampToValueAtTime(400, now + 0.45);
+
+      gain.gain.setValueAtTime(0.35, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(now);
+      osc.stop(now + 0.52);
+    } else if (skillId === 'triple_shot' || skillId === 'TRIPLE_SHOT') {
+      // Triple Shot: 3 Disparos Rápidos de Corda de Arco Élfico
+      for (let i = 0; i < 3; i++) {
+        const shotTime = now + i * 0.08;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(620 + i * 40, shotTime);
+        osc.frequency.exponentialRampToValueAtTime(180, shotTime + 0.09);
+
+        gain.gain.setValueAtTime(0.28, shotTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, shotTime + 0.1);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(shotTime);
+        osc.stop(shotTime + 0.11);
+      }
+    } else if (skillId === 'fire_slash' || skillId === 'FIRE_SLASH') {
+      // Fire Slash: Lâmina Flamejante de Magia e Aço
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.exponentialRampToValueAtTime(560, now + 0.15);
+      osc.frequency.exponentialRampToValueAtTime(80, now + 0.42);
+
+      gain.gain.setValueAtTime(0.38, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(now);
+      osc.stop(now + 0.48);
+    } else if (skillId === 'fireburst' || skillId === 'FIREBURST') {
+      // Fireburst: Detonação Ígnea Trovejante do Dark Lord
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(140, now);
+      osc.frequency.exponentialRampToValueAtTime(45, now + 0.35);
+
+      gain.gain.setValueAtTime(0.42, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(now);
+      osc.stop(now + 0.42);
+    } else if (skillId === 'earthquake' || skillId === 'EARTHQUAKE') {
+      // Earthquake: Terremoto e Ruptura de Rocha com Sub-Grave
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(85, now);
+      osc.frequency.exponentialRampToValueAtTime(32, now + 0.65);
+
+      gain.gain.setValueAtTime(0.5, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(now);
+      osc.stop(now + 0.72);
     }
+  }
+
+  // 1.7 SINO CLÁSSICO DE QUEDA DE JOIA SAGRADA (BLESS / SOUL / LIFE / CHAOS)
+  playJewelDropSound(jewelType = 'bless') {
+    if (this.isMuted || !this.init() || !this.ctx || !this.masterGain) return;
+    const now = this.ctx.currentTime;
+
+    let f1 = 2093.0; // C7 (Bless)
+    let f2 = 3135.9; // G7
+    let decay = 1.6;
+
+    if (jewelType === 'soul' || jewelType === 'jewel_of_soul') {
+      f1 = 1760.0; f2 = 2637.0; decay = 1.4; // A6 / E7
+    } else if (jewelType === 'life' || jewelType === 'jewel_of_life') {
+      f1 = 1396.9; f2 = 2093.0; decay = 1.5; // F6 / C7
+    } else if (jewelType === 'chaos' || jewelType === 'jewel_of_chaos') {
+      f1 = 1046.5; f2 = 1661.2; decay = 1.1; // C6 / G#6
+    }
+
+    // Primeiro Harmônico Célere Cristalino
+    const osc1 = this.ctx.createOscillator();
+    const gain1 = this.ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(f1, now);
+
+    gain1.gain.setValueAtTime(0.35, now);
+    gain1.gain.exponentialRampToValueAtTime(0.0001, now + decay);
+
+    osc1.connect(gain1);
+    gain1.connect(this.masterGain);
+    osc1.start(now);
+    osc1.stop(now + decay + 0.05);
+
+    // Segundo Harmônico Overtone Shimmer
+    const osc2 = this.ctx.createOscillator();
+    const gain2 = this.ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(f2, now);
+
+    gain2.gain.setValueAtTime(0.22, now);
+    gain2.gain.exponentialRampToValueAtTime(0.0001, now + decay * 0.75);
+
+    osc2.connect(gain2);
+    gain2.connect(this.masterGain);
+    osc2.start(now);
+    osc2.stop(now + decay * 0.8);
+  }
+
+  // 1.8 SOM DE COLETA DE ITEM OU MOEDA
+  playItemPickupSound() {
+    if (this.isMuted || !this.init() || !this.ctx || !this.masterGain) return;
+    const now = this.ctx.currentTime;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(880, now);
+    osc.frequency.exponentialRampToValueAtTime(1760, now + 0.08);
+
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now);
+    osc.stop(now + 0.13);
+  }
   }
 }
 

@@ -95,3 +95,20 @@ A cada 4 horas de servidor (horário de relógio mundial sincronizado), soa a tr
    - **Lagarto / Dragão Dourado Titânico:** Uma besta colossal que sobrevoa áreas abertas e pousa destruindo árvores e cercas. Solta Box of Kundun +4 e +5.
 3. **Mecânica da Caixa de Kundun (*Box of Kundun*):**
    - Ao ser arremessada no chão pelo jogador, ela abre com um clarão mágico e projeta para o ar os itens lendários com atributos excelentes antes de caírem na terra com física de dispersão.
+
+---
+
+## 4. MODELAGEM 3D PROCEDURAL & RIG CINEMÁTICO NO DEV VIEWER
+
+Implementado em `src/client/dev_viewer/dasi3dContent.js` e renderizado em tempo real pelo `dasi3dViewer.js` com shaders PBR nativos do Three.js:
+
+| Tipo de Criatura | Categoria | Identificador 3D | Elementos Estéticos & PBR | Ciclos de Animação |
+| :--- | :--- | :--- | :--- | :--- |
+| **Aranha Gigante** | Comum | `SPIDER` | Cefalotórax quitinoso, abdômen pulsante, 8 patas articuladas e 6 olhos vermelhos. | Andar (gait 8 patas), Mordida e Pulso abdominal. |
+| **Budge Dragon** | Invasor / Comum | `BUDGE_DRAGON` | Escamas reptilianas escarlates, asas de alta frequência e centelha de fogo no bico. | Voo pairado, bater de asas e sinuosidade de cauda. |
+| **Bull Fighter** | Comum | `BULL_FIGHTER` | Minotauro brutamontes, chifres de marfim, argola no focinho e machado duplo. | Respiração pesada e machadada violenta. |
+| **Skeleton Warrior** | Comum | `SKELETON` | Crânio com almas espectrais ciano, costelas expostas, escudo e cimitarra. | Trepidação óssea e corte de cimitarra. |
+| **Ice Queen** | World Boss | `ICE_QUEEN` | Rainha glacial com vestido translúcido de gelo, coroa de espetos, cetro com floco de neve e halo de nevasca. | Levitação suave, canalização de cetro e rotação orbital. |
+| **Gorgon** | World Boss | `GORGON` | Cauda serpentina enroscada com ferrão tríplice, escamas verde-abissais, 8 serpentes na cabeça e garras afiadas. | Ondulação serpentina, olhar petrificante e ataque de garras. |
+| **Balrog** | World Boss | `BALROG` | Lorde do abismo de obsidiana, núcleo peitoral de magma incandescente, asas demoníacas e foice de magma. | Respiração vulcânica, bater de asas e golpe ceifador de 180°. |
+| **Golden Titan** | Invasão Dourada | `GOLDEN_TITAN` | Titã solar com armadura completa de placas de ouro polido, elmo com fenda solar e espada larga de ouro com halo orbital. | Pouso de impacto, pulso solar e golpe divino com grande espada. |

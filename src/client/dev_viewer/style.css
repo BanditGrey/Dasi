@@ -3592,3 +3592,139 @@ body {
   border-color: #60a5fa;
   box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
 }
+
+/* ==========================================================================
+   HERÓIS & ARMADURAS/ARMAS MODULARES & TILES VISUAIS (DESIGN POLIDO)
+   ========================================================================== */
+
+.hero-modular-card,
+.tile-floor-card {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(198, 155, 63, 0.35);
+  border-left: 3px solid var(--border-gold);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin: 10px 0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+}
+
+.hero-modular-card legend,
+.tile-floor-card legend {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: var(--gold-accent);
+  padding: 0 6px;
+  font-weight: 700;
+  text-shadow: 0 0 6px rgba(240, 192, 90, 0.4);
+}
+
+.modular-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #f1f5f9;
+  cursor: pointer;
+  margin-bottom: 6px;
+}
+
+.modular-toggle-label input[type="checkbox"] {
+  accent-color: var(--gold-accent);
+  cursor: pointer;
+  width: 15px;
+  height: 15px;
+}
+
+.modular-control-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.modular-select,
+.tile-select {
+  background: #090d16;
+  border: 1px solid rgba(198, 155, 63, 0.4);
+  color: #f8fafc;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-family: var(--font-tech);
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modular-select:hover,
+.tile-select:hover {
+  border-color: var(--gold-accent);
+  box-shadow: 0 0 8px rgba(240, 192, 90, 0.25);
+}
+
+.modular-btn,
+.tile-btn {
+  background: linear-gradient(180deg, #1e293b, #0f172a);
+  border: 1px solid var(--border-gold-dark);
+  color: var(--gold-accent);
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-family: var(--font-tech);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modular-btn:hover,
+.tile-btn:hover {
+  background: linear-gradient(180deg, #d97706, #92400e);
+  border-color: #f59e0b;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+}
+
+.modular-status-text {
+  font-size: 11.5px;
+  color: #94a3b8;
+  margin: 6px 0 4px 0;
+  font-style: italic;
+}
+
+.modular-downloads-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.modular-download-link {
+  font-size: 11px;
+  font-weight: 600;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 12px;
+  padding: 3px 10px;
+  text-decoration: none;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.modular-download-link:hover {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: #38bdf8;
+  color: #e0f2fe;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.35);
+}
+

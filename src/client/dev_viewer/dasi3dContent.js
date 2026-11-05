@@ -1587,6 +1587,382 @@ export function createMonster(monsterType, THREE) {
     const swordBlade = new THREE.Mesh(swordBladeGeom, rustSwordMat);
     swordBlade.position.y = 0.45;
     swordGroup.add(swordBlade);
+  } else if (monsterType === 'ICE_QUEEN') {
+    // ------------------------------------------------------------------------
+    // ICE QUEEN (Devias Boss - Soberana Glacial com Cetro de Floco de Neve)
+    // ------------------------------------------------------------------------
+    const iceSkinMat = new THREE.MeshStandardMaterial({
+      color: 0xf3e9dc,
+      roughness: 0.35,
+      metalness: 0.1,
+    });
+    const iceGownMat = new THREE.MeshStandardMaterial({
+      color: 0x38bdf8,
+      roughness: 0.15,
+      metalness: 0.3,
+      transparent: true,
+      opacity: 0.88,
+      emissive: 0x0284c7,
+      emissiveIntensity: 0.4,
+    });
+    const frostCrystalMat = new THREE.MeshStandardMaterial({
+      color: 0xe0f2fe,
+      emissive: 0x38bdf8,
+      emissiveIntensity: 1.8,
+      roughness: 0.1,
+      metalness: 0.8,
+    });
+    const eyeDiamondMat = new THREE.MeshStandardMaterial({
+      color: 0x38bdf8,
+      emissive: 0x67e8f9,
+      emissiveIntensity: 3.5,
+    });
+    glowMaterials.push(frostCrystalMat, eyeDiamondMat);
+
+    // Corpo Flutuante & Vestido Conical de Gelo
+    const gownGeom = new THREE.ConeGeometry(0.65, 1.45, 16, 1, true);
+    const gownMesh = new THREE.Mesh(gownGeom, iceGownMat);
+    gownMesh.position.set(0, 0.75, 0);
+    rootGroup.add(gownMesh);
+    parts.gown = gownMesh;
+
+    // Tronco e Peitoral Cristalino
+    const torsoGeom = new THREE.CylinderGeometry(0.18, 0.22, 0.55, 12);
+    const torsoMesh = new THREE.Mesh(torsoGeom, iceGownMat);
+    torsoMesh.position.set(0, 1.55, 0);
+    rootGroup.add(torsoMesh);
+    parts.torso = torsoMesh;
+
+    // Cabeça & Rosto
+    const headGeom = new THREE.SphereGeometry(0.16, 12, 10);
+    const headMesh = new THREE.Mesh(headGeom, iceSkinMat);
+    headMesh.position.set(0, 1.95, 0);
+    rootGroup.add(headMesh);
+    parts.head = headMesh;
+
+    // Olhos de Diamante Azul Gélido
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 8), eyeDiamondMat);
+    eyeL.position.set(-0.06, 1.97, 0.14);
+    rootGroup.add(eyeL);
+    const eyeR = eyeL.clone();
+    eyeR.position.x = 0.06;
+    rootGroup.add(eyeR);
+
+    // Coroa de Espetos de Gelo (5 Espigões)
+    const crownGroup = new THREE.Group();
+    crownGroup.position.set(0, 2.05, 0);
+    for (let c = -2; c <= 2; c++) {
+      const spire = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.22 - Math.abs(c) * 0.03, 6), frostCrystalMat);
+      spire.position.set(c * 0.07, 0.1, 0);
+      spire.rotation.z = -c * 0.15;
+      crownGroup.add(spire);
+    }
+    rootGroup.add(crownGroup);
+    parts.crown = crownGroup;
+
+    // Cetro Glacial de Devias (Mão Direita)
+    const scepterGroup = new THREE.Group();
+    scepterGroup.position.set(0.42, 1.4, 0.2);
+    const scepterShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.5, 8), frostCrystalMat);
+    scepterGroup.add(scepterShaft);
+    const scepterOrb = new THREE.Mesh(new THREE.OctahedronGeometry(0.14), eyeDiamondMat);
+    scepterOrb.position.y = 0.8;
+    scepterGroup.add(scepterOrb);
+    const scepterRing = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.02, 6, 16), frostCrystalMat);
+    scepterRing.position.y = 0.8;
+    scepterGroup.add(scepterRing);
+    rootGroup.add(scepterGroup);
+    parts.scepter = scepterGroup;
+    parts.scepterOrb = scepterOrb;
+
+    // Halo / Anel de Nevasca
+    const frostHalo = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.02, 6, 32), frostCrystalMat);
+    frostHalo.rotation.x = Math.PI / 2;
+    frostHalo.position.y = 0.25;
+    rootGroup.add(frostHalo);
+    parts.frostHalo = frostHalo;
+
+  } else if (monsterType === 'GORGON') {
+    // ------------------------------------------------------------------------
+    // GORGON (Dungeon Boss - Serpente do Abismo com Olhar Petrificante)
+    // ------------------------------------------------------------------------
+    const scaleMat = new THREE.MeshStandardMaterial({
+      color: 0x064e3b,
+      roughness: 0.45,
+      metalness: 0.5,
+    });
+    const bellyMat = new THREE.MeshStandardMaterial({
+      color: 0x047857,
+      roughness: 0.6,
+      metalness: 0.2,
+    });
+    const gazeMat = new THREE.MeshStandardMaterial({
+      color: 0x10b981,
+      emissive: 0x22c55e,
+      emissiveIntensity: 3.5,
+    });
+    const clawMat = new THREE.MeshStandardMaterial({
+      color: 0x18181b,
+      roughness: 0.3,
+      metalness: 0.8,
+    });
+    glowMaterials.push(gazeMat);
+
+    // Corpo Serpentino Inferior Enroscado
+    const coilGroup = new THREE.Group();
+    const coilGeom = new THREE.TorusGeometry(0.75, 0.22, 10, 24, Math.PI * 1.5);
+    const coilMesh = new THREE.Mesh(coilGeom, scaleMat);
+    coilMesh.rotation.x = Math.PI / 2;
+    coilMesh.position.set(0, 0.22, 0);
+    coilGroup.add(coilMesh);
+
+    // Cauda com ferrão tríplice
+    const tailGeom = new THREE.CylinderGeometry(0.04, 0.16, 1.2, 8);
+    const tailMesh = new THREE.Mesh(tailGeom, bellyMat);
+    tailMesh.position.set(0.65, 0.35, -0.6);
+    tailMesh.rotation.set(0.5, 0, -0.6);
+    coilGroup.add(tailMesh);
+    const stinger = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.3, 6), clawMat);
+    stinger.position.set(0.85, 0.8, -0.9);
+    stinger.rotation.x = 0.8;
+    coilGroup.add(stinger);
+    rootGroup.add(coilGroup);
+    parts.tail = tailMesh;
+    parts.coil = coilGroup;
+
+    // Torso Demoníaco Ereto
+    const torsoGeom = new THREE.CylinderGeometry(0.28, 0.35, 0.95, 10);
+    const torsoMesh = new THREE.Mesh(torsoGeom, scaleMat);
+    torsoMesh.position.set(0, 1.15, 0);
+    rootGroup.add(torsoMesh);
+    parts.torso = torsoMesh;
+
+    // Cabeça Serpentina com Serpentes como Cabelo
+    const headGeom = new THREE.BoxGeometry(0.35, 0.32, 0.42);
+    const headMesh = new THREE.Mesh(headGeom, scaleMat);
+    headMesh.position.set(0, 1.8, 0.08);
+    rootGroup.add(headMesh);
+    parts.head = headMesh;
+
+    // 8 Serpentes na Cabeça
+    parts.snakes = [];
+    for (let s = 0; s < 8; s++) {
+      const angle = (s / 8) * Math.PI * 2;
+      const snake = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.035, 0.45, 6), bellyMat);
+      snake.position.set(Math.cos(angle) * 0.18, 1.95, Math.sin(angle) * 0.18);
+      snake.rotation.set(Math.sin(angle) * 0.6, 0, -Math.cos(angle) * 0.6);
+      rootGroup.add(snake);
+      parts.snakes.push(snake);
+    }
+
+    // Olhos Petrificantes Esmeralda
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 8), gazeMat);
+    eyeL.position.set(-0.1, 1.82, 0.28);
+    rootGroup.add(eyeL);
+    const eyeR = eyeL.clone();
+    eyeR.position.x = 0.1;
+    rootGroup.add(eyeR);
+
+    // Braços com Lâminas de Garras
+    const armL = new THREE.Group();
+    armL.position.set(-0.45, 1.35, 0.1);
+    const armMeshL = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.6, 6), scaleMat);
+    armMeshL.rotation.z = 0.4;
+    armL.add(armMeshL);
+    const bladeL = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.5, 0.02), clawMat);
+    bladeL.position.set(-0.15, -0.3, 0.1);
+    armL.add(bladeL);
+    rootGroup.add(armL);
+    parts.armL = armL;
+
+    const armR = new THREE.Group();
+    armR.position.set(0.45, 1.35, 0.1);
+    const armMeshR = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.6, 6), scaleMat);
+    armMeshR.rotation.z = -0.4;
+    armR.add(armMeshR);
+    const bladeR = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.5, 0.02), clawMat);
+    bladeR.position.set(0.15, -0.3, 0.1);
+    armR.add(bladeR);
+    rootGroup.add(armR);
+    parts.armR = armR;
+
+  } else if (monsterType === 'BALROG') {
+    // ------------------------------------------------------------------------
+    // BALROG (Lost Tower Demon Lord - Lorde com Asas de Fogo e Foice de Magma)
+    // ------------------------------------------------------------------------
+    const obsidianMat = new THREE.MeshStandardMaterial({
+      color: 0x18181b,
+      roughness: 0.6,
+      metalness: 0.4,
+    });
+    const magmaCoreMat = new THREE.MeshStandardMaterial({
+      color: 0xef4444,
+      emissive: 0xd97706,
+      emissiveIntensity: 2.8,
+      roughness: 0.3,
+    });
+    const hornMat = new THREE.MeshStandardMaterial({
+      color: 0x7f1d1d,
+      roughness: 0.4,
+      metalness: 0.3,
+      emissive: 0x451a03,
+      emissiveIntensity: 0.5,
+    });
+    const demonWingMat = new THREE.MeshStandardMaterial({
+      color: 0x991b1b,
+      roughness: 0.55,
+      side: THREE.DoubleSide,
+    });
+    const fireEyeMat = new THREE.MeshStandardMaterial({
+      color: 0xffedd5,
+      emissive: 0xf97316,
+      emissiveIntensity: 4.0,
+    });
+    glowMaterials.push(magmaCoreMat, fireEyeMat);
+
+    // Tronco Demoníaco Volumoso
+    const torsoGeom = new THREE.BoxGeometry(0.95, 1.15, 0.65);
+    const torsoMesh = new THREE.Mesh(torsoGeom, obsidianMat);
+    torsoMesh.position.set(0, 1.6, 0);
+    rootGroup.add(torsoMesh);
+    parts.torso = torsoMesh;
+
+    // Núcleo de Magma Incandescente no Peito
+    const magmaCore = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), magmaCoreMat);
+    magmaCore.position.set(0, 1.7, 0.28);
+    rootGroup.add(magmaCore);
+    parts.magmaCore = magmaCore;
+
+    // Cabeça Chifruda Demoníaca
+    const headGeom = new THREE.BoxGeometry(0.48, 0.45, 0.5);
+    const headMesh = new THREE.Mesh(headGeom, obsidianMat);
+    headMesh.position.set(0, 2.35, 0.12);
+    rootGroup.add(headMesh);
+    parts.head = headMesh;
+
+    // Chifres Curvados de Magma
+    const hornL = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.75, 8), hornMat);
+    hornL.position.set(-0.35, 2.7, 0.1);
+    hornL.rotation.set(-0.3, 0, 0.8);
+    rootGroup.add(hornL);
+    const hornR = hornL.clone();
+    hornR.position.x = 0.35;
+    hornR.rotation.z = -0.8;
+    rootGroup.add(hornR);
+
+    // Olhos Incandescentes
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 8), fireEyeMat);
+    eyeL.position.set(-0.12, 2.38, 0.38);
+    rootGroup.add(eyeL);
+    const eyeR = eyeL.clone();
+    eyeR.position.x = 0.12;
+    rootGroup.add(eyeR);
+
+    // Asas Demoníacas de Fogo (Espanhol/Asas de Morcego Grandes)
+    const wingL = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.9), demonWingMat);
+    wingL.position.set(-0.7, 1.9, -0.35);
+    wingL.rotation.set(0.2, 0.4, 0.2);
+    rootGroup.add(wingL);
+    parts.wingL = wingL;
+
+    const wingR = wingL.clone();
+    wingR.position.x = 0.7;
+    wingR.rotation.set(0.2, -0.4, -0.2);
+    rootGroup.add(wingR);
+    parts.wingR = wingR;
+
+    // Foice Colossal de Magma do Balrog (Mão Direita)
+    const scytheGroup = new THREE.Group();
+    scytheGroup.position.set(0.75, 1.4, 0.3);
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.2, 8), obsidianMat);
+    scytheGroup.add(handle);
+    const blade = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.1, 4), magmaCoreMat);
+    blade.position.set(0.3, 0.95, 0);
+    blade.rotation.z = -Math.PI / 2.8;
+    scytheGroup.add(blade);
+    rootGroup.add(scytheGroup);
+    parts.scythe = scytheGroup;
+
+  } else if (monsterType === 'GOLDEN_TITAN') {
+    // ------------------------------------------------------------------------
+    // GOLDEN TITAN (Invasão Dourada - Titã Solar Forjado em Ouro Maciço)
+    // ------------------------------------------------------------------------
+    const goldArmorMat = new THREE.MeshStandardMaterial({
+      color: 0xf59e0b,
+      metalness: 0.95,
+      roughness: 0.15,
+      emissive: 0xd97706,
+      emissiveIntensity: 0.2,
+    });
+    const goldTrimMat = new THREE.MeshStandardMaterial({
+      color: 0xfef08a,
+      metalness: 0.98,
+      roughness: 0.1,
+      emissive: 0xf59e0b,
+      emissiveIntensity: 0.6,
+    });
+    const solarEyeMat = new THREE.MeshStandardMaterial({
+      color: 0xfffbeb,
+      emissive: 0xfde047,
+      emissiveIntensity: 4.0,
+    });
+    const solarHaloMat = new THREE.MeshStandardMaterial({
+      color: 0xf59e0b,
+      emissive: 0xf59e0b,
+      emissiveIntensity: 1.8,
+      transparent: true,
+      opacity: 0.85,
+    });
+    glowMaterials.push(goldTrimMat, solarEyeMat, solarHaloMat);
+
+    // Torso de Placa Dourada
+    const torsoGeom = new THREE.BoxGeometry(0.9, 1.1, 0.6);
+    const torsoMesh = new THREE.Mesh(torsoGeom, goldArmorMat);
+    torsoMesh.position.set(0, 1.6, 0);
+    rootGroup.add(torsoMesh);
+    parts.torso = torsoMesh;
+
+    // Ombreiras Ciclópicas com Flutings
+    const shoulderL = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.35, 0.48), goldTrimMat);
+    shoulderL.position.set(-0.62, 2.05, 0);
+    rootGroup.add(shoulderL);
+    const shoulderR = shoulderL.clone();
+    shoulderR.position.x = 0.62;
+    rootGroup.add(shoulderR);
+
+    // Elmo Titânico com Crista Solar
+    const headGeom = new THREE.BoxGeometry(0.42, 0.48, 0.45);
+    const headMesh = new THREE.Mesh(headGeom, goldArmorMat);
+    headMesh.position.set(0, 2.3, 0.05);
+    rootGroup.add(headMesh);
+    parts.head = headMesh;
+
+    // Fenda Visora Solar Dourada
+    const visorMesh = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.06, 0.04), solarEyeMat);
+    visorMesh.position.set(0, 2.32, 0.28);
+    rootGroup.add(visorMesh);
+    parts.visor = visorMesh;
+
+    // Grande Espada Solar Dourada (Mão Direita)
+    const swordGroup = new THREE.Group();
+    swordGroup.position.set(0.68, 1.35, 0.25);
+    const bladeMesh = new THREE.Mesh(new THREE.BoxGeometry(0.16, 1.8, 0.04), goldArmorMat);
+    bladeMesh.position.y = 0.7;
+    swordGroup.add(bladeMesh);
+    const bladeCore = new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.4, 0.05), solarEyeMat);
+    bladeCore.position.y = 0.7;
+    swordGroup.add(bladeCore);
+    const guardMesh = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.08, 0.12), goldTrimMat);
+    guardMesh.position.y = -0.15;
+    swordGroup.add(guardMesh);
+    rootGroup.add(swordGroup);
+    parts.sword = swordGroup;
+
+    // Halo Solar Flutuante nas Costas
+    const solarHalo = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.03, 8, 32), solarHaloMat);
+    solarHalo.position.set(0, 1.85, -0.4);
+    rootGroup.add(solarHalo);
+    parts.solarHalo = solarHalo;
   }
 
   // --------------------------------------------------------------------------
@@ -1654,6 +2030,69 @@ export function createMonster(monsterType, THREE) {
           parts.sword.rotation.x = Math.PI / 3 + rattle * 0.08;
         }
       }
+    } else if (monsterType === 'ICE_QUEEN') {
+      const float = Math.sin(time * 2.5) * 0.08;
+      if (parts.gown) parts.gown.position.y = 0.75 + float;
+      if (parts.torso) parts.torso.position.y = 1.55 + float;
+      if (parts.head) parts.head.position.y = 1.95 + float;
+      if (parts.crown) parts.crown.position.y = 2.05 + float;
+      if (parts.scepter) {
+        if (animName === 'ATTACK') {
+          const thrust = (time * 6.0) % Math.PI;
+          parts.scepter.rotation.x = Math.sin(thrust) * 0.9;
+        } else {
+          parts.scepter.rotation.z = Math.sin(time * 2.0) * 0.1;
+        }
+      }
+      if (parts.scepterOrb) parts.scepterOrb.rotation.y += delta * 3.0;
+      if (parts.frostHalo) parts.frostHalo.rotation.z += delta * 0.8;
+
+    } else if (monsterType === 'GORGON') {
+      const sway = Math.sin(time * 3.0);
+      if (parts.torso) parts.torso.rotation.y = sway * 0.15;
+      if (parts.head) parts.head.rotation.y = sway * 0.2;
+      if (parts.tail) parts.tail.rotation.z = -0.6 + Math.sin(time * 3.5) * 0.25;
+      if (parts.snakes) {
+        parts.snakes.forEach((s, idx) => {
+          s.rotation.x += Math.sin(time * 5.0 + idx) * 0.04;
+        });
+      }
+      if (animName === 'ATTACK') {
+        const strike = (time * 7.0) % Math.PI;
+        if (parts.armL) parts.armL.rotation.x = Math.sin(strike) * 1.2;
+        if (parts.armR) parts.armR.rotation.x = Math.sin(strike) * 1.2;
+      }
+
+    } else if (monsterType === 'BALROG') {
+      const breath = Math.sin(time * 2.0);
+      if (parts.torso) parts.torso.position.y = 1.6 + breath * 0.03;
+      if (parts.wingL) parts.wingL.rotation.y = 0.4 + Math.sin(time * 2.5) * 0.25;
+      if (parts.wingR) parts.wingR.rotation.y = -0.4 - Math.sin(time * 2.5) * 0.25;
+      if (parts.magmaCore) {
+        const pulse = 1.0 + Math.sin(time * 4.0) * 0.15;
+        parts.magmaCore.scale.set(pulse, pulse, pulse);
+      }
+      if (parts.scythe) {
+        if (animName === 'ATTACK') {
+          const slash = (time * 6.0) % Math.PI;
+          parts.scythe.rotation.x = Math.sin(slash) * 1.6;
+        } else {
+          parts.scythe.rotation.x = breath * 0.05;
+        }
+      }
+
+    } else if (monsterType === 'GOLDEN_TITAN') {
+      const breath = Math.sin(time * 1.8);
+      if (parts.torso) parts.torso.position.y = 1.6 + breath * 0.02;
+      if (parts.solarHalo) parts.solarHalo.rotation.z += delta * 1.2;
+      if (parts.sword) {
+        if (animName === 'ATTACK') {
+          const smash = (time * 5.0) % Math.PI;
+          parts.sword.rotation.x = Math.sin(smash) * 1.5;
+        } else {
+          parts.sword.rotation.x = breath * 0.04;
+        }
+      }
     }
   };
 
@@ -1718,6 +2157,8 @@ export function createEnvironment(envType, THREE) {
         if (animParts.aetheriteCore) { animParts.aetheriteCore.rotation.y = time * 1.2; }
         if (animParts.phoenixFire) { animParts.phoenixFire.rotation.y = time * 2.0; }
         if (animParts.zaikanVortex) { animParts.zaikanVortex.rotation.y = -time * 1.8; }
+        if (animParts.crownSeal) { animParts.crownSeal.rotation.y = time * 0.9; animParts.crownSeal.rotation.x = Math.sin(time * 1.5) * 0.2; }
+        if (animParts.gorgonFire) { animParts.gorgonFire.scale.y = 1.0 + Math.sin(time * 5.0) * 0.12; }
 
         // Atualização Dinâmica de Partículas dos 47 Cenários (60 FPS)
         if (animParts.rainSystem) {

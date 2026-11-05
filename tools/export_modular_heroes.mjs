@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { HERO_CLASSES, ARMOR_SLOTS, ARMOR_VARIANTS, createModularHero, createArmorModule } from '../src/client/dev_viewer/modularHero.js';
+import { HERO_CLASSES, ARMOR_SLOTS, ARMOR_VARIANTS, CLASS_WEAPONS, createModularHero, createArmorModule, createWeaponModule } from '../src/client/dev_viewer/modularHero.js';
 
 const selection = process.argv[2];
 const ids = selection === 'ALL' ? Object.keys(HERO_CLASSES) : Object.hasOwn(HERO_CLASSES, selection ?? '') ? [selection] : [];
@@ -26,5 +26,8 @@ for (const id of ids) {
   for (const slot of ARMOR_SLOTS) for (const variant of ARMOR_VARIANTS) {
     await writeGlb(`${lower}_${slot}_${variant}`, createArmorModule(THREE, id, slot, variant));
   }
-  console.log(`${id}: herói e ${ARMOR_SLOTS.length * ARMOR_VARIANTS.length} módulos exportados`);
+  for (const weaponId of CLASS_WEAPONS[id]) {
+    await writeGlb(`${lower}_weapon_${weaponId.toLowerCase()}`, createWeaponModule(THREE, id, weaponId));
+  }
+  console.log(`${id}: herói, ${ARMOR_SLOTS.length * ARMOR_VARIANTS.length} armaduras e ${CLASS_WEAPONS[id].length} armas exportados`);
 }

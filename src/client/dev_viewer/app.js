@@ -10,7 +10,7 @@ import { exportScenarioBatch } from './exportScenarioBatch.js';
 import { createEnvironment } from './dasi3dContent.js';
 import { Dasi3DFeatureViewer } from './dasi3dViewer.js';
 import { ARMORY_METADATA } from './dasi3dArmory.js';
-import { ARMOR_SLOTS, ARMOR_VARIANTS } from './modularHero.js';
+import { ARMOR_SLOTS, ARMOR_VARIANTS, CLASS_WEAPONS, WEAPON_NAMES } from './modularHero.js';
 import { CHARACTER_CONCEPTS, getCharacterConcept } from './characterConcepts.js';
 import { CLASSIC_CONCEPTS, SCENARIO_BLOCKOUTS, conceptKeyForScenario, getScenarioConcept, getScenarioBlockout } from './classicConcepts.js';
 import { canonicalTileScenario, saveTileEdits, validateTileDocument, makeTileDocument, tileDocumentLayers, OBJECT_VARIANTS } from './tileFloor.js';
@@ -2673,12 +2673,32 @@ class DevClientApp {
     const modularMode = document.getElementById('hero-modular-mode');
     const armorSlot = document.getElementById('hero-armor-slot');
     const armorVariant = document.getElementById('hero-armor-variant');
+    const weaponSelect = document.getElementById('hero-weapon-select');
     const modularStatus = document.getElementById('hero-modular-status');
+
+    const updateWeaponDropdown = () => {
+      if (!weaponSelect) return;
+      weaponSelect.innerHTML = '';
+      const available = CLASS_WEAPONS[currentHero] || [];
+      for (const wep of available) {
+        const opt = document.createElement('option');
+        opt.value = wep;
+        opt.textContent = WEAPON_NAMES[wep] || wep;
+        weaponSelect.appendChild(opt);
+      }
+    };
+
     const refreshModularLinks = () => {
       if (!Object.hasOwn(CHARACTER_CONCEPTS, currentHero) || !ARMOR_SLOTS.includes(armorSlot.value) || !ARMOR_VARIANTS.includes(armorVariant.value)) return;
       document.getElementById('hero-modular-download').href = `models/modular_heroes/hero_${currentHero.toLowerCase()}_modular.glb`;
       document.getElementById('hero-armor-download').href = `models/modular_heroes/${currentHero.toLowerCase()}_${armorSlot.value}_${armorVariant.value}.glb`;
+      const curWep = weaponSelect?.value || CLASS_WEAPONS[currentHero]?.[0];
+      const wepLink = document.getElementById('hero-weapon-download');
+      if (wepLink && curWep) {
+        wepLink.href = `models/modular_heroes/${currentHero.toLowerCase()}_weapon_${curWep.toLowerCase()}.glb`;
+      }
     };
+    updateWeaponDropdown();
     modularMode?.addEventListener('change', () => {
       this.viewer3DInstance.modularHeroMode = modularMode.checked;
       if (currentCategory === 'HERO') this.viewer3DInstance.selectEntity('HERO', currentHero, { setTier: currentSetTier });
@@ -2686,6 +2706,7 @@ class DevClientApp {
     });
     armorSlot?.addEventListener('change', refreshModularLinks);
     armorVariant?.addEventListener('change', refreshModularLinks);
+    weaponSelect?.addEventListener('change', refreshModularLinks);
     document.getElementById('hero-armor-apply')?.addEventListener('click', () => {
       const viewer = this.viewer3DInstance;
       if (viewer.currentCategory !== 'HERO' || !viewer.modularHeroMode || !viewer.activeEntity?.setArmor) {
@@ -2693,6 +2714,14 @@ class DevClientApp {
       }
       const changed = viewer.activeEntity.setArmor(armorSlot.value, armorVariant.value);
       modularStatus.textContent = changed ? 'Peça trocada nesta prévia; não afeta inventário ou servidor.' : 'Peça ou variante inválida.';
+    });
+    document.getElementById('hero-weapon-apply')?.addEventListener('click', () => {
+      const viewer = this.viewer3DInstance;
+      if (viewer.currentCategory !== 'HERO' || !viewer.modularHeroMode || !viewer.activeEntity?.setWeapon) {
+        modularStatus.textContent = 'Ative o blockout modular para trocar de arma.'; return;
+      }
+      const changed = viewer.activeEntity.setWeapon(weaponSelect.value);
+      modularStatus.textContent = changed ? `Arma trocada para ${WEAPON_NAMES[weaponSelect.value] || weaponSelect.value}.` : 'Arma inválida para esta classe.';
     });
     refreshModularLinks();
 
@@ -2744,6 +2773,7 @@ class DevClientApp {
 
         if (cat === 'HERO') {
           currentHero = id;
+          updateWeaponDropdown();
           refreshModularLinks();
           this.viewer3DInstance.selectEntity('HERO', currentHero, { setTier: currentSetTier });
           if (badgeMode) badgeMode.textContent = `MODO: HERÓI (${currentHero})`;

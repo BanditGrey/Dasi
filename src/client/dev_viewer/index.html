@@ -448,17 +448,24 @@
               <button class="btn-sub-entity" data-cat="HERO" data-id="MG">⚡ Magic Gladiator</button>
               <button class="btn-sub-entity" data-cat="HERO" data-id="DL">👑 Dark Lord</button>
             </div>
-            <fieldset style="border:1px solid #475569; border-radius:6px; padding:8px; margin:8px 0;">
-              <legend style="color:#a7f3d0;">Herói modular (protótipo)</legend>
-              <label><input type="checkbox" id="hero-modular-mode"> Visualizar blockout modular</label>
-              <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;">
-                <select id="hero-armor-slot" aria-label="Peça de armadura"><option value="helmet">Elmo</option><option value="chest">Peitoral</option><option value="shoulders">Ombreiras</option><option value="gloves">Luvas</option><option value="legs">Calças e grevas</option><option value="boots">Botas</option></select>
-                <select id="hero-armor-variant" aria-label="Variante de armadura"><option value="base">Base</option><option value="elite">Elite</option></select>
-                <button type="button" id="hero-armor-apply">Trocar peça</button>
+            <fieldset class="hero-modular-card">
+              <legend>⚔️ Herói Modular & Armaria PBR</legend>
+              <label class="modular-toggle-label"><input type="checkbox" id="hero-modular-mode"> Visualizar blockout modular</label>
+              <div class="modular-control-row">
+                <select id="hero-armor-slot" class="modular-select" aria-label="Peça de armadura"><option value="helmet">Elmo</option><option value="chest">Peitoral</option><option value="shoulders">Ombreiras</option><option value="gloves">Luvas</option><option value="legs">Calças e grevas</option><option value="boots">Botas</option></select>
+                <select id="hero-armor-variant" class="modular-select" aria-label="Variante de armadura"><option value="base">Base</option><option value="elite">Elite</option></select>
+                <button type="button" id="hero-armor-apply" class="modular-btn">Trocar peça</button>
               </div>
-              <p id="hero-modular-status" style="font-size:11px;color:#94a3b8;">Peças visuais simples; sem rig esquelético ou atributos de jogo.</p>
-              <a id="hero-modular-download" href="models/modular_heroes/hero_dk_modular.glb" download>Baixar GLB do blockout base</a>
-              <span> · </span><a id="hero-armor-download" href="models/modular_heroes/dk_helmet_base.glb" download>Baixar módulo selecionado</a>
+              <div class="modular-control-row">
+                <select id="hero-weapon-select" class="modular-select" aria-label="Arma modular"></select>
+                <button type="button" id="hero-weapon-apply" class="modular-btn">Trocar arma</button>
+              </div>
+              <p id="hero-modular-status" class="modular-status-text">Peças visuais modulares; sem rig esquelético ou atributos de jogo.</p>
+              <div class="modular-downloads-row">
+                <a id="hero-modular-download" class="modular-download-link" href="models/modular_heroes/hero_dk_modular.glb" download>⬇ Base GLB</a>
+                <a id="hero-armor-download" class="modular-download-link" href="models/modular_heroes/dk_helmet_base.glb" download>⬇ Armadura GLB</a>
+                <a id="hero-weapon-download" class="modular-download-link" href="models/modular_heroes/dk_weapon_dragon_blade.glb" download>⬇ Arma GLB</a>
+              </div>
             </fieldset>
             <label class="control-label" style="margin-top: 6px;">SET DE ARMADURA:</label>
             <div class="tier-buttons-row">
@@ -473,12 +480,16 @@
 
           <!-- Sub-seletores de Monstros -->
           <div class="control-group" id="sub-group-monsters" style="display: none;">
-            <label class="control-label">BESTIÁRIO CLÁSSICO 3D:</label>
+            <label class="control-label">BESTIÁRIO CLÁSSICO & CHEFES MUNDIAIS 3D:</label>
             <div class="sub-buttons-grid">
               <button class="btn-sub-entity" data-cat="MONSTER" data-id="SPIDER">🕷️ Aranha Gigante</button>
               <button class="btn-sub-entity" data-cat="MONSTER" data-id="BUDGE_DRAGON">🐉 Budge Dragon</button>
               <button class="btn-sub-entity" data-cat="MONSTER" data-id="BULL_FIGHTER">🐂 Bull Fighter</button>
               <button class="btn-sub-entity" data-cat="MONSTER" data-id="SKELETON">💀 Skeleton</button>
+              <button class="btn-sub-entity" data-cat="MONSTER" data-id="ICE_QUEEN" style="border-color: #38bdf8; color: #bae6fd;">❄️ Ice Queen (Chefe)</button>
+              <button class="btn-sub-entity" data-cat="MONSTER" data-id="GORGON" style="border-color: #10b981; color: #a7f3d0;">🐍 Gorgon (Chefe)</button>
+              <button class="btn-sub-entity" data-cat="MONSTER" data-id="BALROG" style="border-color: #ef4444; color: #fca5a5;">🔥 Balrog (Lorde)</button>
+              <button class="btn-sub-entity" data-cat="MONSTER" data-id="GOLDEN_TITAN" style="border-color: #f59e0b; color: #fde68a;">🌟 Golden Titan (Invasão)</button>
             </div>
           </div>
 
@@ -563,21 +574,23 @@
                 <option value="EVT_04">EVT_04: Coliseu de Duelos (Arena da Glória) (6 colisores)</option>
               </optgroup>
             </select>
-            <fieldset style="border:1px solid #475569; border-radius:6px; padding:8px; margin:8px 0;">
-              <legend style="color:#a7f3d0;">Tiles visuais (experimental)</legend>
-              <p id="tile-floor-status" style="font-size:12px;color:#cbd5e1;">Selecione um cenário.</p>
-              <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
-                <label>Coluna <input id="tile-col" type="number" value="0" min="0" style="width:52px;"></label>
-                <label>Linha <input id="tile-row" type="number" value="0" min="0" style="width:52px;"></label>
-                <select id="tile-variant" aria-label="Variante visual"><option value="original">Original</option><option value="escuro">Escuro</option><option value="claro">Claro</option><option value="musgo">Musgo</option><option value="terra">Terra</option><option value="laje">Laje 3D</option><option value="pedra">Pedra 3D</option><option value="muro_x">Muro 3D horizontal</option><option value="muro_y">Muro 3D vertical</option><option value="arbusto">Arbusto 3D</option><option value="remover_objeto">Remover objeto</option></select>
-                <button type="button" id="tile-apply">Aplicar</button>
-                <button type="button" id="tile-reset">Limpar</button>
-                <button type="button" id="tile-export">Exportar JSON</button>
-                <button type="button" id="tile-export-glb">Exportar GLB visual</button>
-                <button type="button" id="tile-export-all">Exportar 56 GLBs (ZIP)</button>
-                <label>Importar JSON <input id="tile-import" type="file" accept=".json,application/json" style="max-width:140px;"></label>
+            <fieldset class="tile-floor-card">
+              <legend>🧱 Editor de Tiles & Relevo 3D</legend>
+              <p id="tile-floor-status" class="modular-status-text">Selecione um cenário.</p>
+              <div class="modular-control-row">
+                <label style="font-size: 12px; font-weight: 600; color: #cbd5e1;">Col <input id="tile-col" type="number" value="0" min="0" class="modular-select" style="width:58px; padding: 4px 6px;"></label>
+                <label style="font-size: 12px; font-weight: 600; color: #cbd5e1;">Lin <input id="tile-row" type="number" value="0" min="0" class="modular-select" style="width:58px; padding: 4px 6px;"></label>
+                <select id="tile-variant" class="tile-select" aria-label="Variante visual"><option value="original">Original</option><option value="escuro">Escuro</option><option value="claro">Claro</option><option value="musgo">Musgo</option><option value="terra">Terra</option><option value="laje">Laje 3D</option><option value="pedra">Pedra 3D</option><option value="muro_x">Muro 3D horizontal</option><option value="muro_y">Muro 3D vertical</option><option value="arbusto">Arbusto 3D</option><option value="remover_objeto">Remover objeto</option></select>
+                <button type="button" id="tile-apply" class="tile-btn">Aplicar</button>
+                <button type="button" id="tile-reset" class="tile-btn" style="border-color: #ef4444; color: #fca5a5;">Limpar</button>
               </div>
-              <p style="font-size:11px;color:#94a3b8;">Duplo clique no piso para aplicar. Piso e objeto são camadas separadas; somente visual, salvo neste navegador. Muros e arbustos não criam colisões nem alteram GLBs.</p>
+              <div class="modular-control-row" style="margin-top: 8px;">
+                <button type="button" id="tile-export" class="modular-btn">Exportar JSON</button>
+                <button type="button" id="tile-export-glb" class="modular-btn">Exportar GLB visual</button>
+                <button type="button" id="tile-export-all" class="modular-btn" style="border-color: #38bdf8; color: #7dd3fc;">Exportar 56 GLBs (ZIP)</button>
+                <label class="modular-btn" style="cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">Importar JSON <input id="tile-import" type="file" accept=".json,application/json" style="display: none;"></label>
+              </div>
+              <p style="font-size:11px;color:#94a3b8; margin-top: 6px;">Duplo clique no piso para aplicar. Piso e objeto são camadas separadas; somente visual, salvo neste navegador. Muros e arbustos não criam colisões nem alteram GLBs.</p>
             </fieldset>
             <div class="sub-buttons-grid">
               <button class="btn-sub-entity active" data-cat="ENVIRONMENT" data-id="LORENCIA">🏰 Lorencia (7 Cenários)</button>

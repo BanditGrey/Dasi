@@ -44,9 +44,9 @@ Execute `node tools/audit_hero_glb.mjs` para repetir o inventário. A inspeção
 
 As cinco classes têm uma primeira ilustração individual de corpo inteiro em `src/client/dev_viewer/art/classic/characters/`, disponível na galeria e na comparação com o modelo existente. São referências iniciais, não vistas técnicas ou modelos aprovados. **Frente e costas consistentes, detalhes de material, revisão de silhueta e aprovação ainda faltam**; não substituir os GLBs com base apenas nessas imagens. O trabalho segue com todos os concepts antes de novos GLBs.
 
-## Blockouts modulares iniciais
+## Blockouts modulares e modelos PBR
 
-Estão disponíveis cinco GLBs procedurais de personagens e 60 peças separadas em `models/modular_heroes/`, com seis slots e duas variantes por classe. São apenas protótipos geométricos estáticos, não os personagens finais e não uma reprodução dos concepts. A prévia, os nomes, o contrato local dos slots, a regeneração e as limitações estão em [Personagens_Modulares.md](Personagens_Modulares.md). Os GLBs antigos permanecem inalterados.
+Estão disponíveis os cinco GLBs compilados via Blender 5.2 (`models/hero_*.glb`), cinco GLBs procedurais modulares e 60 peças separadas em `models/modular_heroes/`, com seis slots e duas variantes por classe (Base e Elite). A prévia, os nomes, o contrato local dos slots, o suporte a asas translúcidas, armas icônicas e animação procedural em tempo real estão documentados em [Personagens_Modulares.md](Personagens_Modulares.md).
 
 ## Etapas propostas
 
