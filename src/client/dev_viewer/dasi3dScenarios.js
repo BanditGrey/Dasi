@@ -496,7 +496,26 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
 
     const canopy = new THREE.Mesh(new THREE.SphereGeometry(10.0, 12, 12), new THREE.MeshStandardMaterial({ color: 0x065f46, roughness: 0.85 }));
     canopy.position.set(0, 14.0, -5);
+    canopy.scale.y = 0.55;
     envGroup.add(canopy);
+
+    // Varandas e lanternas junto ao tronco: detalhe elevado, sem novos bloqueios.
+    const treeDetails = new THREE.Group();
+    treeDetails.name = 'noria_tree_details';
+    const balconyMat = new THREE.MeshStandardMaterial({ color: 0x604a30, roughness: 0.85 });
+    const lanternMat = new THREE.MeshStandardMaterial({ color: 0xb0a663, emissive: 0x65733b, emissiveIntensity: 0.6, roughness: 0.7 });
+    for (const height of [5.6, 7.4]) {
+      const balcony = new THREE.Mesh(new THREE.TorusGeometry(4.55, 0.22, 6, 24), balconyMat);
+      balcony.rotation.x = Math.PI / 2;
+      balcony.position.set(0, height, -5);
+      treeDetails.add(balcony);
+    }
+    for (const angle of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) {
+      const lantern = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), lanternMat);
+      lantern.position.set(Math.cos(angle) * 4.4, 6.05, -5 + Math.sin(angle) * 4.4);
+      treeDetails.add(lantern);
+    }
+    envGroup.add(treeDetails);
 
     // 4 Raízes Ciclópicas
     const rootCoords = [[4.8, -1.5], [-4.8, -1.5], [-4.5, -8.5], [4.5, -8.5]];
@@ -510,6 +529,11 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     const fountain = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.4, 0.8, 16), matNacar);
     fountain.position.set(0, 0.4, 6.5);
     envGroup.add(fountain);
+    const water = new THREE.Mesh(new THREE.CircleGeometry(1.95, 24), new THREE.MeshStandardMaterial({ color: 0x396f68, roughness: 0.22, metalness: 0.35 }));
+    water.name = 'noria_fountain_water';
+    water.rotation.x = -Math.PI / 2;
+    water.position.set(0, 0.81, 6.5);
+    envGroup.add(water);
     const fLight = new THREE.PointLight(0x10b981, 2.5, 10);
     fLight.position.set(0, 1.5, 6.5);
     envGroup.add(fLight);
@@ -522,6 +546,20 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     const pavR = new THREE.Mesh(new THREE.BoxGeometry(5.0, 4.0, 7.0), matNacar);
     pavR.position.set(13, 2.0, 2);
     envGroup.add(pavR);
+
+    // Telhados e janelas mantidos dentro das projeções dos pavilhões.
+    const pavilionDetails = new THREE.Group();
+    pavilionDetails.name = 'noria_pavilion_details';
+    for (const x of [-13, 13]) {
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(2.2, 2.0, 4), matWood);
+      roof.rotation.y = Math.PI / 4;
+      roof.position.set(x, 5, 2);
+      pavilionDetails.add(roof);
+      const window = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.2, 0.06), lanternMat);
+      window.position.set(x, 2.2, -1.48);
+      pavilionDetails.add(window);
+    }
+    envGroup.add(pavilionDetails);
 
   } else if (id === 'NOR_02') {
     // NOR_02: Chaos Machine Workshop (Oficina dos Duendes e Chaos Forge)

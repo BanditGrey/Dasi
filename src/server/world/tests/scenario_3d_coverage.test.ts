@@ -117,3 +117,27 @@ it('Os sete blockouts de Lorencia carregam como GLBs distintos sem luzes ou part
     assert.ok(meshes > 0, id);
   }
 });
+
+
+it('Os sete blockouts de Noria carregam com GLTFLoader e o santuário preserva detalhes', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  for (let index = 1; index <= 7; index++) {
+    const id = `NOR_${String(index).padStart(2, '0')}`;
+    const bytes = readFileSync(`src/client/dev_viewer/models/scenarios/${id.toLowerCase()}.glb`);
+    const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    const gltf = await new GLTFLoader().parseAsync(buffer, '');
+    assert.ok(gltf.scene.getObjectByName(id), id);
+    let meshes = 0;
+    gltf.scene.traverse((obj: THREE.Object3D) => {
+      if ((obj as THREE.Mesh).isMesh) meshes++;
+      assert.ok(!(obj as THREE.Light).isLight && !(obj as THREE.Points).isPoints, id);
+    });
+    assert.ok(meshes > 0, id);
+    if (id === 'NOR_01') {
+      assert.ok(gltf.scene.getObjectByName('noria_tree_details'));
+      assert.ok(gltf.scene.getObjectByName('noria_pavilion_details'));
+      assert.ok(gltf.scene.getObjectByName('noria_fountain_water'));
+    }
+  }
+});
