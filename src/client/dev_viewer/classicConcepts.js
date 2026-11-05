@@ -58,6 +58,16 @@ export const SCENARIO_CONCEPTS = {
   LT_02: { title: 'Lost Tower — Corredores Rúnicos', description: 'Passagens de basalto, relevos antigos e tochas azuis.' },
   LT_03: { title: 'Lost Tower — Abismo de Magma', description: 'Plataforma de ferro e pedra suspensa sobre um mar de magma.' },
   LT_04: { title: 'Lost Tower — Sacadas dos Demônios', description: 'Terraço de pedra negra, balaustradas e gárgulas sob um céu vermelho.' },
+  LT_05: { title: 'Lost Tower — Colunata Espiral', description: 'Câmara circular de basalto com colunas espirais e braseiros de crânio.' },
+  LT_06: { title: 'Lost Tower — Muralhas Infernais', description: 'Antessala com fissuras de lava, canais no piso e altar de ferro negro.' },
+  LT_07: { title: 'Lost Tower — Trono das Chamas', description: 'Arena no topo da torre com trono de basalto, obeliscos de magma e abismo.' },
+  ATL_01: { title: 'Atlans — Areias Peroladas', description: 'Fundo oceânico com areia clara, luz filtrada, algas e uma estátua partida.' },
+  ATL_02: { title: 'Atlans — Santuário de Nácar', description: 'Plataforma circular, arcos curvos, pedestal e domo de ar submerso.' },
+  ATL_03: { title: 'Atlans — Labirinto de Corais', description: 'Caminhos sinuosos entre recifes de corais, anêmonas e esponjas.' },
+  ATL_04: { title: 'Atlans — Trincheira das Correntes', description: 'Desfiladeiro submarino atravessado por quatro anéis rúnicos.' },
+  ATL_05: { title: 'Atlans — Cemitério dos Leviatãs', description: 'Costelas fósseis gigantes formam arcos sobre a areia e um crânio antigo.' },
+  ATL_06: { title: 'Atlans — Fendas Hidrotermais', description: 'Chaminés de basalto e fissuras quentes entre fumaça mineral e bolhas.' },
+  ATL_07: { title: 'Atlans — Fossa da Hidra', description: 'Arena abissal circular com corais venenosos e três pedestais de cobertura.' },
 };
 
 export function getScenarioConcept(id) {
