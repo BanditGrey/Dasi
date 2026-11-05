@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { SCENARIO_CATALOG } from '../../../server/world/CollisionSystem.ts';
 // @ts-ignore JS module shared with the browser
-import { CLASSIC_CONCEPTS, conceptKeyForScenario, SCENARIO_CONCEPTS, getScenarioConcept } from '../classicConcepts.js';
+import { CLASSIC_CONCEPTS, conceptKeyForScenario, SCENARIO_CONCEPTS, getScenarioConcept, SCENARIO_BLOCKOUTS, getScenarioBlockout } from '../classicConcepts.js';
 
 test('cada cenário resolve para sua família visual sem confundir as arenas', () => {
   for (const scenario of SCENARIO_CATALOG) {
@@ -41,4 +41,16 @@ test('concepts individuais pertencem ao catálogo e possuem arquivos próprios',
   for (const scenario of SCENARIO_CATALOG) assert.ok(ids.includes(scenario.id), `Concept individual ausente: ${scenario.id}`);
   assert.equal(ids.length, SCENARIO_CATALOG.length);
   assert.equal(getScenarioConcept('INVALID_01'), null);
+});
+
+
+test('os downloads de blockout apontam para arquivos de cenários disponíveis', () => {
+  assert.equal(getScenarioBlockout('LORENCIA'), getScenarioBlockout('LOR_01'));
+  assert.equal(getScenarioBlockout('NOR_01'), null);
+  for (const id of SCENARIO_BLOCKOUTS) {
+    assert.ok(SCENARIO_CATALOG.some((scenario) => scenario.id === id));
+    assert.ok(existsSync(`src/client/dev_viewer/${getScenarioBlockout(id)}`));
+  }
+  const html = readFileSync('src/client/dev_viewer/index.html', 'utf8');
+  assert.match(html, /id="scenario-blockout-download"/);
 });

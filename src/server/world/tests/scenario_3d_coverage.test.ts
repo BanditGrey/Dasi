@@ -98,3 +98,22 @@ it('GLB de blockout de Lorencia é carregável e preserva marcos principais', as
   assert.ok(paving?.isInstancedMesh);
   assert.strictEqual(paving.count, 780);
 });
+
+
+it('Os sete blockouts de Lorencia carregam como GLBs distintos sem luzes ou partículas', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  for (let index = 1; index <= 7; index++) {
+    const id = `LOR_${String(index).padStart(2, '0')}`;
+    const bytes = readFileSync(`src/client/dev_viewer/models/scenarios/${id.toLowerCase()}.glb`);
+    const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    const gltf = await new GLTFLoader().parseAsync(buffer, '');
+    assert.ok(gltf.scene.getObjectByName(id), id);
+    let meshes = 0;
+    gltf.scene.traverse((obj: THREE.Object3D) => {
+      if ((obj as THREE.Mesh).isMesh) meshes++;
+      assert.ok(!(obj as THREE.Light).isLight && !(obj as THREE.Points).isPoints, id);
+    });
+    assert.ok(meshes > 0, id);
+  }
+});

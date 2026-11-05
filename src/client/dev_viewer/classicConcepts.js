@@ -90,3 +90,12 @@ export function getScenarioConcept(id) {
   const data = SCENARIO_CONCEPTS[id];
   return data ? { ...data, src: `art/classic/scenarios/${id.toLowerCase()}.jpg` } : null;
 }
+
+/** Blockouts exportados a partir de geometria procedural, não modelos finais. */
+export const SCENARIO_BLOCKOUTS = ['LOR_01', 'LOR_02', 'LOR_03', 'LOR_04', 'LOR_05', 'LOR_06', 'LOR_07'];
+export function getScenarioBlockout(id) {
+  const scenarioId = id === 'LORENCIA' ? 'LOR_01' : id;
+  return SCENARIO_BLOCKOUTS.includes(scenarioId)
+    ? `models/scenarios/${scenarioId.toLowerCase()}.glb`
+    : null;
+}

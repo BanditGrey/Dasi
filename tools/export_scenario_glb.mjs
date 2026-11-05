@@ -1,5 +1,6 @@
 /** Exporta o blockout procedural de um cenário para GLB (sem Blender).
  * Uso: node --experimental-strip-types tools/export_scenario_glb.mjs LOR_01
+ * Ou exporte um bioma: node --experimental-strip-types tools/export_scenario_glb.mjs LORENCIA
  * Não exporta luzes ou partículas: elas pertencem ao runtime do visualizador.
  */
 import * as THREE from 'three';
@@ -8,9 +9,10 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { buildScenario3D } from '../src/client/dev_viewer/dasi3dScenarios.js';
 import { SCENARIO_CATALOG } from '../src/server/world/CollisionSystem.ts';
 
-const id = process.argv[2];
-if (!SCENARIO_CATALOG.some((scenario) => scenario.id === id)) {
-  console.error('Informe um ID canônico, por exemplo: LOR_01');
+const selection = process.argv[2];
+const scenarios = SCENARIO_CATALOG.filter((scenario) => scenario.id === selection || scenario.biome === selection);
+if (scenarios.length === 0) {
+  console.error('Informe um ID ou bioma canônico, por exemplo: LOR_01 ou LORENCIA');
   process.exit(1);
 }
 
@@ -29,17 +31,18 @@ class NodeFileReader {
 }
 globalThis.FileReader = NodeFileReader;
 
-const group = new THREE.Group();
-group.name = id;
-buildScenario3D(id, THREE, group, [], {});
-// O exportador glTF serializa meshes instanciadas via EXT_mesh_gpu_instancing.
-// Partículas e luzes devem continuar sendo controladas pelo runtime, não pelo GLB.
-for (const child of [...group.children]) {
-  if (child.isPoints || child.isLight) group.remove(child);
-}
-const buffer = await new GLTFExporter().parseAsync(group, { binary: true, onlyVisible: true });
 const dir = 'src/client/dev_viewer/models/scenarios';
 await mkdir(dir, { recursive: true });
-const file = `${dir}/${id.toLowerCase()}.glb`;
-await writeFile(file, Buffer.from(buffer));
-console.log(`Blockout exportado: ${file}`);
+for (const scenario of scenarios) {
+  const group = new THREE.Group();
+  group.name = scenario.id;
+  buildScenario3D(scenario.id, THREE, group, [], {});
+  // Partículas e luzes permanecem sob controle do runtime, inclusive as aninhadas.
+  const runtimeOnly = [];
+  group.traverse((child) => { if (child.isPoints || child.isLight) runtimeOnly.push(child); });
+  for (const child of runtimeOnly) child.removeFromParent();
+  const buffer = await new GLTFExporter().parseAsync(group, { binary: true, onlyVisible: true });
+  const file = `${dir}/${scenario.id.toLowerCase()}.glb`;
+  await writeFile(file, Buffer.from(buffer));
+  console.log(`Blockout exportado: ${file}`);
+}

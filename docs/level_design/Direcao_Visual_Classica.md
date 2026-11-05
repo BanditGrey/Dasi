@@ -41,8 +41,12 @@ As imagens de família estão em `src/client/dev_viewer/art/classic/` e aparecem
 1. Detalhar os pontos de interesse de cada um dos 56 IDs, em conformidade com `All_56_Scenarios_Master_Index.md` e `SCENARIO_CATALOG`.
 2. Adaptar modelos, materiais e iluminação 3D aos conceitos aprovados, mantendo os caminhos e colisores consistentes; validar cada mapa no visualizador.
 
-### GLB inicial
+### Blockouts GLB — andamento
 
-`src/client/dev_viewer/models/scenarios/lor_01.glb` é um **blockout inicial** exportado da geometria procedural da praça, não um modelo artístico final. Ele pode ser regenerado com `node --experimental-strip-types tools/export_scenario_glb.mjs LOR_01` após `npm ci`. A exportação omite partículas e luzes, que continuam no runtime; o visualizador ainda usa a geometria procedural, preservando animações e colisões. O arquivo serve de base para modelagem e revisão, não de substituto automático para todos os cenários.
+Os sete cenários de Lorencia (`LOR_01`–`LOR_07`) possuem **blockouts iniciais** em `src/client/dev_viewer/models/scenarios/`. São exportações da geometria procedural existente, não modelos artísticos finais nem reconstruções fiéis das pinturas. Podem ser baixados no painel de comparação do visualizador ao selecionar cada cenário.
+
+Após `npm ci`, regenere um cenário com `node --experimental-strip-types tools/export_scenario_glb.mjs LOR_01` ou o bioma com `node --experimental-strip-types tools/export_scenario_glb.mjs LORENCIA`. O comando sobrescreve os GLBs de destino. A exportação omite partículas e luzes, que continuam no runtime; o visualizador ainda usa a geometria procedural, preservando animações e colisões. Estes arquivos são bases para modelagem e revisão, não substitutos automáticos dos cenários.
+
+**Pendente:** 49 blockouts dos outros biomas e acabamento, revisão visual e validação de colisões de todos os modelos.
 
 A praça `LOR_01` recebeu uma primeira passagem 3D: calçamento, estátua alada, fachada iluminada e ameias. Os materiais de Devil Square, Chaos Castle e do Coliseu receberam uma primeira aproximação de paleta e iluminação. O visualizador mantém a geometria procedural de cada mapa, sem substituí-la automaticamente pelo GLB genérico do bioma. Os modelos 3D existentes **ainda não foram reconstruídos** integralmente a partir destas pinturas. Sua presença ao lado do concept facilita o planejamento e não implica paridade visual concluída.

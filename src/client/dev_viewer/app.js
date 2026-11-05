@@ -5,7 +5,7 @@
 
 import { Dasi3DFeatureViewer } from './dasi3dViewer.js';
 import { ARMORY_METADATA } from './dasi3dArmory.js';
-import { CLASSIC_CONCEPTS, conceptKeyForScenario, getScenarioConcept } from './classicConcepts.js';
+import { CLASSIC_CONCEPTS, conceptKeyForScenario, getScenarioConcept, getScenarioBlockout } from './classicConcepts.js';
 import { Dasi3DAvatarRenderer, DasiHeroClassModal, CLASS_DEFINITIONS } from './dasi3dAvatar.js';
 import { Dasi3DRealtimeArena } from './dasi3dRealtimeArena.js';
 import {
@@ -2187,10 +2187,16 @@ class DevClientApp {
     const splitTitle = document.getElementById('split-concept-art-title');
     const splitDesc = document.getElementById('split-concept-art-desc');
     const splitFeatures = document.getElementById('split-concept-art-features');
+    const blockoutLink = document.getElementById('scenario-blockout-download');
     const viewerBody = document.querySelector('.viewer-3d-body');
 
     this.updateSplitArtDisplay = (biome) => {
       const data = resolveArtDisplay(biome);
+      const blockoutPath = getScenarioBlockout(biome);
+      if (blockoutLink) {
+        blockoutLink.style.display = blockoutPath ? 'block' : 'none';
+        if (blockoutPath) blockoutLink.href = blockoutPath;
+      }
       if (splitImg) { splitImg.style.display = data.src ? 'block' : 'none'; if (data.src) splitImg.src = data.src; }
       if (splitTitle) {
         splitTitle.textContent = data.title;
