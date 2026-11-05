@@ -1784,6 +1784,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'EVT_01') {
     // EVT_01: Blood Castle - A Colossal Ponte do Martírio (120m x 18m)
     const bridge = new THREE.Mesh(new THREE.BoxGeometry(16, 2, 70), matStoneDark);
+    bridge.name = 'scenario_tile_box_floor';
     bridge.position.set(0, -1, 0);
     envGroup.add(bridge);
 
@@ -1840,6 +1841,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'VOL_02') {
     // VOL_02: Primeiro Baluarte & Portão Ciclópico de Ferro (25M HP destrutível)
     const floor = new THREE.Mesh(new THREE.BoxGeometry(58, 0.4, 38), matCobble);
+    floor.name = 'scenario_tile_box_floor';
     floor.position.y = -0.2;
     envGroup.add(floor);
 
@@ -1893,6 +1895,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'VOL_03') {
     // VOL_03: Pátio das Estátuas da Vida (4 estátuas com aura de respawn)
     const courtyard = new THREE.Mesh(new THREE.BoxGeometry(68, 0.4, 48), matCobble);
+    courtyard.name = 'scenario_tile_box_floor';
     courtyard.position.y = -0.2;
     envGroup.add(courtyard);
 
@@ -1936,6 +1939,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'VOL_04') {
     // VOL_04: Gargalo da Ponte Levadiça sobre Fosso de Lava (1400°C)
     const bridgeDrum = new THREE.Mesh(new THREE.BoxGeometry(6, 0.5, 24), matWood);
+    bridgeDrum.name = 'scenario_tile_box_floor';
     bridgeDrum.position.set(0, 0.05, 0);
     envGroup.add(bridgeDrum);
 
@@ -1970,6 +1974,7 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
   } else if (id === 'VOL_05') {
     // VOL_05: Salão do Trono Real & Selo da Coroa (canalização de 30s)
     const hallFloor = new THREE.Mesh(new THREE.BoxGeometry(42, 0.4, 42), matNacar);
+    hallFloor.name = 'scenario_tile_box_floor';
     hallFloor.position.y = -0.2;
     envGroup.add(hallFloor);
 

@@ -5,7 +5,7 @@ import { SCENARIO_CATALOG } from '../../../server/world/CollisionSystem.ts';
 // @ts-ignore - módulos do visualizador
 import { createEnvironment } from '../dasi3dContent.js';
 // @ts-ignore - módulo JS compartilhado com o browser
-import { createTiledFloor, loadTileEdits, saveTileEdits, validateTileDocument, tileDocumentLayers, makeTileDocument } from '../tileFloor.js';
+import { createTiledFloor, createTiledBoxTop, loadTileEdits, saveTileEdits, validateTileDocument, tileDocumentLayers, makeTileDocument } from '../tileFloor.js';
 
 describe('Piso modular visual', () => {
   it('subdivide pisos sem ampliar bordas e troca apenas a célula escolhida', () => {
@@ -156,6 +156,26 @@ describe('Piso modular visual', () => {
     assert.deepEqual(tiles.getObjects(), { '0,0': 'muro_x' });
   });
 
+  it('limita a grade ao topo do bloco, preservando a geometria e o vão da ponte', () => {
+    const box = new THREE.Mesh(new THREE.BoxGeometry(6, 0.5, 24), new THREE.MeshStandardMaterial());
+    box.position.y = 0.05;
+    const tiles = createTiledBoxTop(THREE, box)!;
+    assert.equal(tiles.cols, 2);
+    assert.equal(tiles.rows, 6);
+    assert.ok(Math.abs(tiles.mesh.position.y - 0.302) < 1e-9);
+    tiles.mesh.updateMatrixWorld(true);
+    assert.ok(new THREE.Raycaster(new THREE.Vector3(2, 5, 0), new THREE.Vector3(0, -1, 0)).intersectObject(tiles.mesh).length);
+    assert.equal(new THREE.Raycaster(new THREE.Vector3(4, 5, 0), new THREE.Vector3(0, -1, 0)).intersectObject(tiles.mesh).length, 0);
+    assert.equal(box.geometry.type, 'BoxGeometry');
+    box.rotation.y = 0.1;
+    assert.equal(createTiledBoxTop(THREE, box), null);
+    for (const id of ['VOL_02', 'VOL_03', 'VOL_04', 'VOL_05', 'EVT_01']) {
+      const env = createEnvironment(id, THREE);
+      assert.ok(env.tileFloor, id);
+      assert.ok(env.group.getObjectByName('scenario_tile_box_floor'), id);
+    }
+  });
+
   it('converte apenas pisos planos marcados e mantém arenas especiais intactas', () => {
     const supported: string[] = [];
     const unsupported: string[] = [];
@@ -167,7 +187,7 @@ describe('Piso modular visual', () => {
         assert.equal(env.group.getObjectByName('scenario_base_floor'), undefined);
       } else unsupported.push(scenario.id);
     }
-    assert.equal(supported.length, 46);
-    assert.deepEqual(unsupported, ['ICA_01', 'ICA_02', 'VOL_02', 'VOL_03', 'VOL_04', 'VOL_05', 'EVT_01', 'EVT_02', 'EVT_03', 'EVT_04']);
+    assert.equal(supported.length, 51);
+    assert.deepEqual(unsupported, ['ICA_01', 'ICA_02', 'EVT_02', 'EVT_03', 'EVT_04']);
   });
 });

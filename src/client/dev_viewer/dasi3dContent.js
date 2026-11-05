@@ -13,7 +13,7 @@
 // PALETAS DE MATERIAIS & CORES GÓTICAS PBR
 // ============================================================================
 import { buildScenario3D } from './dasi3dScenarios.js';
-import { createTiledFloor, loadTileEdits } from './tileFloor.js';
+import { createTiledFloor, createTiledBoxTop, loadTileEdits } from './tileFloor.js';
 import { GLTFLoader } from './libs/GLTFLoader.js';
 
 // ============================================================================
@@ -1678,15 +1678,18 @@ export function createEnvironment(envType, THREE) {
     const dynamicLights = [];
     const animParts = {};
     buildScenario3D(envType, THREE, envGroup, dynamicLights, animParts);
-    // Apenas pisos planos identificados são convertidos; arenas especiais preservam a geometria.
+    // Blocos sólidos mantêm sua geometria e recebem apenas uma grade no topo.
     const originalFloor = envGroup.getObjectByName('scenario_base_floor');
-    const tileFloor = createTiledFloor(THREE, originalFloor);
+    const boxFloor = envGroup.getObjectByName('scenario_tile_box_floor');
+    const tileFloor = originalFloor ? createTiledFloor(THREE, originalFloor) : createTiledBoxTop(THREE, boxFloor);
     if (tileFloor) {
       const edits = loadTileEdits(envType, tileFloor);
       tileFloor.applyEdits(edits.floor);
       tileFloor.applyEdits(edits.objects, 'objects');
-      envGroup.remove(originalFloor);
-      originalFloor.geometry.dispose();
+      if (originalFloor) {
+        envGroup.remove(originalFloor);
+        originalFloor.geometry.dispose();
+      }
       envGroup.add(tileFloor.mesh);
     }
     // A geometria específica do cenário deve permanecer visível. O GLB de bioma

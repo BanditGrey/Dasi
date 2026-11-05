@@ -19,6 +19,22 @@ const isObjectVariant = variant => OBJECT_VARIANTS.includes(variant);
 const ALIASES = { LORENCIA: 'LOR_01', NORIA: 'NOR_01', DEVIAS: 'DEV_01', DUNGEON: 'DNG_01', LOST_TOWER: 'LT_01', ATLANS: 'ATL_01', TARKAN: 'TAR_01', ICARUS: 'ICA_01', VALLEY_OF_LOREN: 'VOL_01', BLOOD_CASTLE: 'EVT_01' };
 export function canonicalTileScenario(id) { return ALIASES[id] || id; }
 
+/** Grade visual sobre o topo de um bloco retangular, sem substituir sua geometria. */
+export function createTiledBoxTop(THREE, box) {
+  if (!box || box.geometry?.type !== 'BoxGeometry' || Array.isArray(box.material) ||
+      box.rotation.x !== 0 || box.rotation.y !== 0 || box.rotation.z !== 0) return null;
+  const { width, height, depth } = box.geometry.parameters;
+  if (![width, height, depth].every(n => Number.isFinite(n) && n > 0)) return null;
+  const plane = new THREE.Mesh(new THREE.PlaneGeometry(width, depth), box.material);
+  plane.position.set(box.position.x, box.position.y + height * box.scale.y / 2 + 0.002, box.position.z);
+  plane.rotation.x = -Math.PI / 2;
+  plane.scale.set(box.scale.x, box.scale.z, 1);
+  plane.receiveShadow = box.receiveShadow;
+  const controller = createTiledFloor(THREE, plane);
+  plane.geometry.dispose();
+  return controller;
+}
+
 /** Recebe a malha plana original, preservando posição, rotação e material. */
 export function createTiledFloor(THREE, floor) {
   if (!floor || floor.geometry?.type !== 'PlaneGeometry' || Array.isArray(floor.material)) return null;
