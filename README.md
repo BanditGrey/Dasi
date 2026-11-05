@@ -1,12 +1,19 @@
 # DASI — Continent of Legend Reimagined
 
-Projeto de jogo MMORPG / ARPG de nova geração inspirado no clássico **Continent of Legend** (MU Online), combinando a lendária progressão por joias, asas majestosas, eventos épicos e combate visceral com **modelos 3D reais (`.glb`) compilados no Blender 5.2.2 LTS**, renderizados em WebGL com PBR, iluminação dinâmica e sistemas de partículas GPU a 60 FPS.
+Protótipo de MMORPG / ARPG inspirado na atmosfera clássica de **MU Online**, com identidade própria, visualizador WebGL e sistemas de jogo em desenvolvimento. Não é um produto pronto para produção.
 
 ---
 
-## 🏛️ Status do Projeto: 56 Cenários Canônicos Implementados, Concept Arts AAA & Modelos 3D GLB Reais
+## Estado atual e documentação
 
-O projeto conta com arquitetura autoritativa completa, **100% de testes automatizados aprovados (133 testes em 41 suítes)**, **type-check limpo (`tsc --noEmit`)** e modelos 3D compilados em alta fidelidade:
+- **Cenários:** 56 concepts individuais e 56 GLBs procedurais de blockout. O editor experimental permite alterações visuais em todos os cenários e exportação individual ou em lote; isso não atualiza colisões ou o servidor. As bordas circulares ainda têm áreas não editáveis.
+- **Personagens:** cinco concepts iniciais e cinco blockouts GLB modulares, com 60 peças experimentais de armadura. São formas procedurais simples, sem rig esquelético, skinning ou animações GLTF; não são modelos finais.
+- **Servidor:** protótipo sem autenticação real, persistência completa ou autoridade integral de movimento. Não exponha a redes não confiáveis.
+- **Validação:** execute `npm run typecheck` e `npm test`; os testes automatizados não substituem revisão visual, testes em navegador nem medição de desempenho.
+
+Guias e planos: [pisos e exportação](docs/level_design/Pisos_Modulares.md), [pendências dos mapas](docs/level_design/Plano_Mapas_Modulares.md), [personagens e slots de armadura](docs/art/Personagens_Modulares.md) e [plano de personagens](docs/art/Plano_Personagens.md).
+
+Estrutura geral (alguns arquivos históricos são apenas referências ou protótipos):
 
 ```text
 Dasi/
@@ -18,8 +25,8 @@ Dasi/
 │   ├── Economy_and_Crafting.md           # Economia das Joias e Máquina do Caos
 │   ├── PVP_and_Castle_Siege.md           # Sistema Moral de PK e Batalha pelo Castelo
 │   ├── art/                              # Galeria de Arte Conceitual Oficial
-│   │   ├── Scenery_Art_Gallery.md        # Catálogo Completo das 10 Concept Arts AAA
-│   │   └── scenery/                      # Imagens Panorâmicas 16:9 em Ultra-HD
+│   │   ├── Scenery_Art_Gallery.md        # Galeria histórica de referências
+│   │   └── scenery/                      # Referências de cenários
 │   ├── level_design/
 │   │   ├── All_56_Scenarios_Master_Index.md  # Índice Geral dos 56 Cenários Canônicos
 │   │   ├── Lorencia_Level_Design.md      # Castelo de Loren & Cidadela de Lorencia
@@ -34,7 +41,7 @@ Dasi/
 │   │   └── Event_Arenas_Level_Design.md  # Blood Castle, Devil Square, Chaos Castle e Coliseu
 │   └── development_logs/                 # Registros e Histórico Técnico de Sessões
 │
-├── prototypes/3d_scenery/                # Modelos 3D Reais Compilados (.glb PBR)
+├── prototypes/3d_scenery/                # Modelos GLB de referência existentes
 │   ├── lorencia_citadel.glb              # Cidadela de Lorencia (56m x 56m)
 │   ├── noria_feywood.glb                 # Santuário de Noria (Sequóia 36m, Máquina do Caos)
 │   ├── devias_boreal.glb                 # Fortaleza de Devias (Braseiro Rei 12m, Catedral)
@@ -53,13 +60,13 @@ Dasi/
 │   │   │   ├── style.css                 # Interface Sombria e Dourada
 │   │   │   ├── app.js                    # WebSocket Client, Alternância de Cenários
 │   │   │   ├── dasi3dRealtimeArena.js    # Motor 3D Three.js com Câmera e Partículas GPU
-│   │   │   ├── dasi3dContent.js          # Pipeline de Carregamento GLB e Remoção de Mocks
+│   │   │   ├── dasi3dContent.js          # Geradores procedurais e carregamento de GLB
 │   │   │   ├── dasiCollisionEngine.js    # Motor de Colisão Física com Deslizamento
-│   │   │   ├── models/                   # Modelos 3D Reais GLB Sincronizados
-│   │   │   └── art/                      # 10 Concept Arts Oficiais AAA (16:9)
+│   │   │   ├── models/                   # GLBs existentes, blockouts e módulos experimentais
+│   │   │   └── art/                      # Referências e concepts
 │   │   └── gameplay/                     # Sistemas de Combate Client-Side (TypeScript)
 │   │
-│   ├── server/                           # Servidor Autoritativo Node.js / TypeScript
+│   ├── server/                           # Protótipo de servidor Node.js / TypeScript
 │   │   ├── network/                      # GameServer WebSocket (Porta 8299)
 │   │   ├── world/                        # CollisionSystem (Catálogo dos Cenários Canônicos)
 │   │   ├── combat/                       # Motor de Combate Autoritativo & Spawner
@@ -88,8 +95,9 @@ npm start
 Abra no navegador:
 👉 **`http://localhost:8080`**
 
-- **Navegação pelos 10 Cenários Mestre:** Selecione qualquer um dos reinos no menu superior para carregar instantaneamente o modelo 3D real correspondente com partículas dinâmicas e iluminação PBR.
-- **Comparador Split-Screen:** Clique em **"Comparar com Concept Art"** para visualizar a tela dividida lado a lado (3D ao vivo vs Concept Art original).
+- **Cenários:** escolha um dos 56 cenários no visualizador; o editor de tiles e os botões de exportação são experimentais.
+- **Comparador:** clique em **"Comparar com Concept Art"** para ver a referência ao lado da prévia 3D.
+- **Heróis modulares:** na categoria Heróis, ative **Visualizar blockout modular** para experimentar a troca visual de peças; as mudanças não são salvas nem afetam o jogo.
 - **Inspeção de Colisão:** Ative o botão de colisão para visualizar os colisores físicos em tempo real.
 
 ### Limitações de segurança e persistência
@@ -128,7 +136,7 @@ Os **56 cenários canônicos** vivem em uma **única fonte de verdade**:
 ### Comandos principais
 
 ```bash
-npm start          # Servidor autoritativo + Dev Viewer em http://localhost:8080
+npm start          # Servidor protótipo + Dev Viewer em http://localhost:8080
 npm test           # todos os arquivos src/**/*.test.ts
 npm run typecheck  # tsc --noEmit (strict)
 npm run test:parity # paridade do catálogo servidor ⇄ cliente
