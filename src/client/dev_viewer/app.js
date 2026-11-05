@@ -1747,11 +1747,21 @@ class DevClientApp {
       btnChaosForge.addEventListener('click', () => this.triggerChaosForge());
     }
 
-    // Botões de Teletransporte de Mapa
-    ['lorencia', 'noria', 'devias'].forEach((mKey) => {
+    // Botões de Teletransporte de Mapa (faixa de reinos da Arena de Combate)
+    const teleportTargets = {
+      lorencia: 'LORENCIA',
+      noria: 'NORIA',
+      devias: 'DEVIAS',
+      dungeon: 'DUNGEON',
+      lost_tower: 'LOST_TOWER',
+      atlans: 'ATLANS',
+      tarkan: 'TARKAN',
+      icarus: 'ICARUS',
+    };
+    Object.entries(teleportTargets).forEach(([mKey, mapId]) => {
       const btn = document.getElementById(`btn-teleport-${mKey}`);
       if (btn) {
-        btn.addEventListener('click', () => this.teleportMap(mKey.toUpperCase()));
+        btn.addEventListener('click', () => this.teleportMap(mapId));
       }
     });
 
@@ -2086,6 +2096,7 @@ class DevClientApp {
       const canonicalBiome = artData[biome] ? biome : (biome && biome.includes('_') ? {
         LOR: 'LORENCIA', NOR: 'NORIA', DEV: 'DEVIAS', DNG: 'DUNGEON',
         LT: 'LOST_TOWER', ATL: 'ATLANS', TAR: 'TARKAN', ICA: 'ICARUS',
+        VOL: 'VALLEY_OF_LOREN', EVT: 'BLOOD_CASTLE',
         HERO: biome
       }[biome.split('_')[0]] || biome : (biome || 'LORENCIA'));
 
@@ -2481,7 +2492,9 @@ class DevClientApp {
           });
           const selectScenario47 = document.getElementById('select-scenario-47');
           if (selectScenario47) {
-            const firstOption = Array.from(selectScenario47.options).find(o => o.value.startsWith(id.substring(0, 3)));
+            const prefix = id.startsWith('VOL') || id.startsWith('VALLEY') || id.startsWith('SIEGE') ? 'VOL'
+              : (id.startsWith('EVT') || id.startsWith('EVENT') ? 'EVT' : id.substring(0, 3));
+            const firstOption = Array.from(selectScenario47.options).find(o => o.value.startsWith(prefix));
             if (firstOption) selectScenario47.value = firstOption.value;
           }
         }
@@ -2805,7 +2818,8 @@ class DevClientApp {
   updateMapButtonsUI(mapId) {
     const biomeMap = {
       LOR: 'LORENCIA', NOR: 'NORIA', DEV: 'DEVIAS', DNG: 'DUNGEON',
-      LT: 'LOST_TOWER', ATL: 'ATLANS', TAR: 'TARKAN', ICA: 'ICARUS'
+      LT: 'LOST_TOWER', ATL: 'ATLANS', TAR: 'TARKAN', ICA: 'ICARUS',
+      VOL: 'VALLEY_OF_LOREN', EVT: 'BLOOD_CASTLE'
     };
     const prefix = (mapId || '').split('_')[0].toUpperCase();
     const activeBiome = biomeMap[prefix] || (mapId || '').toUpperCase();
@@ -2840,7 +2854,12 @@ class DevClientApp {
         LOST_TOWER: 'TORRE PERDIDA DE BALROG',
         ATLANS: 'REINO SUBMARINO DE ATLANS',
         TARKAN: 'DESERTO CARMESIM DE TARKAN',
-        ICARUS: 'ARQUIPÉLAGO CELESTE DE ICARUS'
+        ICARUS: 'ARQUIPÉLAGO CELESTE DE ICARUS',
+        VALLEY_OF_LOREN: 'VALE DE LOREN — CERCO AO CASTELO',
+        BLOOD_CASTLE: 'BLOOD CASTLE — PONTE DO MARTÍRIO',
+        DEVIL_SQUARE: 'DEVIL SQUARE — PRAÇA PENTAGRAMAL',
+        CHAOS_CASTLE: 'CHAOS CASTLE — COLISEU SUSPENSO',
+        DUEL_COLISEUM: 'COLISEU DE DUELOS — ARENA DA GLÓRIA'
       };
       this.domMapBadge.textContent = biomeLabels[activeBiome] || activeBiome;
     }
@@ -3065,6 +3084,16 @@ class DevClientApp {
       this.teleportMap('NORIA');
     } else if (code === 'Digit3') {
       this.teleportMap('DEVIAS');
+    } else if (code === 'Digit4') {
+      this.teleportMap('DUNGEON');
+    } else if (code === 'Digit5') {
+      this.teleportMap('LOST_TOWER');
+    } else if (code === 'Digit6') {
+      this.teleportMap('ATLANS');
+    } else if (code === 'Digit7') {
+      this.teleportMap('TARKAN');
+    } else if (code === 'Digit8') {
+      this.teleportMap('ICARUS');
     }
   }
 
@@ -4511,6 +4540,11 @@ class DevClientApp {
 }
 
 // Iniciação no carregamento da página
-window.addEventListener('DOMContentLoaded', () => {
+// (o script é um módulo deferido: se o DOM já estiver pronto, inicializa direto)
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', () => {
+    window.dasiClient = new DevClientApp();
+  });
+} else {
   window.dasiClient = new DevClientApp();
-});
+}

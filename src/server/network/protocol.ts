@@ -155,6 +155,8 @@ export interface CharacterSummary {
   agility: number;
   vitality: number;
   energy: number;
+  /** Comando (exclusivo do Dark Lord / Soberano Imperial) */
+  command: number;
   zen: number;
   statPoints: number;
 }

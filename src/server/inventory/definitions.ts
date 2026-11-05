@@ -2923,69 +2923,6 @@ export const ITEM_DEFINITIONS: Record<string, ItemDefinition> = {
     validEquipSlots: [EquipmentSlot.WEAPON_RIGHT],
     requirements: { strength: 310, agility: 60, allowedClasses: ['DK'] },
   },
-  kundun_staff: {
-    id: 'kundun_staff',
-    name: 'Staff of Kundun',
-    category: ItemCategory.WEAPON,
-    width: 2,
-    height: 4,
-    baseDurability: 140,
-    minDamage: 160,
-    maxDamage: 235,
-    attackSpeed: 35,
-    isTwoHanded: false,
-    validEquipSlots: [EquipmentSlot.WEAPON_RIGHT],
-    requirements: { strength: 90, energy: 380, allowedClasses: ['DW', 'MG'] },
-  },
-
-  // ==========================================
-  // BOX OF KUNDUN (+1 ATÉ +5)
-  // ==========================================
-  box_of_kundun_1: {
-    id: 'box_of_kundun_1',
-    name: 'Box of Kundun +1',
-    category: ItemCategory.BOX,
-    width: 1,
-    height: 1,
-    baseDurability: 1,
-    requirements: { strength: 0, agility: 0 },
-  },
-  box_of_kundun_2: {
-    id: 'box_of_kundun_2',
-    name: 'Box of Kundun +2',
-    category: ItemCategory.BOX,
-    width: 1,
-    height: 1,
-    baseDurability: 1,
-    requirements: { strength: 0, agility: 0 },
-  },
-  box_of_kundun_3: {
-    id: 'box_of_kundun_3',
-    name: 'Box of Kundun +3',
-    category: ItemCategory.BOX,
-    width: 1,
-    height: 1,
-    baseDurability: 1,
-    requirements: { strength: 0, agility: 0 },
-  },
-  box_of_kundun_4: {
-    id: 'box_of_kundun_4',
-    name: 'Box of Kundun +4',
-    category: ItemCategory.BOX,
-    width: 1,
-    height: 1,
-    baseDurability: 1,
-    requirements: { strength: 0, agility: 0 },
-  },
-  box_of_kundun_5: {
-    id: 'box_of_kundun_5',
-    name: 'Box of Kundun +5',
-    category: ItemCategory.BOX,
-    width: 1,
-    height: 1,
-    baseDurability: 1,
-    requirements: { strength: 0, agility: 0 },
-  },
 
   // ==========================================
   // ITENS DE EVENTO & ENTRADAS

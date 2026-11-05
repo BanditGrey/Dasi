@@ -3,21 +3,27 @@
   "version": "1.0.0",
   "description": "Dasi MMORPG Core Systems & Server Infrastructure",
   "type": "module",
+  "imports": {
+    "#dasi/server/*": "./src/server/*"
+  },
   "scripts": {
     "start": "node --experimental-strip-types src/server/network/GameServer.ts",
-    "test": "node --experimental-strip-types --test src/server/inventory/tests/inventory.test.ts src/server/inventory/tests/chaos_and_economy.test.ts src/server/inventory/tests/armory.test.ts src/server/inventory/tests/expanded_systems.test.ts src/server/network/tests/server.test.ts src/server/combat/tests/combat.test.ts src/client/gameplay/tests/gameplay_action.test.ts src/client/gameplay/tests/idle_combat.test.ts src/server/world/tests/collision.test.ts src/server/bosses/tests/bosses.test.ts src/server/events/tests/events.test.ts src/server/dungeons/tests/dungeons.test.ts",
+    "test": "node --experimental-strip-types --test src/server/inventory/tests/inventory.test.ts src/server/inventory/tests/chaos_and_economy.test.ts src/server/inventory/tests/armory.test.ts src/server/inventory/tests/expanded_systems.test.ts src/server/network/tests/server.test.ts src/server/combat/tests/combat.test.ts src/client/gameplay/tests/gameplay_action.test.ts src/client/gameplay/tests/idle_combat.test.ts src/server/world/tests/collision.test.ts src/server/world/tests/scenario_parity.test.ts src/server/world/tests/scenario_3d_coverage.test.ts src/server/bosses/tests/bosses.test.ts src/server/events/tests/events.test.ts src/server/dungeons/tests/dungeons.test.ts",
     "test:bosses": "node --experimental-strip-types --test src/server/bosses/tests/bosses.test.ts",
     "test:events": "node --experimental-strip-types --test src/server/events/tests/events.test.ts",
     "test:dungeons": "node --experimental-strip-types --test src/server/dungeons/tests/dungeons.test.ts",
     "test:armory": "node --experimental-strip-types --test src/server/inventory/tests/armory.test.ts",
-    "test:collision": "node --experimental-strip-types --test src/server/world/tests/collision.test.ts",
+    "test:collision": "node --experimental-strip-types --test src/server/world/tests/collision.test.ts src/server/world/tests/scenario_parity.test.ts",
     "test:idle": "node --experimental-strip-types --test src/client/gameplay/tests/idle_combat.test.ts",
     "test:action": "node --experimental-strip-types --test src/client/gameplay/tests/gameplay_action.test.ts",
     "test:inventory": "node --experimental-strip-types --test src/server/inventory/tests/inventory.test.ts src/server/inventory/tests/chaos_and_economy.test.ts",
     "test:chaos": "node --experimental-strip-types --test src/server/inventory/tests/chaos_and_economy.test.ts",
     "test:network": "node --experimental-strip-types --test src/server/network/tests/server.test.ts",
     "test:combat": "node --experimental-strip-types --test src/server/combat/tests/combat.test.ts",
-    "test:watch": "node --experimental-strip-types --test --watch src/server/inventory/tests/inventory.test.ts"
+    "test:watch": "node --experimental-strip-types --test --watch src/server/inventory/tests/inventory.test.ts",
+    "test:parity": "node --experimental-strip-types --test src/server/world/tests/scenario_parity.test.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test:3d": "node --experimental-strip-types --test src/server/world/tests/scenario_3d_coverage.test.ts"
   },
   "keywords": [
     "mmorpg",
@@ -29,7 +35,8 @@
   "author": "Dasi Systems & Network Engineering Team",
   "license": "ISC",
   "devDependencies": {
-    "@types/node": "^26.6.6"
+    "@types/node": "^26.6.6",
+    "typescript": "^5.9.2"
   },
   "dependencies": {
     "@types/three": "^0.187.0",

@@ -29,6 +29,14 @@ export const GLTF_BIOME_MAP = {
   TARKAN: 'models/tarkan_desert.glb',
   VALLEY_OF_LOREN: 'models/valley_of_loren_citadel.glb',
   BLOOD_CASTLE: 'models/blood_castle_bridge.glb',
+  // Arenas de evento sem GLB dedicado reutilizam a arte 3D canônica do bioma
+  // temático mais próximo (a geometria procedural de dasi3dScenarios.js cobre o resto).
+  EVT_02: 'models/dungeon_catacombs.glb',
+  EVT_03: 'models/lost_tower_abyss.glb',
+  EVT_04: 'models/lorencia_citadel.glb',
+  DEVIL_SQUARE: 'models/dungeon_catacombs.glb',
+  CHAOS_CASTLE: 'models/lost_tower_abyss.glb',
+  DUEL_COLISEUM: 'models/lorencia_citadel.glb',
 };
 
 // ============================================================================
@@ -184,17 +192,34 @@ export function createProceduralCanvasTexture(type, THREE, repeatX = 6, repeatY 
 }
 
 /**
+ * Mapa de resolução de ID de cenário (ou código de bioma) para o bioma/zona
+ * canônico usado nos modelos GLB. As 4 arenas de evento usam a arte da zona
+ * temática (BLOOD_CASTLE, DEVIL_SQUARE, CHAOS_CASTLE, DUEL_COLISEUM).
+ */
+export function resolveScenarioBiome(scenarioId) {
+  const id = String(scenarioId || '').toUpperCase();
+  if (GLTF_BIOME_MAP[id]) return id;
+  const prefix = id.split('_')[0];
+  const prefixMap = {
+    LOR: 'LORENCIA', NOR: 'NORIA', DEV: 'DEVIAS', DNG: 'DUNGEON',
+    LT: 'LOST_TOWER', ATL: 'ATLANS', TAR: 'TARKAN', ICA: 'ICARUS',
+    VOL: 'VALLEY_OF_LOREN', EVT: 'BLOOD_CASTLE',
+    VALLEY: 'VALLEY_OF_LOREN', EVENT: 'BLOOD_CASTLE', SIEGE: 'VALLEY_OF_LOREN',
+  };
+  const byPrefix = prefixMap[prefix] || id;
+  // Arenas de evento têm arte própria por cenário
+  if (prefix === 'EVT' && GLTF_BIOME_MAP[`EVT_${id.split('_')[1]}`]) {
+    return `EVT_${id.split('_')[1]}`;
+  }
+  return byPrefix;
+}
+
+/**
  * Carregador Assíncrono do Cenário 3D Real (GLB PBR) compilado pelo Blender 5.2
  */
 export function loadBiomeGLB(biomeId, THREE, targetGroup, onComplete) {
   if (typeof window === 'undefined') return; // Safe for Node.js
-  const biomePrefix = biomeId.includes('_') ? biomeId.split('_')[0] : biomeId;
-  const prefixMap = {
-    LOR: 'LORENCIA', NOR: 'NORIA', DEV: 'DEVIAS', DNG: 'DUNGEON',
-    LT: 'LOST_TOWER', ATL: 'ATLANS', TAR: 'TARKAN', ICA: 'ICARUS',
-    VOL: 'VALLEY_OF_LOREN', EVT: 'BLOOD_CASTLE'
-  };
-  const canonicalBiome = prefixMap[biomePrefix] || biomeId;
+  const canonicalBiome = resolveScenarioBiome(biomeId);
   const glbPath = GLTF_BIOME_MAP[canonicalBiome];
   if (!glbPath) return;
 

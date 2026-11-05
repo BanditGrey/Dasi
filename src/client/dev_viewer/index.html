@@ -12,7 +12,8 @@
   {
     "imports": {
       "three": "./libs/three.module.js",
-      "three/addons/": "./libs/"
+      "three/addons/": "./libs/",
+      "#dasi/server/": "/src/server/"
     }
   }
   </script>
@@ -116,6 +117,11 @@
           <button class="btn-map-teleport active-map" id="btn-teleport-lorencia" data-map="LORENCIA" title="Teletransportar para Lorencia [Atalho: 1]">🏰 Lorencia</button>
           <button class="btn-map-teleport" id="btn-teleport-noria" data-map="NORIA" title="Teletransportar para Noria [Atalho: 2]">🌿 Noria</button>
           <button class="btn-map-teleport" id="btn-teleport-devias" data-map="DEVIAS" title="Teletransportar para Devias [Atalho: 3]">❄️ Devias</button>
+          <button class="btn-map-teleport" id="btn-teleport-dungeon" data-map="DUNGEON" title="Teletransportar para Dungeon [Atalho: 4]">💀 Dungeon</button>
+          <button class="btn-map-teleport" id="btn-teleport-lost_tower" data-map="LOST_TOWER" title="Teletransportar para Lost Tower [Atalho: 5]">🔥 Lost Tower</button>
+          <button class="btn-map-teleport" id="btn-teleport-atlans" data-map="ATLANS" title="Teletransportar para Atlans [Atalho: 6]">🌊 Atlans</button>
+          <button class="btn-map-teleport" id="btn-teleport-tarkan" data-map="TARKAN" title="Teletransportar para Tarkan [Atalho: 7]">🏜️ Tarkan</button>
+          <button class="btn-map-teleport" id="btn-teleport-icarus" data-map="ICARUS" title="Teletransportar para Icarus [Atalho: 8]">🪽 Icarus</button>
         </div>
         <div class="arena-telemetry-strip">
           <span class="arena-stat-badge">Monstros Vivos: <strong id="arena-mobs-counter">0</strong></span>
@@ -463,9 +469,9 @@
             </div>
           </div>
 
-          <!-- Sub-seletores de Cenários (8 Biomas & 47 Cenários Canônicos) -->
+          <!-- Sub-seletores de Cenários (8 Biomas + Cerco & Eventos: 56 Cenários Canônicos) -->
           <div class="control-group" id="sub-group-environments" style="display: flex;">
-            <label class="control-label">TODOS OS 47 CENÁRIOS CANÔNICOS EM 3D:</label>
+            <label class="control-label">TODOS OS 56 CENÁRIOS CANÔNICOS EM 3D:</label>
             <select class="scenario-dropdown-3d" id="select-scenario-47" style="width: 100%; background: #0f172a; border: 1px solid #38bdf8; color: #f8fafc; border-radius: 6px; padding: 8px 10px; font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 600; margin-bottom: 8px; cursor: pointer;">
               <optgroup label="🏰 LORENCIA (7 Cenários)">
                 <option value="LOR_01" selected>LOR_01: Citadel Plaza & Fonte do Arcanjo (15 colisores)</option>
@@ -527,8 +533,21 @@
                 <option value="TAR_05">TAR_05: A Cratera de Areia Movediça de Zaikan (4 colisores)</option>
               </optgroup>
               <optgroup label="🪽 ICARUS (2 Cenários)">
-                <option value="ICA_01">ICA_01: Cidadela da Levitação & Pontes de Luz (4 colisores)</option>
-                <option value="ICA_02">ICA_02: Ninho de Lótus do Dark Phoenix (4 colisores)</option>
+                <option value="ICA_01">ICA_01: Cidadela da Levitação & Pontes de Luz (2 colisores)</option>
+                <option value="ICA_02">ICA_02: Ninho de Lótus do Dark Phoenix (2 colisores)</option>
+              </optgroup>
+              <optgroup label="⚔️ VALLEY OF LOREN & CASTLE SIEGE (5 Cenários)">
+                <option value="VOL_01">VOL_01: Campo de Guerra & Acampamento das Alianças (8 colisores)</option>
+                <option value="VOL_02">VOL_02: Primeiro Baluarte & Portão Ciclópico 25M HP (5 colisores)</option>
+                <option value="VOL_03">VOL_03: Pátio das Estátuas da Vida (8 colisores)</option>
+                <option value="VOL_04">VOL_04: Gargalo da Ponte Levadiça sobre Lava (6 colisores)</option>
+                <option value="VOL_05">VOL_05: Salão do Trono Real & Selo da Coroa (11 colisores)</option>
+              </optgroup>
+              <optgroup label="🩸 EVENT ARENAS & DESAFIOS (4 Cenários)">
+                <option value="EVT_01">EVT_01: Blood Castle (Ponte de Martírio) (22 colisores)</option>
+                <option value="EVT_02">EVT_02: Devil Square (Praça Pentagramal) (6 colisores)</option>
+                <option value="EVT_03">EVT_03: Chaos Castle (Coliseu Suspenso) (9 colisores)</option>
+                <option value="EVT_04">EVT_04: Coliseu de Duelos (Arena da Glória) (6 colisores)</option>
               </optgroup>
             </select>
             <div class="sub-buttons-grid">
@@ -540,6 +559,8 @@
               <button class="btn-sub-entity" data-cat="ENVIRONMENT" data-id="ATLANS">🌊 Atlans (7 Cenários)</button>
               <button class="btn-sub-entity" data-cat="ENVIRONMENT" data-id="TARKAN">🏜️ Tarkan (5 Cenários)</button>
               <button class="btn-sub-entity" data-cat="ENVIRONMENT" data-id="ICARUS">🪽 Icarus (2 Cenários)</button>
+              <button class="btn-sub-entity" data-cat="ENVIRONMENT" data-id="VALLEY_OF_LOREN">⚔️ Castle Siege (5 Cenários)</button>
+              <button class="btn-sub-entity" data-cat="ENVIRONMENT" data-id="EVENT_ARENAS">🩸 Event Arenas (4 Cenários)</button>
             </div>
           </div>
 
@@ -590,7 +611,7 @@
             <ul class="fidelity-list">
               <li><strong>Heróis:</strong> DK (Dragon/Phoenix), DW (Grand Soul) e ELF (Spirit)</li>
               <li><strong>Monstros:</strong> Spider, Budge Dragon, Bull Fighter e Skeleton</li>
-              <li><strong>Cenários:</strong> Lorencia (Castelo), Noria (Feywood), Devias (Boreal), Atlans (Thalassa) e Icarus (Aethel)</li>
+              <li><strong>Cenários:</strong> 56 cenários canônicos — 8 biomas + Valley of Loren (Castle Siege) e as 4 Event Arenas</li>
               <li><strong>Física:</strong> PBR Metallic-Roughness, ACES Filmic Tone Mapping e Animações</li>
             </ul>
           </div>

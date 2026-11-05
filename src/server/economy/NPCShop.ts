@@ -238,7 +238,13 @@ export class NPCShopSystem {
   ): { success: boolean; zenGained: number; zenRemaining: number; message: string; inventoryState?: SerializedInventoryState; error?: string } {
     const placed = session.inventory.getPlacedItem(itemUuid);
     if (!placed) {
-      return { success: false, zenGained: 0, zenRemaining: session.character.zen ?? 0, error: 'Item não encontrado no inventário.' };
+      return {
+        success: false,
+        zenGained: 0,
+        zenRemaining: session.character.zen ?? 0,
+        message: 'Item não encontrado no inventário.',
+        error: 'Item não encontrado no inventário.',
+      };
     }
 
     const price = this.getSellPrice(placed.item);

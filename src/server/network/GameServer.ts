@@ -412,11 +412,25 @@ export class GameServer {
       pathname = '/index.html';
     }
 
-    const resolvedStaticDir = path.resolve(this.staticDir);
-    const filePath = path.resolve(resolvedStaticDir, '.' + pathname);
+    // Os diretórios de teste e artefatos de build nunca são servidos publicamente.
+    if (/\/(tests|node_modules|__pycache__|dist|build)(\/|$)/.test(pathname)) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      res.end('403 Forbidden');
+      return;
+    }
 
-    // Proteção contra path traversal
-    if (!filePath.startsWith(resolvedStaticDir)) {
+    // O Dev Viewer importa módulos de jogo compartilhados com o servidor
+    // (ex.: /src/server/world/CollisionSystem.ts), então /src/** é servido a partir
+    // da raiz do repositório. Todo o resto é resolvido no diretório do Dev Viewer.
+    const resolvedStaticDir = path.resolve(this.staticDir);
+    const sharedSourceRoot = path.resolve(process.cwd(), 'src');
+    const isSharedSource = pathname === '/src' || pathname.startsWith('/src/');
+    const baseDir = isSharedSource ? path.resolve(process.cwd()) : resolvedStaticDir;
+    const allowedRoot = isSharedSource ? sharedSourceRoot : resolvedStaticDir;
+    const filePath = path.resolve(baseDir, '.' + pathname);
+
+    // Proteção contra path traversal: nada fora da raiz permitida é servido
+    if (!filePath.startsWith(allowedRoot + path.sep)) {
       res.writeHead(403, { 'Content-Type': 'text/plain' });
       res.end('403 Forbidden');
       return;
@@ -441,6 +455,14 @@ export class GameServer {
         '.ico': 'image/x-icon',
         '.glb': 'model/gltf-binary',
         '.gltf': 'model/gltf+json',
+        // Módulos fonte servidos ao Dev Viewer (o módulo compartilhado de colisão
+        // vive em src/server/world e é importado pelo cliente WebGL).
+        '.ts': 'application/javascript; charset=utf-8',
+        '.mjs': 'application/javascript; charset=utf-8',
+        '.map': 'application/json; charset=utf-8',
+        '.wasm': 'application/wasm',
+        '.woff': 'font/woff',
+        '.woff2': 'font/woff2',
       };
 
       const contentType = mimeTypes[ext] || 'application/octet-stream';
@@ -1479,7 +1501,7 @@ export class GameServer {
       const picked = bc.pickupArchangelWeapon(session.sessionId);
       this.broadcastPacket(Opcodes.MSG_BLOOD_CASTLE_UPDATE_RES.opcode, Opcodes.MSG_BLOOD_CASTLE_UPDATE_RES.subcode, {
         stage: bc.stage,
-        weaponCarrier: session.characterName,
+        weaponCarrier: session.character.name,
         success: picked,
       });
     } else if (payload.action === 'DELIVER_WEAPON') {

@@ -349,12 +349,12 @@ export class CombatEngine {
 
     if (primaryWeapon) {
       const wDmg = Item.calculateDamage(primaryWeapon);
-      minAttack += wDmg.minDamage;
-      maxAttack += wDmg.maxDamage;
-      attackRate += Math.floor(wDmg.maxDamage * 1.2);
-      if (primaryWeapon.hasLuck) hasLuck = true;
-      if (primaryWeapon.hasSkill) hasSkill = true;
-      if (primaryWeapon.excellentOptions && (primaryWeapon.excellentOptions & WeaponExcellentOption.INCREASE_DMG_2_PERCENT)) {
+      minAttack += wDmg.min;
+      maxAttack += wDmg.max;
+      attackRate += Math.floor(wDmg.max * 1.2);
+      if (primaryWeapon.luck) hasLuck = true;
+      if (primaryWeapon.skill) hasSkill = true;
+      if (primaryWeapon.excellentMask && (primaryWeapon.excellentMask & WeaponExcellentOption.INCREASE_DMG_2_PERCENT)) {
         excellentBonusDmgPercent += 2;
       }
     }

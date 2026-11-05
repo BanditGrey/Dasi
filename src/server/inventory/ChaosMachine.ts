@@ -109,7 +109,16 @@ export class ChaosMachine {
       const sacrificeItems = items.filter((it) => {
         if (it.defId.startsWith('jewel_')) return false;
         const def = Item.getDefinition(it);
-        const isGear = [ItemCategory.WEAPON, ItemCategory.ARMOR, ItemCategory.SHIELD, ItemCategory.HELM, ItemCategory.PANTS, ItemCategory.GLOVES, ItemCategory.BOOTS].includes(def.category);
+        const gearCategories: readonly string[] = [
+          ItemCategory.WEAPON,
+          ItemCategory.ARMOR,
+          ItemCategory.SHIELD,
+          ItemCategory.HELM,
+          ItemCategory.PANTS,
+          ItemCategory.GLOVES,
+          ItemCategory.BOOTS,
+        ];
+        const isGear = gearCategories.includes(def.category);
         return isGear && it.level >= 4 && it.optionLevel >= 4;
       });
 

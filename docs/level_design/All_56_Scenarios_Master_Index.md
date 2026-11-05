@@ -4,7 +4,38 @@
 > **Documento:** Master Scenario & Collision Registry  
 > **Total de Cenários:** 56 Cenários Canônicos (8 Biomas Principais + Zonas de Cerco & Eventos)  
 > **Métrica do Mundo:** $1\text{ un} = 1\text{ metro}$ ($100\text{ cm}$)  
-> **Status:** Aprovado para Produção / Goal Execution  
+> **Status:** 🟢 **Implementado e Homologado** — catálogo único em código (`SCENARIO_CATALOG`), compartilhado entre servidor e cliente  
+> **Fonte de Verdade:** [`src/server/world/CollisionSystem.ts`](../../src/server/world/CollisionSystem.ts) → constante `SCENARIO_CATALOG`  
+> **Validação Automatizada:** [`src/server/world/tests/collision.test.ts`](../../src/server/world/tests/collision.test.ts) e [`scenario_parity.test.ts`](../../src/server/world/tests/scenario_parity.test.ts)  
+
+> ℹ️ **Nota de implementação:** este documento é a especificação de *design* (dimensões conceituais e POIs).
+> Os volumes de colisão efetivamente usados em runtime vivem **apenas** em `SCENARIO_CATALOG`;
+> qualquer alteração de geometria deve ser feita lá e é validada automaticamente pelo teste de paridade
+> cliente ⇄ servidor.
+
+## 📌 Mapa de Rastreabilidade (Doc ⇄ Código)
+
+| Zona | Faixa de IDs | `biome` no catálogo | `instanced` | Qtd. |
+| :--- | :--- | :--- | :---: | :---: |
+| Lorencia | `LOR_01`..`LOR_07` | `LORENCIA` | não | 7 |
+| Noria | `NOR_01`..`NOR_07` | `NORIA` | não | 7 |
+| Devias | `DEV_01`..`DEV_06` | `DEVIAS` | não | 6 |
+| Dungeon | `DNG_01`..`DNG_06` | `DUNGEON` | não | 6 |
+| Lost Tower | `LT_01`..`LT_07` | `LOST_TOWER` | não | 7 |
+| Atlans | `ATL_01`..`ATL_07` | `ATLANS` | não | 7 |
+| Tarkan | `TAR_01`..`TAR_05` | `TARKAN` | não | 5 |
+| Icarus | `ICA_01`..`ICA_02` | `ICARUS` | não | 2 |
+| Valley of Loren (Castle Siege) | `VOL_01`..`VOL_05` | `VALLEY_OF_LOREN` | sim | 5 |
+| Event Arenas | `EVT_01`..`EVT_04` | `BLOOD_CASTLE`, `DEVIL_SQUARE`, `CHAOS_CASTLE`, `DUEL_COLISEUM` | sim | 4 |
+| **TOTAL** | | | | **56** |
+
+Estruturas destrutíveis declaradas em `destructibleHp`:
+
+| Cenário | Colisor | HP |
+| :--- | :--- | ---: |
+| `VOL_02` | `cyclopean_iron_gate` | 25.000.000 |
+| `VOL_03` | `life_statue_nw/ne/sw/se` | 8.000.000 cada |
+| `EVT_01` | `archangel_gate` | 5.000.000 |
 
 ---
 
@@ -353,6 +384,9 @@ Cada cenário possui uma matriz rigorosa de volumes de colisão simples:
 1. **Paredes & Baluartes:** Volumes $Box(x, y, z, w, h, d)$.
 2. **Pilares, Árvores & Estátuas:** Volumes $Cylinder(x, z, r, h)$.
 3. **Muralhas Circulares & Covis:** Volumes $ConvexHull / RadialBoundary(x, z, R_{inner}, R_{outer})$.
-4. **Resolução de Contato (Slide Physics):**
+4. **Zonas de Perigo (`HAZARD`):** Círculos $(x, z, r)$ atravessáveis que sinalizam dano/queda fatal
+   (fosso de lava em `VOL_04`, ácido, areia movediça, poço dos sacrifícios). O movimento **não** é bloqueado;
+   o gameplay recebe `hazardsHit` na resolução de colisão do frame.
+5. **Resolução de Contato (Slide Physics):**
    $$\vec{v}_{\text{slide}} = \vec{v} - (\vec{v} \cdot \hat{n}) \hat{n}$$
    Garante deslizamento fluído e sem travamento ao longo de paredes e quinas.

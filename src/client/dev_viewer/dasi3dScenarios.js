@@ -1,6 +1,7 @@
 /**
  * DASI MMORPG - CONSTRUTOR 3D DOS 47 CENÁRIOS CANÔNICOS
- * Modelagem procedural PBR de alta fidelidade para todos os 8 Biomas e 47 Cenários.
+ * Modelagem procedural PBR de alta fidelidade para todos os 8 Biomas (47 cenários)
+ * + as 5 zonas de Castle Siege e as 4 arenas de evento (56 cenários canônicos).
  * Alinhado rigorosamente com os colisores físicos de DasiCollisionEngine e CollisionSystem.ts.
  */
 
@@ -1588,6 +1589,338 @@ export function buildScenario3D(scenarioId, THREE, envGroup, dynamicLights, anim
     envGroup.add(swordLight);
     dynamicLights.push(swordLight);
 
+  // ==========================================================================
+  // 9. VALLEY OF LOREN & CASTLE SIEGE (5 CENÁRIOS)
+  // ==========================================================================
+  } else if (id === 'VOL_02') {
+    // VOL_02: Primeiro Baluarte & Portão Ciclópico de Ferro (25M HP destrutível)
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(58, 0.4, 38), matCobble);
+    floor.position.y = -0.2;
+    envGroup.add(floor);
+
+    // Muralha cortina com ameias
+    for (const wx of [-21, 21]) {
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(14, 10, 2.5), matStoneDark);
+      wall.position.set(wx, 5, 6);
+      envGroup.add(wall);
+      for (let m = -6; m <= 6; m += 2.4) {
+        const merlon = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.2, 2.5), matStoneDark);
+        merlon.position.set(wx + m, 10.6, 6);
+        envGroup.add(merlon);
+      }
+    }
+
+    // Torres de menagem para arqueiros (+12m)
+    for (const tx of [-12, 12]) {
+      const tower = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.9, 12, 16), matStoneDark);
+      tower.position.set(tx, 6, 6);
+      envGroup.add(tower);
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(4.3, 3.2, 16), matWood);
+      roof.position.set(tx, 13.6, 6);
+      envGroup.add(roof);
+    }
+
+    // Portão ciclópico de ferro fundido (8 x 10m, 25.000.000 HP)
+    const gate = new THREE.Mesh(new THREE.BoxGeometry(8, 10, 1.2), matIron);
+    gate.position.set(0, 5, 6);
+    envGroup.add(gate);
+    for (let bar = -3; bar <= 3; bar += 1.5) {
+      const rib = new THREE.Mesh(new THREE.BoxGeometry(0.22, 9.4, 1.4), matGold);
+      rib.position.set(bar, 5, 6);
+      envGroup.add(rib);
+    }
+    const gateLight = new THREE.PointLight(0xf59e0b, 4.0, 16);
+    gateLight.position.set(0, 7, 9);
+    envGroup.add(gateLight);
+    dynamicLights.push(gateLight);
+
+    // Trincheiras e paliçadas no campo de assédio
+    for (const px of [-24, 24]) {
+      for (let pz = -16; pz <= 0; pz += 2.2) {
+        const stake = new THREE.Mesh(new THREE.ConeGeometry(0.35, 3.0, 5), matWood);
+        stake.position.set(px, 1.5, pz);
+        stake.rotation.z = px < 0 ? -0.18 : 0.18;
+        envGroup.add(stake);
+      }
+    }
+    animParts.siegeGate = gate;
+
+  } else if (id === 'VOL_03') {
+    // VOL_03: Pátio das Estátuas da Vida (4 estátuas com aura de respawn)
+    const courtyard = new THREE.Mesh(new THREE.BoxGeometry(68, 0.4, 48), matCobble);
+    courtyard.position.y = -0.2;
+    envGroup.add(courtyard);
+
+    for (const wz of [-18, 18]) {
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(70, 9, 2), matStoneDark);
+      wall.position.set(0, 4.5, wz);
+      envGroup.add(wall);
+    }
+
+    // 4 Estátuas da Vida em alabastro (7m) com plintos de 3.5m
+    for (const sx of [-12, 12]) {
+      for (const sz of [-8, 8]) {
+        const plinth = new THREE.Mesh(new THREE.BoxGeometry(3.5, 1.2, 3.5), matStoneDark);
+        plinth.position.set(sx, 0.6, sz);
+        envGroup.add(plinth);
+
+        const statue = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.5, 7, 10), matNacar);
+        statue.position.set(sx, 4.7, sz);
+        envGroup.add(statue);
+
+        const halo = new THREE.Mesh(new THREE.TorusGeometry(1.4, 0.12, 8, 24), matGold);
+        halo.position.set(sx, 8.6, sz);
+        halo.rotation.x = Math.PI / 2;
+        envGroup.add(halo);
+
+        const lifeAura = new THREE.PointLight(0x38bdf8, 3.6, 13);
+        lifeAura.position.set(sx, 5, sz);
+        envGroup.add(lifeAura);
+        dynamicLights.push(lifeAura);
+      }
+    }
+
+    // Canhões defensivos de baluarte
+    for (const cx of [-26, 26]) {
+      const cannon = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.4, 4.2, 10), matIron);
+      cannon.position.set(cx, 2.1, 0);
+      cannon.rotation.z = Math.PI / 2;
+      envGroup.add(cannon);
+    }
+
+  } else if (id === 'VOL_04') {
+    // VOL_04: Gargalo da Ponte Levadiça sobre Fosso de Lava (1400°C)
+    const bridgeDrum = new THREE.Mesh(new THREE.BoxGeometry(6, 0.5, 24), matWood);
+    bridgeDrum.position.set(0, 0.05, 0);
+    envGroup.add(bridgeDrum);
+
+    // Parapeitos de 1.1m
+    for (const px of [-3.6, 3.6]) {
+      const parapet = new THREE.Mesh(new THREE.BoxGeometry(1, 1.1, 24), matStoneDark);
+      parapet.position.set(px, 0.55, 0);
+      envGroup.add(parapet);
+    }
+
+    // Abismos de lava borbulhante dos dois lados
+    for (const lx of [-14, 14]) {
+      const lava = new THREE.Mesh(new THREE.CircleGeometry(9.5, 28), matMagma);
+      lava.rotation.x = -Math.PI / 2;
+      lava.position.set(lx, -2.2, 0);
+      envGroup.add(lava);
+
+      const lavaLight = new THREE.PointLight(0xef4444, 5.5, 22);
+      lavaLight.position.set(lx, -0.5, 0);
+      envGroup.add(lavaLight);
+      dynamicLights.push(lavaLight);
+    }
+    animParts.lavaPools = [];
+
+    // Caldeiras de óleo quente nas ameias
+    for (const cx of [-8, 8]) {
+      const cauldron = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 0.9, 1.4, 12), matIron);
+      cauldron.position.set(cx, 10.7, 10);
+      envGroup.add(cauldron);
+    }
+
+  } else if (id === 'VOL_05') {
+    // VOL_05: Salão do Trono Real & Selo da Coroa (canalização de 30s)
+    const hallFloor = new THREE.Mesh(new THREE.BoxGeometry(42, 0.4, 42), matNacar);
+    hallFloor.position.y = -0.2;
+    envGroup.add(hallFloor);
+
+    // 7 degraus do estrado imperial
+    for (let d = 0; d < 7; d++) {
+      const step = new THREE.Mesh(new THREE.BoxGeometry(9 - d * 0.5, 0.6, 6 - d * 0.4), matStoneDark);
+      step.position.set(0, 0.3 + d * 0.6, 16 - d * 0.5);
+      envGroup.add(step);
+    }
+
+    // Trono Real de ouro com Selo da Coroa
+    const throne = new THREE.Mesh(new THREE.BoxGeometry(5, 4.2, 4), matGold);
+    throne.position.set(0, 6.2, 14);
+    envGroup.add(throne);
+    const crownSeal = new THREE.Mesh(new THREE.OctahedronGeometry(1.1, 0), new THREE.MeshStandardMaterial({
+      color: 0xfbbf24, emissive: 0xf59e0b, emissiveIntensity: 3.0, metalness: 0.9, roughness: 0.15,
+    }));
+    crownSeal.position.set(0, 9.6, 14);
+    envGroup.add(crownSeal);
+    animParts.crownSeal = crownSeal;
+
+    const throneLight = new THREE.PointLight(0xfbbf24, 5.0, 20);
+    throneLight.position.set(0, 8, 14);
+    envGroup.add(throneLight);
+    dynamicLights.push(throneLight);
+
+    // Pedestais sagrados dos sub-líderes
+    for (const px of [-8, 8]) {
+      const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.3, 2.2, 10), matNacar);
+      pedestal.position.set(px, 1.1, 10);
+      envGroup.add(pedestal);
+      const pLight = new THREE.PointLight(0x38bdf8, 3.0, 10);
+      pLight.position.set(px, 2.6, 10);
+      envGroup.add(pLight);
+      dynamicLights.push(pLight);
+    }
+
+    // 8 colunas de alabastro com capitéis dourados
+    const columnPositions = [
+      [-14, 6], [14, 6], [-14, -2], [14, -2],
+      [-14, -10], [14, -10], [-8, -16], [8, -16],
+    ];
+    for (const [cx, cz] of columnPositions) {
+      const column = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 10, 12), matNacar);
+      column.position.set(cx, 5, cz);
+      envGroup.add(column);
+      const capital = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.7, 2.9), matGold);
+      capital.position.set(cx, 10.3, cz);
+      envGroup.add(capital);
+    }
+
+  // ==========================================================================
+  // 10. EVENT ARENAS & DESAFIOS CLÁSSICOS (4 CENÁRIOS)
+  // ==========================================================================
+  } else if (id === 'EVT_02') {
+    // EVT_02: Devil Square — Praça Circular da Carnificina Pentagramal
+    const square = new THREE.Mesh(new THREE.CircleGeometry(24.5, 48), matCobble);
+    square.rotation.x = -Math.PI / 2;
+    square.position.y = 0.02;
+    envGroup.add(square);
+
+    // Pentagrama rúnico incandescente no piso de granito
+    const pentagramMat = new THREE.MeshStandardMaterial({
+      color: 0xf43f5e, emissive: 0xbe123c, emissiveIntensity: 2.6, roughness: 0.4, side: THREE.DoubleSide,
+    });
+    for (let i = 0; i < 5; i++) {
+      const a1 = (i / 5) * Math.PI * 2 - Math.PI / 2;
+      const a2 = ((i + 2) / 5) * Math.PI * 2 - Math.PI / 2;
+      const x1 = Math.cos(a1) * 16;
+      const z1 = Math.sin(a1) * 16;
+      const x2 = Math.cos(a2) * 16;
+      const z2 = Math.sin(a2) * 16;
+      const len = Math.hypot(x2 - x1, z2 - z1);
+      const line = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.08, len), pentagramMat);
+      line.position.set((x1 + x2) / 2, 0.06, (z1 + z2) / 2);
+      line.rotation.y = -Math.atan2(x2 - x1, z2 - z1);
+      envGroup.add(line);
+    }
+
+    // Grade perimetral circular intransponível (r = 24.5m)
+    const grate = new THREE.Mesh(new THREE.TorusGeometry(24.5, 0.3, 6, 64), matIron);
+    grate.position.y = 3.0;
+    grate.rotation.x = Math.PI / 2;
+    envGroup.add(grate);
+    for (let b = 0; b < 32; b++) {
+      const ang = (b / 32) * Math.PI * 2;
+      const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 6.0, 6), matIron);
+      bar.position.set(Math.cos(ang) * 24.5, 3.0, Math.sin(ang) * 24.5);
+      envGroup.add(bar);
+    }
+
+    // 4 totens de crânios de 6m expelindo chamas
+    for (const [tx, tz] of [[0, 16], [16, 0], [0, -16], [-16, 0]]) {
+      const totem = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.0, 6, 8), matBone);
+      totem.position.set(tx, 3, tz);
+      envGroup.add(totem);
+      const flame = new THREE.Mesh(new THREE.ConeGeometry(1.0, 2.4, 8), matMagma);
+      flame.position.set(tx, 7.2, tz);
+      envGroup.add(flame);
+      const fLight = new THREE.PointLight(0xf97316, 3.4, 12);
+      fLight.position.set(tx, 6.5, tz);
+      envGroup.add(fLight);
+      dynamicLights.push(fLight);
+    }
+
+    // Pedestal central do Baú de Ouro do Triunfo
+    const chestPedestal = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.5, 1.0, 12), matGold);
+    chestPedestal.position.set(0, 0.5, 0);
+    envGroup.add(chestPedestal);
+    animParts.triumphPedestal = chestPedestal;
+
+  } else if (id === 'EVT_03') {
+    // EVT_03: Chaos Castle — Coliseu Suspenso das Lajes Desabantes
+    // Tablado modular 6x6 de lajes (encolhe de 42x42m -> 28x28m -> 14x14m)
+    animParts.chaosTiles = [];
+    const tileMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.7, metalness: 0.3 });
+    for (let row = -2; row <= 3; row++) {
+      for (let col = -2; col <= 3; col++) {
+        const tile = new THREE.Mesh(new THREE.BoxGeometry(6.6, 0.6, 6.6), tileMat);
+        tile.position.set(col * 7.0, -0.3, row * 7.0);
+        envGroup.add(tile);
+        animParts.chaosTiles.push(tile);
+      }
+    }
+
+    // Abismo perimetral fatal
+    const abyss = new THREE.Mesh(new THREE.RingGeometry(20.5, 40, 40), new THREE.MeshBasicMaterial({
+      color: 0x0b0416, side: THREE.DoubleSide,
+    }));
+    abyss.rotation.x = -Math.PI / 2;
+    abyss.position.y = -4;
+    envGroup.add(abyss);
+
+    const voidLight = new THREE.PointLight(0xa855f7, 4.5, 30);
+    voidLight.position.set(0, -2, 0);
+    envGroup.add(voidLight);
+    dynamicLights.push(voidLight);
+
+    // Barreira etérea do anonimato absoluto
+    const barrier = new THREE.Mesh(new THREE.CylinderGeometry(20.5, 20.5, 9, 32, 1, true), new THREE.MeshBasicMaterial({
+      color: 0xa855f7, transparent: true, opacity: 0.12, side: THREE.DoubleSide,
+    }));
+    barrier.position.y = 4.5;
+    envGroup.add(barrier);
+
+  } else if (id === 'EVT_04') {
+    // EVT_04: Coliseu de Duelos — Grande Arena da Glória (octogonal)
+    const octagon = new THREE.Mesh(new THREE.CylinderGeometry(17.5, 17.8, 1.0, 8), matNacar);
+    octagon.position.y = 0.5;
+    envGroup.add(octagon);
+
+    // Arquibancadas em degraus ao redor do tablado
+    for (let s = 0; s < 4; s++) {
+      const stand = new THREE.Mesh(new THREE.CylinderGeometry(18.6 + s * 1.8, 18.2 + s * 1.8, 1.2, 8, 1, true), matStoneDark);
+      stand.position.y = 1.1 + s * 1.1;
+      envGroup.add(stand);
+    }
+
+    // Cúpula de barreira de força translúcida (r = 17.5m)
+    const dome = new THREE.Mesh(new THREE.CylinderGeometry(17.5, 17.5, 12, 24, 1, true), new THREE.MeshBasicMaterial({
+      color: 0x38bdf8, transparent: true, opacity: 0.10, side: THREE.DoubleSide,
+    }));
+    dome.position.y = 6.5;
+    envGroup.add(dome);
+
+    // Placar holográfico tridimensional flutuante a 8m
+    const scoreboard = new THREE.Mesh(new THREE.BoxGeometry(7, 2.6, 0.3), new THREE.MeshStandardMaterial({
+      color: 0x0ea5e9, emissive: 0x0284c7, emissiveIntensity: 2.2, transparent: true, opacity: 0.85,
+      metalness: 0.4, roughness: 0.2,
+    }));
+    scoreboard.position.set(0, 9.5, 0);
+    envGroup.add(scoreboard);
+    animParts.duelScoreboard = scoreboard;
+
+    const boardLight = new THREE.PointLight(0x38bdf8, 4.0, 16);
+    boardLight.position.set(0, 8.4, 0);
+    envGroup.add(boardLight);
+    dynamicLights.push(boardLight);
+
+    // Plintos octogonais do perímetro
+    for (const [px, pz] of [[0, 13], [0, -13], [13, 0], [-13, 0]]) {
+      const plinth = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.2, 1.6, 8), matGold);
+      plinth.position.set(px, 0.8, pz);
+      envGroup.add(plinth);
+    }
+
+    // Tochas de duelo nos cantos do tablado
+    for (let t = 0; t < 8; t++) {
+      const ang = (t / 8) * Math.PI * 2 + Math.PI / 8;
+      const torch = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 3.0, 6), matIron);
+      torch.position.set(Math.cos(ang) * 16.2, 2.5, Math.sin(ang) * 16.2);
+      envGroup.add(torch);
+      const flame = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.9, 6), matMagma);
+      flame.position.set(Math.cos(ang) * 16.2, 4.3, Math.sin(ang) * 16.2);
+      envGroup.add(flame);
+    }
   }
 
   return true;
