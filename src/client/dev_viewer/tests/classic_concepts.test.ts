@@ -38,5 +38,7 @@ test('concepts individuais pertencem ao catálogo e possuem arquivos próprios',
   for (const id of ['DNG_01', 'DNG_02', 'DNG_03', 'DNG_04', 'DNG_05', 'DNG_06', 'LT_01', 'LT_02', 'LT_03', 'LT_04']) assert.ok(ids.includes(id), id);
   for (const id of ['LT_05', 'LT_06', 'LT_07', 'ATL_01', 'ATL_02', 'ATL_03', 'ATL_04', 'ATL_05', 'ATL_06', 'ATL_07']) assert.ok(ids.includes(id), id);
   for (const id of ['TAR_01', 'TAR_02', 'TAR_03', 'TAR_04', 'TAR_05', 'ICA_01', 'ICA_02', 'VOL_01', 'VOL_02', 'VOL_03']) assert.ok(ids.includes(id), id);
-  assert.equal(getScenarioConcept('VOL_04'), null);
+  for (const scenario of SCENARIO_CATALOG) assert.ok(ids.includes(scenario.id), `Concept individual ausente: ${scenario.id}`);
+  assert.equal(ids.length, SCENARIO_CATALOG.length);
+  assert.equal(getScenarioConcept('INVALID_01'), null);
 });

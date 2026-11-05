@@ -78,6 +78,12 @@ export const SCENARIO_CONCEPTS = {
   VOL_01: { title: 'Valley of Loren — Campo de Guerra', description: 'Acampamento de cerco com catapultas, tendas, trincheiras e paliçadas.' },
   VOL_02: { title: 'Valley of Loren — Portão Ciclópico', description: 'Portão monumental de ferro entre torres e muralhas fortificadas.' },
   VOL_03: { title: 'Valley of Loren — Pátio das Estátuas', description: 'Pátio de cerco com quatro estátuas de alabastro e canhões defensivos.' },
+  VOL_04: { title: 'Valley of Loren — Ponte Levadiça', description: 'Ponte de carvalho e ferro sobre o fosso de lava, com caldeiras defensivas.' },
+  VOL_05: { title: 'Valley of Loren — Salão do Trono', description: 'Trono imperial, selo da coroa, pedestais sagrados e colunas de alabastro.' },
+  EVT_01: { title: 'Blood Castle — Ponte do Martírio', description: 'Ponte gótica sobre o abismo com estátuas aladas, portão e altar.' },
+  EVT_02: { title: 'Devil Square — Praça Pentagramal', description: 'Arena circular com pentagrama, totens de crânios e pedestal central.' },
+  EVT_03: { title: 'Chaos Castle — Lajes Suspensas', description: 'Plataforma modular de lajes sobre o abismo, cercada por ruínas e névoa.' },
+  EVT_04: { title: 'Coliseu de Duelos — Arena da Glória', description: 'Tablado octogonal, arquibancadas, tochas e barreira de proteção.' },
 };
 
 export function getScenarioConcept(id) {

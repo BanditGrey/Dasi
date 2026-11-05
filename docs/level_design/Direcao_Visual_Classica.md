@@ -31,14 +31,18 @@ As imagens de família estão em `src/client/dev_viewer/art/classic/` e aparecem
 
 ## Concepts individuais — andamento
 
-- Concluídos: `LOR_01`–`LOR_07`, `NOR_01`–`NOR_07`, `DEV_01`–`DEV_06`, `DNG_01`–`DNG_06`, `LT_01`–`LT_07`, `ATL_01`–`ATL_07`, `TAR_01`–`TAR_05`, `ICA_01`–`ICA_02` e `VOL_01`–`VOL_03` (50 de 56).
-- Pendentes: `VOL_04`–`VOL_05` e `EVT_01`–`EVT_04` (6 de 56).
+- Concluídos: `LOR_01`–`LOR_07`, `NOR_01`–`NOR_07`, `DEV_01`–`DEV_06`, `DNG_01`–`DNG_06`, `LT_01`–`LT_07`, `ATL_01`–`ATL_07`, `TAR_01`–`TAR_05`, `ICA_01`–`ICA_02` e `VOL_01`–`VOL_05` e `EVT_01`–`EVT_04` (56 de 56).
+- Pendentes: nenhum concept individual.
 - As imagens de família, inclusive as arenas, são guias preliminares e não contam como concepts individuais.
-- Concluir e revisar os 56 concepts individuais antes de iniciar a produção dos GLBs.
+- Revisar os concepts individuais e utilizá-los como referência para a produção dos GLBs.
 
 ## Próximas etapas
 
 1. Detalhar os pontos de interesse de cada um dos 56 IDs, em conformidade com `All_56_Scenarios_Master_Index.md` e `SCENARIO_CATALOG`.
 2. Adaptar modelos, materiais e iluminação 3D aos conceitos aprovados, mantendo os caminhos e colisores consistentes; validar cada mapa no visualizador.
+
+### GLB inicial
+
+`src/client/dev_viewer/models/scenarios/lor_01.glb` é um **blockout inicial** exportado da geometria procedural da praça, não um modelo artístico final. Ele pode ser regenerado com `node --experimental-strip-types tools/export_scenario_glb.mjs LOR_01` após `npm ci`. A exportação omite partículas e luzes, que continuam no runtime; o visualizador ainda usa a geometria procedural, preservando animações e colisões. O arquivo serve de base para modelagem e revisão, não de substituto automático para todos os cenários.
 
 A praça `LOR_01` recebeu uma primeira passagem 3D: calçamento, estátua alada, fachada iluminada e ameias. Os materiais de Devil Square, Chaos Castle e do Coliseu receberam uma primeira aproximação de paleta e iluminação. O visualizador mantém a geometria procedural de cada mapa, sem substituí-la automaticamente pelo GLB genérico do bioma. Os modelos 3D existentes **ainda não foram reconstruídos** integralmente a partir destas pinturas. Sua presença ao lado do concept facilita o planejamento e não implica paridade visual concluída.

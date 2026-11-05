@@ -85,3 +85,16 @@ it('Lorencia preserva detalhes do concept e não troca cenários por GLB de outr
     else (globalThis as any).window = oldWindow;
   }
 });
+
+it('GLB de blockout de Lorencia é carregável e preserva marcos principais', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  const bytes = readFileSync('src/client/dev_viewer/models/scenarios/lor_01.glb');
+  const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  const gltf = await new GLTFLoader().parseAsync(arrayBuffer, '');
+  assert.ok(gltf.scene.getObjectByName('lorencia_angel_statue'));
+  assert.ok(gltf.scene.getObjectByName('lorencia_tavern_details'));
+  const paving = gltf.scene.getObjectByName('lorencia_paving') as THREE.InstancedMesh;
+  assert.ok(paving?.isInstancedMesh);
+  assert.strictEqual(paving.count, 780);
+});
