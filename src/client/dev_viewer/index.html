@@ -17,6 +17,26 @@
     }
   }
   </script>
+  <script>
+    window.addEventListener('error', function(event) {
+      console.error('[CRITICAL DEV VIEWER ERROR]', event.error || event.message);
+      var banner = document.getElementById('global-js-error-banner');
+      if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'global-js-error-banner';
+        banner.style = 'position:fixed;top:0;left:0;right:0;z-index:9999999;background:#b91c1c;color:#fff;padding:12px 18px;font-family:monospace;font-size:13px;white-space:pre-wrap;box-shadow:0 4px 12px rgba(0,0,0,0.5);border-bottom:2px solid #fecaca;';
+        if (document.body) {
+          document.body.prepend(banner);
+        } else {
+          document.documentElement.appendChild(banner);
+        }
+      }
+      banner.textContent = '❌ [ERRO JS NO NAVEGADOR]: ' + (event.message || 'Exceção não tratada') + '\nArquivo: ' + (event.filename || '') + ':' + (event.lineno || '') + ':' + (event.colno || '') + '\n' + (event.error && event.error.stack ? event.error.stack : '');
+    });
+    window.addEventListener('unhandledrejection', function(event) {
+      console.error('[UNHANDLED PROMISE REJECTION]', event.reason);
+    });
+  </script>
 </head>
 <body>
   <div class="app-container">

@@ -470,10 +470,10 @@ class DevClientApp {
     this.initGridCells();
     this.initCanvasShaderEngine();
     this.initCombatArena();
-    this.bindEvents();
     this.init3DAvatarSystem();
     this.initBossesPanel();
     this.initEventsPanel();
+    this.bindEvents();
     this.connect();
   }
 
@@ -2173,12 +2173,14 @@ class DevClientApp {
           ? 'linear-gradient(180deg, #059669, #047857)'
           : 'linear-gradient(180deg, #d97706, #b45309)';
         if (!isShown) {
-          if (currentCategory === 'HERO') {
-            this.updateSplitArtDisplay('HERO_' + currentHero);
+          const v = this.viewer3DInstance;
+          const cat = v?.currentCategory || document.querySelector('.btn-3d-cat.active')?.getAttribute('data-cat') || 'ENVIRONMENT';
+          const hero = (cat === 'HERO' ? v?.currentSubId : null) || document.querySelector('.btn-sub-entity.active[data-cat="HERO"]')?.getAttribute('data-id') || 'DK';
+          const env = (cat === 'ENVIRONMENT' ? v?.currentSubId : null) || document.querySelector('.btn-sub-entity.active[data-cat="ENVIRONMENT"]')?.getAttribute('data-id') || 'LORENCIA';
+          if (cat === 'HERO') {
+            this.updateSplitArtDisplay('HERO_' + hero);
           } else {
-            const activeSubBtn = document.querySelector('.btn-sub-entity.active[data-cat="ENVIRONMENT"]');
-            const currentBiome = currentEnv || (activeSubBtn && activeSubBtn.getAttribute('data-id')) || 'LORENCIA';
-            this.updateSplitArtDisplay(currentBiome);
+            this.updateSplitArtDisplay(env);
           }
         }
         setTimeout(() => {
@@ -2200,8 +2202,11 @@ class DevClientApp {
 
     if (btnOpenArt && modalArt) {
       btnOpenArt.addEventListener('click', () => {
-        const activeSubBtn = document.querySelector('.btn-sub-entity.active[data-cat="ENVIRONMENT"]');
-        const currentBiome = currentCategory === 'HERO' ? 'HERO_' + currentHero : (currentEnv || (activeSubBtn && activeSubBtn.getAttribute('data-id')) || 'LORENCIA');
+        const v = this.viewer3DInstance;
+        const cat = v?.currentCategory || document.querySelector('.btn-3d-cat.active')?.getAttribute('data-cat') || 'ENVIRONMENT';
+        const hero = (cat === 'HERO' ? v?.currentSubId : null) || document.querySelector('.btn-sub-entity.active[data-cat="HERO"]')?.getAttribute('data-id') || 'DK';
+        const env = (cat === 'ENVIRONMENT' ? v?.currentSubId : null) || document.querySelector('.btn-sub-entity.active[data-cat="ENVIRONMENT"]')?.getAttribute('data-id') || 'LORENCIA';
+        const currentBiome = cat === 'HERO' ? 'HERO_' + hero : env;
         updateArtDisplay(currentBiome);
         modalArt.style.display = 'flex';
       });
@@ -2224,7 +2229,8 @@ class DevClientApp {
     const btnQuickScenery = document.getElementById('btn-quick-scenery');
 
     const setMode = (mode) => {
-      this.viewMode = mode;
+      try {
+        this.viewMode = mode;
       [tabCombat, tabScenery, tabBosses, tabEvents, tabInventory, tabSplit, tabViewer3D].forEach((b) => b && b.classList.remove('active'));
       if (this.domBossesPanel) this.domBossesPanel.style.display = 'none';
       if (this.domEventsPanel) this.domEventsPanel.style.display = 'none';
@@ -2304,6 +2310,9 @@ class DevClientApp {
           setTimeout(() => this.arena3D.onWindowResize(), 50);
         }
       }
+      } catch (err) {
+        console.error('[DevClientApp] Falha ao alternar modo ' + mode, err);
+      }
     };
 
     if (tabCombat) tabCombat.addEventListener('click', () => setMode('combat'));
@@ -2315,32 +2324,7 @@ class DevClientApp {
     if (tabSplit) tabSplit.addEventListener('click', () => setMode('split'));
     if (tabViewer3D) tabViewer3D.addEventListener('click', () => setMode('viewer3d'));
 
-    // Inicia de acordo com parâmetros de URL ou padrão 'scenery'
-    const urlParams = new URLSearchParams(window.location.search);
-    const initialTab = urlParams.get('tab') || 'scenery';
-    setMode(initialTab);
 
-    if (urlParams.get('cat')) {
-      setTimeout(() => {
-        const catBtn = document.querySelector(`.btn-3d-cat[data-cat="${urlParams.get('cat')}"]`);
-        if (catBtn) catBtn.click();
-      }, 150);
-    }
-    if (urlParams.get('hero')) {
-      setTimeout(() => {
-        const heroBtn = document.querySelector(`.btn-sub-entity[data-cat="HERO"][data-id="${urlParams.get('hero')}"]`);
-        if (heroBtn) heroBtn.click();
-      }, 250);
-    }
-    if (urlParams.get('modular') === '1' || urlParams.get('modular') === 'true') {
-      setTimeout(() => {
-        const modCheck = document.getElementById('hero-modular-mode');
-        if (modCheck && !modCheck.checked) {
-          modCheck.checked = true;
-          modCheck.dispatchEvent(new Event('change'));
-        }
-      }, 350);
-    }
 
     // 10. Atalhos de Teclado & Action Bar Moderna 3D
     window.addEventListener('keydown', (e) => {
@@ -2358,15 +2342,48 @@ class DevClientApp {
         else if (key === 'R') this.castSkill('R', 'death_stab');
         else if (key === 'SPACE') this.performDodge();
         else if (key === 'LMB') {
-          if (btnAttack) btnAttack.click();
+          const btnBossAtk = document.getElementById('btn-boss-attack');
+          if (btnBossAtk) btnBossAtk.click();
+          else if (this.arena3D) this.arena3D.triggerSkill('ATTACK');
         } else if (key === 'RMB') {
-          if (btnSkill) btnSkill.click();
+          this.castSkill('E', 'cyclone');
         }
       });
     });
 
     // Inicia loop de regeneração e animação de cooldowns
     this.startHudVitalsLoop();
+
+    // Inicia de acordo com parâmetros de URL ou padrão 'scenery' de forma segura
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const initialTab = urlParams.get('tab') || 'scenery';
+      setMode(initialTab);
+
+      if (urlParams.get('cat')) {
+        setTimeout(() => {
+          const catBtn = document.querySelector(`.btn-3d-cat[data-cat="${urlParams.get('cat')}"]`);
+          if (catBtn) catBtn.click();
+        }, 150);
+      }
+      if (urlParams.get('hero')) {
+        setTimeout(() => {
+          const heroBtn = document.querySelector(`.btn-sub-entity[data-cat="HERO"][data-id="${urlParams.get('hero')}"]`);
+          if (heroBtn) heroBtn.click();
+        }, 250);
+      }
+      if (urlParams.get('modular') === '1' || urlParams.get('modular') === 'true') {
+        setTimeout(() => {
+          const modCheck = document.getElementById('hero-modular-mode');
+          if (modCheck && !modCheck.checked) {
+            modCheck.checked = true;
+            modCheck.dispatchEvent(new Event('change'));
+          }
+        }, 350);
+      }
+    } catch (tabErr) {
+      console.error('[DevClientApp] Erro na inicialização da aba inicial:', tabErr);
+    }
   }
 
   // ==========================================================================
@@ -2423,7 +2440,7 @@ class DevClientApp {
       if (tileRow) { tileRow.max = controller ? String(controller.rows - 1) : '0'; tileRow.value = '0'; }
     };
     this.viewer3DInstance.onTileFloorChanged = updateTileStatus;
-    updateTileStatus(this.viewer3DInstance.activeEntity?.tileFloor, initialEnv);
+    updateTileStatus(this.viewer3DInstance.activeEntity?.tileFloor, currentEnv);
     const applyTile = (col, row) => {
       const viewer = this.viewer3DInstance;
       const controller = viewer?.currentCategory === 'ENVIRONMENT' && viewer.activeEntity?.tileFloor;
@@ -5026,10 +5043,19 @@ class DevClientApp {
 
 // Iniciação no carregamento da página
 // (o script é um módulo deferido: se o DOM já estiver pronto, inicializa direto)
-if (document.readyState === 'loading') {
-  window.addEventListener('DOMContentLoaded', () => {
+function bootDevClientApp() {
+  try {
     window.dasiClient = new DevClientApp();
-  });
+  } catch (err) {
+    console.error('[DevClientApp FATAL BOOT ERROR]:', err);
+    if (typeof window !== 'undefined' && window.dispatchEvent) {
+      window.dispatchEvent(new ErrorEvent('error', { error: err, message: err.message }));
+    }
+  }
+}
+
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', bootDevClientApp);
 } else {
-  window.dasiClient = new DevClientApp();
+  bootDevClientApp();
 }
