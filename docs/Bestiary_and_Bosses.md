@@ -66,21 +66,21 @@
 
 ---
 
-## 3. ESPECIFICAÇÃO TÉCNICA AUTORITATIVA DOS 5 WORLD BOSSES
+## 3. MONSTROS LENDÁRIOS NO CATÁLOGO DE COMBATE
 
-Configurações implementadas em `src/server/combat/Monster.ts`:
+Os tipos abaixo são definições de `Monster` em `src/server/combat/Monster.ts`. A configuração de chefes com fases fica separadamente em `src/server/bosses/BossDefinitions.ts`; Hydra ainda não tem um tipo `boss_hydra`.
 
-| Boss Id | Nome | Zona | Nível | HP | Dano Físico | Defesa | Poise (Postura) | Principais Recompensas |
+| Tipo | Nome | Zona | Nível | HP | Dano Físico | Defesa | Poise Máx. | Principais Recompensas |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `ice_queen` | Rainha de Gelo | Devias | 52 | 4,000 | 105 - 145 | 90 | 120 (Resist. 60%) | Joias, Box of Kundun +2, Armas de Gelo |
-| `gorgon` | Gorgon Guardião | Dungeon 3 | 55 | 5,500 | 120 - 160 | 110 | 150 (Resist. 70%) | Joias, Box of Kundun +3, Sets Plate/Sphinx |
-| `hydra` | Hydra de Atlans | Atlans 3 | 74 | 11,500 | 220 - 290 | 200 | 220 (Resist. 80%) | Box of Kundun +3/+4, Sets Spirit/Dragon |
-| `balrog` | Balrog do Abismo | Lost Tower 7 | 84 | 22,000 | 340 - 450 | 290 | 300 (Resist. 85%) | Box of Kundun +4, Foice e Espada Lendária |
-| `zaikan` | Zaikan do Deserto | Tarkan | 90 | 35,000 | 450 - 620 | 380 | 400 (Resist. 90%) | Box of Kundun +5, Asas T2/T3, Joias Raras |
+| `ice_queen` | Rainha de Gelo | Devias | 52 | 16,000 | 140–190 | 110 | 250 | Box +2, joias, Crystal Sword e Dragon Helm |
+| `gorgon` | Gorgon Guardião | Dungeon | 55 | 20,000 | 160–220 | 130 | 300 | Box +2, Chaos, Chaos Dragon Axe e Skull Shield |
+| `hydra` | Hydra de Atlans | Atlans | 74 | 38,000 | 280–390 | 210 | 400 | Box +3, Crest of Monarch, Arrow Viper Bow e Guardian Armor |
+| `balrog` | Balrog do Abismo | Lost Tower | 84 | 55,000 | 380–520 | 280 | 500 | Box +4, Sword of Destruction, Archangel Sword e sets lendários |
+| `zaikan` | Zaikan do Deserto | Tarkan | 95 | 80,000 | 460–640 | 340 | 600 | Box +5, Condor Flame, Bone Blade e sets lendários |
 
 ---
 
-## 3. O SISTEMA DE INVASÕES DOURADAS (GOLDEN INVASIONS)
+## 4. O SISTEMA DE INVASÕES DOURADAS (GOLDEN INVASIONS)
 
 A cada 4 horas de servidor (horário de relógio mundial sincronizado), soa a trombeta ancestral nos céus do mundo de Dasi:
 
@@ -98,7 +98,7 @@ A cada 4 horas de servidor (horário de relógio mundial sincronizado), soa a tr
 
 ---
 
-## 4. MODELAGEM 3D PROCEDURAL & RIG CINEMÁTICO NO DEV VIEWER
+## 5. MODELAGEM 3D PROCEDURAL & RIG CINEMÁTICO NO DEV VIEWER
 
 Implementado em `src/client/dev_viewer/dasi3dContent.js` e renderizado em tempo real pelo `dasi3dViewer.js` com shaders PBR nativos do Three.js:
 
@@ -112,3 +112,30 @@ Implementado em `src/client/dev_viewer/dasi3dContent.js` e renderizado em tempo 
 | **Gorgon** | World Boss | `GORGON` | Cauda serpentina enroscada com ferrão tríplice, escamas verde-abissais, 8 serpentes na cabeça e garras afiadas. | Ondulação serpentina, olhar petrificante e ataque de garras. |
 | **Balrog** | World Boss | `BALROG` | Lorde do abismo de obsidiana, núcleo peitoral de magma incandescente, asas demoníacas e foice de magma. | Respiração vulcânica, bater de asas e golpe ceifador de 180°. |
 | **Golden Titan** | Invasão Dourada | `GOLDEN_TITAN` | Titã solar com armadura completa de placas de ouro polido, elmo com fenda solar e espada larga de ouro com halo orbital. | Pouso de impacto, pulso solar e golpe divino com grande espada. |
+
+---
+
+## 6. PROTÓTIPOS GLB ESTÁTICOS PARA O BESTIÁRIO
+
+O Dev Viewer possui doze GLBs independentes para inspeção visual, e a arena 3D em tempo real já os associa aos tipos correspondentes existentes no servidor. `BossManager` é sincronizado separadamente de `MobSpawner`; os snapshots de chefes alimentam a cena e os protótipos substituem somente a malha visual. `ICE_QUEEN`, `GORGON`, `BALROG` e `GOLDEN_TITAN` partem dos construtores procedurais já existentes; `HYDRA`, `ZAIKAN`, `KUNDUN` e as cinco criaturas douradas abaixo usam geometria estática própria nesta primeira passagem.
+
+| Identificador | Tipo | Arquivo do protótipo |
+| :--- | :--- | :--- |
+| `ICE_QUEEN` | World Boss | `prototypes/3d_bestiary/ice_queen.glb` |
+| `GORGON` | World Boss | `prototypes/3d_bestiary/gorgon.glb` |
+| `HYDRA` | Monstro lendário de Atlans (sem fases em `BossManager`) | `prototypes/3d_bestiary/hydra.glb` |
+| `BALROG` | World Boss | `prototypes/3d_bestiary/balrog.glb` |
+| `ZAIKAN` | World Boss | `prototypes/3d_bestiary/zaikan.glb` |
+| `KUNDUN` | World Boss | `prototypes/3d_bestiary/kundun.glb` |
+| `GOLDEN_TITAN` | Invasão Dourada | `prototypes/3d_bestiary/golden_titan.glb` |
+| `GOLDEN_BUDGE_DRAGON` | Invasão Dourada — wyrmling saqueador | `prototypes/3d_bestiary/golden_budge_dragon.glb` |
+| `GOLDEN_SOLDIER` | Invasão Dourada — cavaleiro esqueleto | `prototypes/3d_bestiary/golden_soldier.glb` |
+| `GOLDEN_LIZARD_KING` | Protótipo dourado visual-only — monarca anfíbio | `prototypes/3d_bestiary/golden_lizard_king.glb` |
+| `GOLDEN_TANTALOS` | Invasão Dourada — titã do deserto | `prototypes/3d_bestiary/golden_tantalos.glb` |
+| `GOLDEN_DRAGON` | Invasão Dourada — dragão colossal | `prototypes/3d_bestiary/golden_dragon.glb` |
+
+Os cinco tipos `boss_*` efetivamente configurados em `src/server/bosses/BossDefinitions.ts` são Gorgon, Ice Queen, Balrog, Zaikan e Kundun; Hydra existe como monstro em `Monster.ts`, mas não foi promovida a chefe de fases. `GOLDEN_LIZARD_KING` vem do manifesto de produção e está disponível para inspeção visual, porém ainda não possui definição de monstro, atributos ou spawn no servidor — nada disso é criado implicitamente.
+
+As cópias consumidas pelo Dev Viewer ficam em `src/client/dev_viewer/models/bestiary/`. `bestiaryRuntimeMap.js` associa os tipos existentes aos GLBs; `GLTF_BESTIARY_MAP` associa os IDs aos arquivos. Os controles administrativos usam a API HTTP e exigem `DASI_DEV_CONTROLS=1` (desativado por padrão). Regeneração reproduzível: `npm run build:bestiary-glb`.
+
+> **Limite de escopo:** são blockouts visuais estáticos, não os modelos finais previstos no manifesto. Não incluem rig esquelético, skinning, animação, colisões, luzes/partículas ou efeitos de runtime. O selo `[SPEC]` das linhas `BOSS_*` continua válido até a produção e homologação dos assets completos; os protótipos não satisfazem os orçamentos de geometria/textura nem os rigs especificados.

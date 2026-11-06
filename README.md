@@ -7,6 +7,8 @@ Protótipo de MMORPG / ARPG inspirado na atmosfera clássica de **MU Online**, c
 ## Estado atual e documentação
 
 - **Cenários:** 56 concepts individuais e 56 GLBs procedurais de blockout. O editor experimental permite alterações visuais em todos os cenários e exportação individual ou em lote; isso não atualiza colisões ou o servidor. As bordas circulares ainda têm áreas não editáveis.
+- **Arenas de evento:** GLBs estáticos dedicados para Devil Square (`EVT_02`), Chaos Castle (`EVT_03`) e Coliseu de Duelos (`EVT_04`), além dos 56 blockouts. Os GLBs são visuais e não contêm colisões, animações nem VFX de runtime.
+- **Bestiário:** 12 protótipos GLB estáticos para seis chefes e seis criaturas da Invasão Dourada; integrados ao Dev Viewer, mas não são assets finais nem contêm rig, animações, colisões ou VFX de runtime.
 - **Personagens:** cinco concepts iniciais e cinco blockouts GLB modulares, com 60 peças experimentais de armadura. São formas procedurais simples, sem rig esquelético, skinning ou animações GLTF; não são modelos finais.
 - **Servidor:** protótipo sem autenticação real, persistência completa ou autoridade integral de movimento. Não exponha a redes não confiáveis.
 - **Validação:** execute `npm run typecheck` e `npm test`; os testes automatizados não substituem revisão visual, testes em navegador nem medição de desempenho.
@@ -51,7 +53,23 @@ Dasi/
 │   ├── tarkan_desert.glb                 # Deserto de Cinzas (Dunas, Verme 9,5m, Engrenagens)
 │   ├── icarus_aethel.glb                 # Ilhas Flutuantes (Aetherita, Pontes de Luz)
 │   ├── valley_of_loren_citadel.glb       # Batalha de Cerco (Catapultas, Fosso de Lava, Trono)
-│   └── blood_castle_bridge.glb           # Ponte do Martírio (120m, 16 Arcanjos, Altar Divino)
+│   ├── blood_castle_bridge.glb           # Ponte do Martírio (120m, 16 Arcanjos, Altar Divino)
+│   ├── devil_square.glb                  # Arena circular, pentagrama, totens e grades (EVT_02)
+│   ├── chaos_castle.glb                  # 36 lajes sobre o abismo e ruínas (EVT_03)
+│   └── duel_coliseum.glb                  # Coliseu octogonal, arquibancadas e placar (EVT_04)
+├── prototypes/3d_bestiary/               # Protótipos visuais estáticos de chefes/invasão
+│   ├── ice_queen.glb                     # Rainha de Gelo
+│   ├── gorgon.glb                        # Gorgon
+│   ├── hydra.glb                         # Hydra de três cabeças
+│   ├── balrog.glb                        # Balrog com membros e asas
+│   ├── zaikan.glb                        # Quimera biomecânica do deserto
+│   ├── kundun.glb                        # Lorde do Caos
+│   ├── golden_titan.glb                  # Campeão da Invasão Dourada
+│   ├── golden_budge_dragon.glb           # Wyrmling dourado
+│   ├── golden_soldier.glb                # Cavaleiro esqueleto dourado
+│   ├── golden_lizard_king.glb            # Monarca anfíbio
+│   ├── golden_tantalos.glb               # Titã solar do deserto
+│   └── golden_dragon.glb                 # Dragão Dourado colossal
 │
 ├── src/                                  # Código-Fonte do Jogo
 │   ├── client/
@@ -78,7 +96,12 @@ Dasi/
 │   └── shaders/                          # Shaders HLSL e GLSL
 │
 └── tools/
-    └── blender_dasi_world_builder.py     # Gerador Procedural Automatizado (Blender 5.2 LTS)
+    ├── blender_dasi_world_builder.py     # Gerador de biomas e Valley/Blood Castle (Blender 5.2 LTS)
+    ├── event_arena_models.mjs            # Cenas PBR estáticas dedicadas de EVT_02..EVT_04
+    ├── export_event_arenas.mjs           # Exportação/sincronização dos GLBs de evento
+    ├── bestiary_models.mjs               # Construtores estáticos dos protótipos de chefes
+    ├── golden_invasion_models.mjs        # Geometria estática das criaturas douradas
+    └── export_bestiary_glbs.mjs          # Exportação/sincronização dos GLBs do bestiário
 ```
 
 ---
@@ -91,6 +114,15 @@ npm ci
 # Iniciar o Servidor de Jogo e Dev Viewer Web (somente localhost)
 npm start
 ```
+
+Para regenerar os GLBs estáticos de arenas e bestiário (Node.js/Three.js):
+
+```bash
+npm run build:event-glb
+npm run build:bestiary-glb
+```
+
+No Dev Viewer, a categoria **Monstros** permite inspecionar os 12 protótipos. São malhas de referência estáticas; movimento, combate, colisão e efeitos permanecem fora dos GLBs.
 
 Abra no navegador:
 👉 **`http://localhost:8080`**

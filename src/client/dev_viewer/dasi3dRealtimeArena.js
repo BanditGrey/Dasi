@@ -17,7 +17,15 @@
  */
 
 import * as THREE from './libs/three.module.js';
-import { createHero, createMonster, createEnvironment, createProceduralCanvasTexture } from './dasi3dContent.js';
+import { OPCODES } from './protocolOpcodes.js';
+import {
+  createHero,
+  createMonster,
+  createEnvironment,
+  createProceduralCanvasTexture,
+  loadBestiaryCreatureGLB,
+} from './dasi3dContent.js';
+import { resolveBestiaryRuntimeModel } from './bestiaryRuntimeMap.js';
 import { DasiCollisionEngine } from './dasiCollisionEngine.js';
 import {
   HarmonicAudioSynthesizer,
@@ -48,7 +56,8 @@ export class Dasi3DRealtimeArena {
     this.showCollisionDebug = false;
     this.debugCollidersMesh = null;
     this.harmonicAudio = new HarmonicAudioSynthesizer();
-    this.monsters3D = new Map();   // id -> { group, monsterRef, hpBar, lastX, lastZ }
+    this.monsters3D = new Map();   // id -> entidade 3D sincronizada com MobSpawner
+    this.bosses3D = new Map();     // id -> entidade 3D sincronizada separadamente com BossManager
     this.drops3D = new Map();      // dropId -> { group, mesh, beam, light }
     this.portals3D = new Map();    // portalId -> { group, vortexDisc, innerRing, outerRing, portalLight, particlesPoints, labelSprite, def }
     this.floatingTexts = [];       // { sprite, targetY, life, maxLife }
@@ -439,7 +448,16 @@ export class Dasi3DRealtimeArena {
         }
       }
 
-      // 3. Checa se clicou em algum monstro 3D
+      // 3. Chefes chegam por um fluxo separado do MobSpawner.
+      for (const [bossId, bossObj] of this.bosses3D.entries()) {
+        const hits = this.raycaster.intersectObjects(bossObj.group.children, true);
+        if (hits.length > 0) {
+          this.onBossClicked(bossId);
+          return;
+        }
+      }
+
+      // 4. Checa se clicou em algum monstro 3D
       for (const [mobId, mobObj] of this.monsters3D.entries()) {
         const hits = this.raycaster.intersectObjects(mobObj.group.children, true);
         if (hits.length > 0) {
@@ -448,7 +466,7 @@ export class Dasi3DRealtimeArena {
         }
       }
 
-      // 4. Checa clique no solo navegável para movimentação
+      // 5. Checa clique no solo navegável para movimentação
       const groundHits = this.raycaster.intersectObject(this.walkPlane);
       if (groundHits.length > 0) {
         const hitPoint = groundHits[0].point;
@@ -474,7 +492,7 @@ export class Dasi3DRealtimeArena {
     this.app.selectedTargetId = mobId;
     this.app.updateTargetHud(mob);
 
-    this.app.sendPacket(this.app.OPCODES.COMBAT_ATTACK_REQ, {
+    this.app.sendPacket(OPCODES.COMBAT_ATTACK_REQ, {
       targetMobId: mob.id,
       playerX: this.app.playerX,
       playerY: this.app.playerY,
@@ -483,12 +501,27 @@ export class Dasi3DRealtimeArena {
     this.triggerPlayerAttackAnim();
   }
 
+  onBossClicked(bossId) {
+    const boss = this.app.activeBosses?.get(bossId);
+    if (!boss || boss.isDead) return;
+
+    this.app.selectedBossId = bossId;
+    this.app.updateBossHud?.(boss);
+    this.app.updateActiveBossesList?.();
+    this.app.sendPacket(OPCODES.COMBAT_ATTACK_REQ, {
+      targetMobId: boss.id,
+      playerX: this.app.playerX,
+      playerY: this.app.playerY,
+    });
+    this.triggerPlayerAttackAnim();
+  }
+
   onDropClicked(dropId) {
     const drop = this.app.groundDrops.get(dropId);
     if (!drop) return;
 
     this.harmonicAudio?.playItemPickupSound();
-    this.app.sendPacket(this.app.OPCODES.GROUND_ITEM_PICKUP_REQ, {
+    this.app.sendPacket(OPCODES.GROUND_ITEM_PICKUP_REQ, {
       dropId: drop.dropId,
       playerX: this.app.playerX,
       playerY: this.app.playerY,
@@ -594,114 +627,144 @@ export class Dasi3DRealtimeArena {
   // ==========================================================================
   // SINCRONIZAÇÃO DE MONSTROS 3D COM O SERVIDOR
   // ==========================================================================
-  syncMonsters(serverMonstersMap) {
-    const activeIds = new Set();
+  createSynchronizedEntity(entityId, entityData, bossCollection = false) {
+    const entityType = String(entityData.type || '').toLowerCase();
+    const visual = resolveBestiaryRuntimeModel(entityType);
+    const isBoss = bossCollection || entityData.isBoss || entityType.startsWith('boss_') || !!visual?.isBoss;
+    const isGolden = entityType.startsWith('golden_');
+    const modelScale = visual?.scale ?? (isBoss ? 2.4 : isGolden ? 1.4 : 1);
+    const fallbackType = visual?.fallbackType || 'SPIDER';
+    const coords3D = this.to3DCoords(entityData.x, entityData.y);
+    const entity = createMonster(fallbackType, THREE);
+    entity.group.position.set(coords3D.x, 0, coords3D.z);
+    entity.group.scale.setScalar(modelScale);
 
-    for (const [mobId, mobData] of serverMonstersMap.entries()) {
-      activeIds.add(mobId);
-      const coords3D = this.to3DCoords(mobData.x, mobData.y);
+    let bossRing = null;
+    let goldRing = null;
+    if (isBoss) {
+      const bossRingGeom = new THREE.RingGeometry(1.6, 2.1, 32);
+      bossRingGeom.rotateX(-Math.PI / 2);
+      const bossRingMat = new THREE.MeshBasicMaterial({
+        color: 0xdc2626,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.8,
+      });
+      bossRing = new THREE.Mesh(bossRingGeom, bossRingMat);
+      entity.group.add(bossRing);
+    } else if (isGolden) {
+      const goldRingGeom = new THREE.RingGeometry(1.2, 1.5, 32);
+      goldRingGeom.rotateX(-Math.PI / 2);
+      const goldRingMat = new THREE.MeshBasicMaterial({
+        color: 0xf59e0b,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.85,
+      });
+      goldRing = new THREE.Mesh(goldRingGeom, goldRingMat);
+      entity.group.add(goldRing);
+    }
 
-      let mob3D = this.monsters3D.get(mobId);
-      const isBoss = mobData.isBoss || (mobData.type && mobData.type.startsWith('boss_'));
-      const isGolden = mobData.type && mobData.type.startsWith('golden_');
+    const hpCanvas = document.createElement('canvas');
+    hpCanvas.width = 160;
+    hpCanvas.height = 28;
+    const hpTex = new THREE.CanvasTexture(hpCanvas);
+    const spriteMat = new THREE.SpriteMaterial({ map: hpTex });
+    const hpSprite = new THREE.Sprite(spriteMat);
+    const labelHeight = visual?.labelHeight ?? (isBoss ? 3.6 : 1.9);
+    hpSprite.position.y = labelHeight / modelScale;
+    hpSprite.scale.set(isBoss ? 2.5 : isGolden ? 1.8 : 1.4, isBoss ? 0.38 : 0.28, 1.0);
+    entity.group.add(hpSprite);
 
-      if (!mob3D) {
-        let type3D = 'SPIDER';
-        if (mobData.type === 'spider') type3D = 'SPIDER';
-        else if (mobData.type === 'hound' || mobData.type === 'budge_dragon') type3D = 'BUDGE_DRAGON';
-        else if (mobData.type === 'bull_fighter') type3D = 'BULL_FIGHTER';
-        else if (mobData.type === 'skeleton') type3D = 'SKELETON';
-        else if (mobData.type === 'boss_gorgon') type3D = 'GORGON';
-        else if (mobData.type === 'boss_ice_queen') type3D = 'ICE_QUEEN';
-        else if (mobData.type === 'boss_balrog') type3D = 'BALROG';
-        else if (mobData.type === 'boss_zaikan') type3D = 'BALROG';
-        else if (mobData.type === 'boss_kundun') type3D = 'BALROG';
-        else if (isGolden) {
-          type3D = mobData.type.includes('dragon') ? 'BUDGE_DRAGON' : (mobData.type.includes('titan') || mobData.type.includes('tantalos') ? 'GOLDEN_TITAN' : 'GOLDEN_TITAN');
-        }
+    this.scene.add(entity.group);
 
-        const entity = createMonster(type3D, THREE);
-        entity.group.position.set(coords3D.x, 0, coords3D.z);
+    const synchronizedEntity = {
+      id: entityId,
+      group: entity.group,
+      entity,
+      hpSprite,
+      hpCanvas,
+      hpTex,
+      type: visual?.modelId || fallbackType,
+      isBoss,
+      isGolden,
+      targetPos: new THREE.Vector3(coords3D.x, 0, coords3D.z),
+      isDead: false,
+    };
 
-        if (isBoss) {
-          entity.group.scale.set(2.4, 2.4, 2.4);
-          const bossRingGeom = new THREE.RingGeometry(1.6, 2.1, 32);
-          bossRingGeom.rotateX(-Math.PI / 2);
-          const bossRingMat = new THREE.MeshBasicMaterial({
-            color: 0xdc2626,
-            side: THREE.DoubleSide,
-            transparent: true,
-            opacity: 0.8
-          });
-          entity.group.add(new THREE.Mesh(bossRingGeom, bossRingMat));
-        } else if (isGolden) {
-          entity.group.scale.set(1.4, 1.4, 1.4);
-          const goldRingGeom = new THREE.RingGeometry(1.2, 1.5, 32);
-          goldRingGeom.rotateX(-Math.PI / 2);
-          const goldRingMat = new THREE.MeshBasicMaterial({
-            color: 0xf59e0b,
-            side: THREE.DoubleSide,
-            transparent: true,
-            opacity: 0.85
-          });
-          entity.group.add(new THREE.Mesh(goldRingGeom, goldRingMat));
-        }
+    if (visual?.modelId) {
+      const preserved = [entity.parts?.groundRing, bossRing, goldRing, hpSprite];
+      loadBestiaryCreatureGLB(visual.modelId, entity.group, THREE, (model) => {
+        synchronizedEntity.glbModel = model;
+      }, preserved);
+    }
 
-        const hpCanvas = document.createElement('canvas');
-        hpCanvas.width = 160;
-        hpCanvas.height = 28;
-        const hpTex = new THREE.CanvasTexture(hpCanvas);
-        const spriteMat = new THREE.SpriteMaterial({ map: hpTex });
-        const hpSprite = new THREE.Sprite(spriteMat);
-        hpSprite.position.y = isBoss ? 3.6 : 1.9;
-        hpSprite.scale.set(isBoss ? 2.5 : 1.4, isBoss ? 0.38 : 0.28, 1.0);
-        entity.group.add(hpSprite);
+    return synchronizedEntity;
+  }
 
-        this.scene.add(entity.group);
+  updateSynchronizedEntity(synchronizedEntity, entityData) {
+    const coords3D = this.to3DCoords(entityData.x, entityData.y);
+    synchronizedEntity.targetPos.set(coords3D.x, 0, coords3D.z);
 
-        mob3D = {
-          group: entity.group,
-          entity,
-          hpSprite,
-          hpCanvas,
-          hpTex,
-          type: type3D,
-          isBoss,
-          isGolden,
-          targetPos: new THREE.Vector3(coords3D.x, 0, coords3D.z),
-          isDead: false,
-        };
-        this.monsters3D.set(mobId, mob3D);
-      }
-
-      mob3D.targetPos.set(coords3D.x, 0, coords3D.z);
-
-      const hpPct = Math.max(0, mobData.currentHp / mobData.maxHp);
-      const shieldPct = mobData.shield ? Math.min(1, mobData.shield / mobData.maxHp) : 0;
-      const ctx = mob3D.hpCanvas.getContext('2d');
+    const maxHp = Math.max(1, Number(entityData.maxHp) || 1);
+    const currentHp = Math.max(0, Number(entityData.currentHp) || 0);
+    const hpPct = Math.max(0, Math.min(1, currentHp / maxHp));
+    const shield = Math.max(0, Number(entityData.currentShield ?? entityData.shield) || 0);
+    const maxShield = Math.max(1, Number(entityData.maxShield) || maxHp);
+    const shieldPct = Math.max(0, Math.min(1, shield / maxShield));
+    const ctx = synchronizedEntity.hpCanvas.getContext('2d');
+    if (ctx) {
       ctx.clearRect(0, 0, 160, 28);
       ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
       ctx.fillRect(0, 0, 160, 28);
-      ctx.fillStyle = mob3D.isBoss ? '#ef4444' : (hpPct > 0.4 ? '#10b981' : '#ef4444');
+      ctx.fillStyle = synchronizedEntity.isBoss ? '#ef4444' : (hpPct > 0.4 ? '#10b981' : '#ef4444');
       ctx.fillRect(2, 2, Math.round(156 * hpPct), 24);
       if (shieldPct > 0) {
         ctx.fillStyle = 'rgba(56, 189, 248, 0.85)';
         ctx.fillRect(2, 2, Math.round(156 * shieldPct), 8);
       }
-      mob3D.hpTex.needsUpdate = true;
-
-      if (mobData.isDead && !mob3D.isDead) {
-        mob3D.isDead = true;
-        this.animateMonsterDeath(mob3D);
-      }
+      synchronizedEntity.hpTex.needsUpdate = true;
     }
 
-    for (const [mobId, mob3D] of this.monsters3D.entries()) {
-      if (!activeIds.has(mobId)) {
-        this.scene.remove(mob3D.group);
-        this.monsters3D.delete(mobId);
+    if (entityData.isDead && !synchronizedEntity.isDead) {
+      synchronizedEntity.isDead = true;
+      this.animateMonsterDeath(synchronizedEntity);
+    }
+  }
+
+  syncEntityCollection(serverEntities, renderEntities, bossCollection = false) {
+    const entries = serverEntities instanceof Map
+      ? serverEntities.entries()
+      : Array.isArray(serverEntities)
+        ? serverEntities.map((entity) => [entity.id, entity])
+        : Object.entries(serverEntities || {});
+    const activeIds = new Set();
+
+    for (const [entityId, entityData] of entries) {
+      if (!entityData || !entityId) continue;
+      activeIds.add(entityId);
+      let synchronizedEntity = renderEntities.get(entityId);
+      if (!synchronizedEntity) {
+        synchronizedEntity = this.createSynchronizedEntity(entityId, entityData, bossCollection);
+        renderEntities.set(entityId, synchronizedEntity);
+      }
+      this.updateSynchronizedEntity(synchronizedEntity, entityData);
+    }
+
+    for (const [entityId, synchronizedEntity] of renderEntities.entries()) {
+      if (!activeIds.has(entityId)) {
+        this.scene.remove(synchronizedEntity.group);
+        renderEntities.delete(entityId);
       }
     }
+  }
+
+  syncMonsters(serverMonstersMap) {
+    this.syncEntityCollection(serverMonstersMap, this.monsters3D, false);
+  }
+
+  syncBosses(serverBosses) {
+    this.syncEntityCollection(serverBosses, this.bosses3D, true);
   }
 
   animateMonsterDeath(mob3D) {
@@ -945,12 +1008,14 @@ export class Dasi3DRealtimeArena {
     );
     this.camera.lookAt(this.cameraLookTarget.x, this.cameraLookTarget.y + 0.6, this.cameraLookTarget.z);
 
-    // 7. ATUALIZAÇÃO DE MONSTROS 3D
-    for (const mob3D of this.monsters3D.values()) {
-      if (!mob3D.isDead) {
-        mob3D.group.position.lerp(mob3D.targetPos, 0.15);
-        if (mob3D.entity && mob3D.entity.updateAnim) {
-          mob3D.entity.updateAnim('WALK', elapsed, delta);
+    // 7. ATUALIZAÇÃO DE MONSTROS E CHEFES 3D
+    for (const entityMap of [this.monsters3D, this.bosses3D]) {
+      for (const entity3D of entityMap.values()) {
+        if (!entity3D.isDead) {
+          entity3D.group.position.lerp(entity3D.targetPos, 0.15);
+          if (entity3D.entity && entity3D.entity.updateAnim) {
+            entity3D.entity.updateAnim('WALK', elapsed, delta);
+          }
         }
       }
     }

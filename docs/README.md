@@ -3,7 +3,7 @@
 > **Servidor Autoritativo:** Node.js / TypeScript (`ws://localhost:8080` & `http://localhost:8080`)  
 > **Cliente WebGL 3D:** Three.js PBR (`src/client/dev_viewer/`)  
 > **Cliente Desktop AAA:** Unreal Engine 5.5 C++ (`src/client/ue5_project/`)  
-> **Status dos Testes:** 🟢 **133 / 133 Testes Aprovados em 41 suítes (100% Green)** + `npm run typecheck` sem erros
+> **Status dos Testes:** 🟢 **222 / 222 testes aprovados em 54 suítes (100% green)** + `npm run typecheck` sem erros
 
 ---
 
@@ -14,7 +14,7 @@
 - [`Classes_and_Skills.md`](file:///d:/Dasi/docs/Classes_and_Skills.md): As 5 classes canônicas (Dark Knight, Dark Wizard, Fairy Elf, Magic Gladiator, Dark Lord) e suas árvores de habilidades.
 - [`Combat_and_Stats.md`](file:///d:/Dasi/docs/Combat_and_Stats.md): Sistema de atributos (FOR, AGI, VIT, ENE), fórmulas de escalonamento, vitais e cálculos autoritativos de dano.
 - [`Economy_and_Crafting.md`](file:///d:/Dasi/docs/Economy_and_Crafting.md): Economia de Zen, Joias Sagradas (Bless, Soul, Chaos, Life), taxas de aprimoramento (+0..+15) e Máquina do Caos.
-- [`Bestiary_and_Bosses.md`](file:///d:/Dasi/docs/Bestiary_and_Bosses.md): Bestiário completo com monstros normais, elites, monstros dourados e chefes mundiais (Kundun, Gorgon, Balrog).
+- [`Bestiary_and_Bosses.md`](file:///d:/Dasi/docs/Bestiary_and_Bosses.md): Bestiário, chefes e invasões; inclui doze protótipos GLB estáticos em `prototypes/3d_bestiary/` (sem rig, animações, colisões ou VFX de runtime).
 - [`PVP_and_Castle_Siege.md`](file:///d:/Dasi/docs/PVP_and_Castle_Siege.md): Regras de PK, duelo de arenas, batalhas de guildas e o lendário cerco ao castelo (*Castle Siege*).
 
 ### 1.2 Level Design & Os 56 Cenários Canônicos (8 Biomas + Cerco + Eventos)
@@ -26,7 +26,7 @@
 - [`Atlans_Thalassa_Level_Design.md`](file:///d:/Dasi/docs/level_design/Atlans_Thalassa_Level_Design.md): Cidade submersa abissal, física subaquática e reflexos cáusticos.
 - [`Icarus_Aethel_Level_Design.md`](file:///d:/Dasi/docs/level_design/Icarus_Aethel_Level_Design.md): Reino celeste nas nuvens, aerodinâmica de asas e pontes etéreas.
 - [`Scenery_Art_Gallery.md`](file:///d:/Dasi/docs/art/Scenery_Art_Gallery.md): Galeria com artes conceituais de alta definição de todos os biomas.
-- [`Modelos 3D Reais (.glb) em models/`](file:///d:/Dasi/src/client/dev_viewer/models/): Modelos 3D compilados no Blender 5.2 (Lorencia Citadel, Noria Feywood, Devias Boreal, Atlans Thalassa, Icarus Aethel, Dungeon, Lost Tower, Tarkan) renderizados nativamente via `GLTFLoader.js`.
+- [`Modelos 3D (.glb) em models/`](file:///d:/Dasi/src/client/dev_viewer/models/): Biomas principais, GLBs estáticos de arenas de evento (`models/events/`) e doze protótipos de bestiário (`models/bestiary/`), exportados com Three.js. Os arquivos estáticos não incluem colisões, rig, animações nem efeitos dinâmicos; esses pertencem ao `CollisionSystem` e ao runtime.
 
 ### 1.3 Arquitetura Técnica & Engenharia de Sistemas
 - [`Network_Protocol.md`](file:///d:/Dasi/docs/technical/Network_Protocol.md): Especificação completa do protocolo de rede binário multiplexado (Opcodes `0x01` a `0x75`).
@@ -92,18 +92,20 @@ d:\Dasi\
 
 ## ⚡ 3. COMO INICIALIZAR E TESTAR
 
-### 3.1 Executar a Suíte de Testes Automatizados (133 Testes em 41 suítes)
+### 3.1 Executar a Suíte de Testes Automatizados (222 testes em 54 suítes)
 ```powershell
 npm test
 npm run typecheck   # tsc --noEmit (strict) — 0 erros
 ```
-*Executa testes de inventário, economia, forja do caos, servidor de rede, motor de combate, gameplay de ação, caça 100% idle, catálogo dos 56 cenários, física de colisão com deslizamento e **paridade do catálogo servidor ⇄ cliente**.*
+*Executa testes de inventário, economia, forja do caos, servidor de rede, motor de combate, gameplay de ação, caça 100% idle, catálogo e colisão dos 56 cenários, **paridade servidor ⇄ cliente**, arenas de evento e carregamento dos doze GLBs estáticos do bestiário no Dev Viewer.*
 
 ### 3.2 Iniciar o Servidor de Jogo Autoritativo
 ```powershell
 npm start
 ```
 *Inicializa o GameServer em `http://localhost:8080` (HTTP REST) e `ws://localhost:8080` (WebSocket).*
+
+Os controles administrativos do Dev Viewer (spawn manual de chefes, invasões e caixas) ficam desligados por padrão. Para habilitá-los somente em desenvolvimento, inicie com `DASI_DEV_CONTROLS=1 npm start`.
 
 ### 3.3 Acessar o Cliente 3D no Navegador
 Abra o navegador em `http://localhost:8080/index.html` para testar:

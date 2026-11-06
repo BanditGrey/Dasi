@@ -12,7 +12,7 @@
 
 import * as THREE from './libs/three.module.js';
 import { OrbitControls } from './libs/OrbitControls.js';
-import { createHero, createMonster, createEnvironment } from './dasi3dContent.js';
+import { createHero, createMonster, createEnvironment, loadBestiaryCreatureGLB } from './dasi3dContent.js';
 import { createModularHero } from './modularHero.js';
 import { buildArmoryShowcase, ARMORY_METADATA } from './dasi3dArmory.js';
 import { DasiCollisionEngine } from './dasiCollisionEngine.js';
@@ -277,6 +277,11 @@ export class Dasi3DFeatureViewer {
   selectEntity(category, id, options = {}) {
     this.currentCategory = category;
     this.currentSubId = id;
+    const statusBadge = document.getElementById('lbl-real-scenery-status');
+    if (statusBadge) {
+      statusBadge.textContent = '🎮 Modelo 3D: visualização ativa';
+      statusBadge.style.color = '#4ade80';
+    }
     if (category !== 'ENVIRONMENT') this.onTileFloorChanged?.(null, id);
     if (options.setTier) this.currentSetTier = options.setTier;
 
@@ -309,6 +314,14 @@ export class Dasi3DFeatureViewer {
       const monster = createMonster(id, THREE);
       this.activeEntity = monster;
       this.scene.add(monster.group);
+      loadBestiaryCreatureGLB(id, monster.group, THREE, (glbModel) => {
+        monster.parts.realGLB = glbModel;
+        const statusBadge = document.getElementById('lbl-real-scenery-status');
+        if (statusBadge) {
+          statusBadge.textContent = '📦 Bestiário: protótipo GLB estático';
+          statusBadge.style.color = '#fbbf24';
+        }
+      }, [monster.parts.groundRing]);
 
       if (id === 'SPIDER') {
         this.controls.target.set(0, 0.55, 0);
@@ -326,14 +339,38 @@ export class Dasi3DFeatureViewer {
         this.controls.target.set(0, 1.4, 0);
         this.camera.position.set(0, 2.1, 4.2);
       } else if (id === 'GORGON') {
-        this.controls.target.set(0, 1.4, 0);
-        this.camera.position.set(0, 2.2, 4.8);
+        this.controls.target.set(0, 2.55, 0);
+        this.camera.position.set(0, 3.8, 8.2);
+      } else if (id === 'HYDRA') {
+        this.controls.target.set(0, 2.55, 0);
+        this.camera.position.set(0, 3.55, 9.1);
       } else if (id === 'BALROG') {
+        this.controls.target.set(0, 2.65, 0);
+        this.camera.position.set(0, 4.0, 8.2);
+      } else if (id === 'ZAIKAN') {
+        this.controls.target.set(0, 2.55, 0);
+        this.camera.position.set(0, 3.55, 8.8);
+      } else if (id === 'KUNDUN') {
+        this.controls.target.set(0, 2.6, 0);
+        this.camera.position.set(0, 3.65, 8.7);
+      } else if (id === 'GOLDEN_BUDGE_DRAGON') {
+        this.controls.target.set(0, 1.0, 0);
+        this.camera.position.set(0, 1.8, 5.1);
+      } else if (id === 'GOLDEN_SOLDIER') {
         this.controls.target.set(0, 1.8, 0);
-        this.camera.position.set(0, 2.6, 5.6);
+        this.camera.position.set(0, 2.7, 5.8);
+      } else if (id === 'GOLDEN_LIZARD_KING') {
+        this.controls.target.set(0, 1.5, 0);
+        this.camera.position.set(0, 2.4, 6.4);
+      } else if (id === 'GOLDEN_TANTALOS') {
+        this.controls.target.set(0, 2.6, 0);
+        this.camera.position.set(0, 3.7, 8.4);
+      } else if (id === 'GOLDEN_DRAGON') {
+        this.controls.target.set(0, 2.8, 0);
+        this.camera.position.set(0, 4.0, 13.0);
       } else if (id === 'GOLDEN_TITAN') {
-        this.controls.target.set(0, 1.8, 0);
-        this.camera.position.set(0, 2.6, 5.4);
+        this.controls.target.set(0, 2.1, 0);
+        this.camera.position.set(0, 3.2, 6.4);
       }
 
     } else if (category === 'ENVIRONMENT') {

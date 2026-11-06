@@ -182,6 +182,74 @@ it('Todos os 56 blockouts carregam e excluem efeitos controlados pelo runtime', 
   }
 });
 
+it('GLBs dedicados das arenas de evento carregam, preservam marcos e mantêm o mapa de aliases', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  // @ts-ignore - módulo JS do Dev Viewer
+  const { GLTF_BIOME_MAP, resolveScenarioBiome } = await import('../../../client/dev_viewer/dasi3dContent.js');
+  const assets = [
+    {
+      id: 'EVT_02',
+      alias: 'DEVIL_SQUARE',
+      filename: 'devil_square',
+      landmarks: ['devil_square_floor', 'devil_square_pentagram', 'devil_square_skull_totem_north', 'devil_square_triumph_chest', 'devil_square_iron_cage'],
+    },
+    {
+      id: 'EVT_03',
+      alias: 'CHAOS_CASTLE',
+      filename: 'chaos_castle',
+      landmarks: ['chaos_castle_suspended_platform', 'chaos_castle_abyss_rift', 'chaos_castle_force_barrier', 'chaos_castle_ruin_01'],
+    },
+    {
+      id: 'EVT_04',
+      alias: 'DUEL_COLISEUM',
+      filename: 'duel_coliseum',
+      landmarks: ['duel_coliseum_fighting_floor', 'duel_coliseum_seating_tier_01', 'duel_coliseum_scoreboard', 'duel_coliseum_force_dome'],
+    },
+  ] as const;
+
+  for (const asset of assets) {
+    const viewerPath = `src/client/dev_viewer/models/events/${asset.filename}.glb`;
+    const prototypePath = `prototypes/3d_scenery/${asset.filename}.glb`;
+    const bytes = readFileSync(viewerPath);
+    assert.ok(bytes.length > 100_000, `${asset.id}: asset inesperadamente pequeno`);
+    assert.strictEqual(bytes.toString('ascii', 0, 4), 'glTF', `${asset.id}: cabeçalho GLB inválido`);
+    assert.deepStrictEqual(readFileSync(prototypePath), bytes, `${asset.id}: protótipo e cópia do Viewer divergiram`);
+    assert.strictEqual(resolveScenarioBiome(asset.id), asset.id);
+    assert.strictEqual(resolveScenarioBiome(asset.alias), asset.alias);
+    assert.strictEqual(GLTF_BIOME_MAP[asset.id], `models/events/${asset.filename}.glb`);
+    assert.strictEqual(GLTF_BIOME_MAP[asset.alias], `models/events/${asset.filename}.glb`);
+
+    const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    const gltf = await new GLTFLoader().parseAsync(buffer, '');
+    const arena = gltf.scene.getObjectByName(asset.alias);
+    assert.ok(arena, `${asset.id}: raiz do cenário ausente`);
+    assert.strictEqual(arena.userData.scenarioId, asset.id);
+    assert.strictEqual(arena.userData.staticVisualOnly, true);
+    assert.strictEqual(arena.userData.collisionsIncluded, false);
+    for (const landmark of asset.landmarks) assert.ok(arena.getObjectByName(landmark), `${asset.id}: ${landmark}`);
+
+    let meshCount = 0;
+    arena.traverse((object: THREE.Object3D) => {
+      assert.ok(!(object as THREE.Light).isLight && !(object as THREE.Points).isPoints, `${asset.id}: efeitos runtime fora do GLB`);
+      if ((object as THREE.Mesh).isMesh) meshCount++;
+    });
+    assert.ok(meshCount >= 150, `${asset.id}: geometria abaixo do mínimo esperado (${meshCount})`);
+
+    if (asset.id === 'EVT_03') {
+      let tileCount = 0;
+      arena.traverse((object: THREE.Object3D) => {
+        if (/^chaos_castle_tile_r\d{2}_c\d{2}$/.test(object.name)) tileCount++;
+      });
+      assert.strictEqual(tileCount, 36, 'Chaos Castle deve exportar cada uma das 36 lajes separadamente');
+    }
+    if (asset.id === 'EVT_04') {
+      const dome = arena.getObjectByName('duel_coliseum_force_dome') as THREE.Mesh;
+      assert.ok(dome.material instanceof THREE.Material && dome.material.transparent);
+    }
+  }
+});
+
 it('Atmosfera de cerco e eventos anima; interiores de Lorencia não recebem chuva', async () => {
   // @ts-ignore - módulo JS usado pelo visualizador
   const { createEnvironment } = await import('../../../client/dev_viewer/dasi3dContent.js');
@@ -223,7 +291,7 @@ it('Lorencia leste e bosque preservam marcos e atmosfera após exportação', as
       assert.strictEqual(grass.userData.nonBlockingDecoration, true);
     }
   }
-  // @ts-ignore - módulo JS do visualizador
+  // @ts-ignore - módulo do visualizador
   const { createEnvironment } = await import('../../../client/dev_viewer/dasi3dContent.js');
   const forest = createEnvironment('LOR_03', THREE);
   const motes = (forest.animParts as any).forestMotes;
