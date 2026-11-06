@@ -639,7 +639,6 @@ export class HarmonicAudioSynthesizer {
     osc.start(now);
     osc.stop(now + 0.13);
   }
-  }
 }
 
 // ============================================================================

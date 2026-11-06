@@ -318,9 +318,31 @@ export class GameServer {
       return;
     }
 
-    if (req.method === 'POST' && ['/api/bosses/spawn', '/api/events/trigger', '/api/castle-siege/control', '/api/box/open'].includes(pathname) && !this.enableDevControls) {
+    if (req.method === 'POST' && ['/api/bosses/spawn', '/api/bosses/despawn', '/api/events/trigger', '/api/castle-siege/control', '/api/box/open'].includes(pathname) && !this.enableDevControls) {
       res.writeHead(403, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Developer controls disabled' }));
+      return;
+    }
+
+    // Remoção manual de Chefes via console de desenvolvimento
+    if (pathname === '/api/bosses/despawn' && req.method === 'POST') {
+      this.readLimitedBody(req, res, (body) => {
+        try {
+          const data = body ? JSON.parse(body) : {};
+          const bossId = String(data.bossId || '');
+          if (!bossId || !this.bossManager.removeBoss(bossId)) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: 'Chefe ativo não encontrado.' }));
+            return;
+          }
+          this.broadcastBossesState();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, bossId }));
+        } catch (err: any) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: err.message }));
+        }
+      });
       return;
     }
 
@@ -1313,6 +1335,9 @@ export class GameServer {
       result
     );
 
+    // Bosses são mantidos pelo BossManager, fora do snapshot normal de monstros.
+    if (req.targetMobId?.startsWith('boss-')) this.broadcastBossesState();
+
     // Se o monstro foi derrotado e gerou drops no chão (0x16:0x01)
     if (result.dropsGenerated && result.dropsGenerated.length > 0) {
       this.broadcastPacket(
@@ -1578,11 +1603,19 @@ export class GameServer {
   // ==========================================
 
   private handleBossSpawnReq(session: ClientSession, payload: { type?: string; x?: number; y?: number }): void {
-    const type = payload?.type || 'boss_gorgon';
-    const x = payload?.x ?? 400;
-    const y = payload?.y ?? 250;
-    this.bossManager.spawnBoss(type, x, y);
-    this.broadcastBossesState();
+    try {
+      const type = payload?.type || 'boss_gorgon';
+      const x = payload?.x ?? 400;
+      const y = payload?.y ?? 250;
+      this.bossManager.spawnBoss(type, x, y);
+      this.broadcastBossesState();
+    } catch (err: any) {
+      this.sendPacket(session, Opcodes.MSG_BOSS_UPDATE_RES.opcode, Opcodes.MSG_BOSS_UPDATE_RES.subcode, {
+        success: false,
+        error: err.message,
+        bosses: this.bossManager.getSerializedBosses(),
+      });
+    }
   }
 
   private handleGoldenInvasionReq(session: ClientSession, payload: { tier?: number; mapId?: string }): void {

@@ -201,6 +201,7 @@ Para viabilizar a produção e aprofundamento das mecânicas, o GDD de **Dasi** 
 2. [ ] **Alinhamento moral / PK (karma)** — as 6 faixas de alinhamento (Herói → Carniceiro) e as penalidades de drop ainda são apenas design.
 3. [x] **Cerco ao Castelo como evento agendado** — `src/server/siege/CastleSiegeManager.ts` fecha o ciclo sobre `VOL_01..VOL_05`: janela de inscrição, portão de 25M HP, 4 Estátuas de 8M, pedestais + Selo da Coroa de 30s contínuos, opcodes `0xB1`, rotas `/api/castle-siege` e painel no Dev Viewer (19 testes em `castle_siege.test.ts`).
 4. [ ] **Persistência** — hoje o estado é em memória (`SessionManager`); o protocolo prevê Redis 7 + PostgreSQL 16.
-5. [ ] **GLB dedicados das arenas de evento** — `EVT_02`/`EVT_03`/`EVT_04` usam arte emprestada do bioma temático; faltam modelos próprios no `blender_dasi_world_builder.py`.
-6. [ ] **Pipeline UE5 executável** — o conteúdo C++ (59 arquivos) e os specs de animação estão no repo, mas o projeto ainda não foi compilado/validado em uma instalação de Unreal Engine.
+5. [x] **GLB dedicados das arenas de evento** — `EVT_02`/`EVT_03`/`EVT_04` agora têm assets PBR estáticos próprios em `prototypes/3d_scenery/{devil_square,chaos_castle,duel_coliseum}.glb`, sincronizados para `src/client/dev_viewer/models/events/` e mapeados no `GLTF_BIOME_MAP`. Regeneração: `npm run build:event-glb`; colisões e efeitos dinâmicos continuam separados no catálogo/runtime.
+6. [x] **Protótipos estáticos do bestiário** — 12 GLBs (seis chefes e as seis criaturas douradas da Invasão) em `prototypes/3d_bestiary/`, integrados ao seletor de monstros do Dev Viewer. Regeneração: `npm run build:bestiary-glb`; são blockouts sem rig, animação, colisão ou VFX e não concluem os assets `[SPEC]` do manifesto.
+7. [ ] **Pipeline UE5 executável** — o conteúdo C++ (59 arquivos) e os specs de animação estão no repo, mas o projeto ainda não foi compilado/validado em uma instalação de Unreal Engine.
 

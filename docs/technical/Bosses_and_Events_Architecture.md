@@ -92,6 +92,13 @@ O sistema dispara alertas globais na rede e gera monstros dourados com alto índ
 - **Tier 4:** Tarkan (`golden_tantalos`) $\to$ Dropa `box_of_kundun_4`.
 - **Tier 5:** Lost Tower (`golden_dragon`) $\to$ Dropa `box_of_kundun_5`.
 
+### 3.1.1 Integração com o Dev Viewer e a Arena 3D
+
+- O painel de desenvolvimento invoca chefes por `POST /api/bosses/spawn` (`{ type }`) e invasões por `POST /api/events/trigger` (`{ type: "GOLDEN_INVASION", tier }`). Cada ação usa um único transporte, evitando spawn duplicado; os controles HTTP ficam protegidos por `DASI_DEV_CONTROLS=1` e permanecem desligados por padrão.
+- O servidor publica snapshots completos em `{ bosses: [...] }`. O cliente consome esse formato, sincroniza o HUD e renderiza o `BossManager` em um mapa 3D separado do `MobSpawner`; ataques continuam passando pelo `CombatEngine` autoritativo.
+- `bestiaryRuntimeMap.js` associa os cinco chefes configurados, Hydra como monstro comum/lendário e os cinco tipos dourados de invasão aos GLBs corretos. Anéis de spawn, barras de vida, movimento e telégrafos continuam sendo visuais de runtime.
+- Os GLBs são protótipos estáticos: não fornecem rig, animações, colisão ou lógica de combate. `GOLDEN_LIZARD_KING` permanece visual-only até existir uma definição aprovada de atributos e spawn; Hydra não é promovida automaticamente a chefe de fases.
+
 ### 3.2 Tabela de Recompensas das Caixas de Kundun
 
 Ao abrir uma Box of Kundun, o loot é gerado autoritativamente e espalhado fisicamente no solo com dispersão radial:
@@ -203,4 +210,4 @@ O ecossistema conta com testes unitários e de integração cobrindo 100% dos fl
 - **Chefes & Invasões (`src/server/bosses/tests/bosses.test.ts`):** Validação dos 5 chefes canônicos, fases de Górgona, absorção de dano por escudo rúnico, ciclo de telégrafos, imunidade em fúria, e dispersão da Box of Kundun (+1 a +5).
 - **Arenas de Eventos (`src/server/events/tests/events.test.ts`):** Validação dos 4 estágios de Blood Castle, ondas e pilares de Devil Square, colapso de anéis e física de repulsão de Chaos Castle, placar de 10 abates de Duelo 1v1, e validação de bilhetes no EventManager.
 - **Masmorras (`src/server/dungeons/tests/dungeons.test.ts`):** Validação da progressão de 3 andares das Catacumbas, chave de ossos, drenagem de lodo ácido, quebra de pilares rúnicos e cálculo de ranques S/A/B/C.
-- **Resultado Total:** **133 testes aprovados em 41 suítes (100% verde)** — inclui `collision.test.ts` (56 cenários), `scenario_parity.test.ts` (paridade servidor ⇄ cliente) e `scenario_3d_coverage.test.ts` (geometria 3D dos 56).
+- **Resultado Total (validação em 06/11/2026):** **222 testes aprovados em 54 suítes (100% verde)** — inclui `collision.test.ts` (56 cenários), `scenario_parity.test.ts` (paridade servidor ⇄ cliente), `scenario_3d_coverage.test.ts` (cobertura procedural dos 56 cenários + GLBs dedicados de EVT_02..EVT_04) e `bestiary_glb_coverage.test.ts` (doze protótipos estáticos e integração do Dev Viewer).
