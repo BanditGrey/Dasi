@@ -19,11 +19,20 @@ import { DasiCollisionEngine } from './dasiCollisionEngine.js';
 import { ChaosMachineVFX, HarmonicAudioSynthesizer } from './dasiActionGameplay.js';
 
 export class Dasi3DFeatureViewer {
-  constructor(canvasContainerId, initialCategory = 'ENVIRONMENT', initialSubId = 'LORENCIA') {
+  constructor(canvasContainerId, initialCategory = 'ENVIRONMENT', initialSubId = null) {
     this.container = document.getElementById(canvasContainerId);
     if (!this.container) {
       console.error(`[Dasi3DViewer] Container ${canvasContainerId} não encontrado.`);
       return;
+    }
+
+    if (!initialSubId) {
+      if (initialCategory === 'HERO') initialSubId = 'DK';
+      else if (initialCategory === 'MONSTER') initialSubId = 'SPIDER';
+      else if (initialCategory === 'ARMORY') initialSubId = 'DRAGON_BLADE';
+      else initialSubId = 'LORENCIA';
+    } else if (initialCategory === 'HERO' && !['DK', 'DW', 'ELF', 'MG', 'DL'].includes(initialSubId)) {
+      initialSubId = 'DK';
     }
 
     // Configurações e Estado
@@ -302,12 +311,15 @@ export class Dasi3DFeatureViewer {
     }
 
     if (category === 'HERO') {
-      const hero = this.modularHeroMode ? createModularHero(THREE, id) : createHero(id, { setTier: this.currentSetTier }, THREE);
+      const heroId = ['DK', 'DW', 'ELF', 'MG', 'DL'].includes(id) ? id : 'DK';
+      this.currentSubId = heroId;
+      const hero = this.modularHeroMode ? createModularHero(THREE, heroId) : createHero(heroId, { setTier: this.currentSetTier }, THREE);
       this.activeEntity = hero;
       this.scene.add(hero.group);
 
       this.controls.target.set(0, 1.4, 0);
       this.camera.position.set(0, 2.2, 4.8);
+      this.controls.update();
       this.updateRefinementGlow(this.refinementLevel);
 
     } else if (category === 'MONSTER') {

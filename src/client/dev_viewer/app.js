@@ -2285,14 +2285,16 @@ class DevClientApp {
         if (this.domViewer3DPanel) this.domViewer3DPanel.style.display = 'flex';
 
         if (!this.viewer3DInstance) {
-          this.initViewer3D('HERO');
+          this.initViewer3D('HERO', 'DK');
         } else {
           const heroCatBtn = document.querySelector('.btn-3d-cat[data-cat="HERO"]');
           if (heroCatBtn && !heroCatBtn.classList.contains('active')) heroCatBtn.click();
+        }
+        [20, 80, 200, 350].forEach((delay) => {
           setTimeout(() => {
             if (this.viewer3DInstance) this.viewer3DInstance.onWindowResize();
-          }, 60);
-        }
+          }, delay);
+        });
       } else {
         if (tabSplit) tabSplit.classList.add('active');
         if (this.domArenaPanel) this.domArenaPanel.style.display = 'flex';
@@ -2370,8 +2372,16 @@ class DevClientApp {
   // ==========================================================================
   // INICIALIZAÇÃO E CONTROLE DO VISUALIZADOR 3D NATIVO (Three.js WebGL)
   // ==========================================================================
-  initViewer3D(initialCategory = 'ENVIRONMENT', initialEnv = 'LORENCIA') {
-    this.viewer3DInstance = new Dasi3DFeatureViewer('dasi-3d-viewport', initialCategory, initialEnv);
+  initViewer3D(initialCategory = 'ENVIRONMENT', initialSubId = null) {
+    if (!initialSubId) {
+      if (initialCategory === 'HERO') initialSubId = 'DK';
+      else if (initialCategory === 'MONSTER') initialSubId = 'SPIDER';
+      else if (initialCategory === 'ARMORY') initialSubId = 'DRAGON_BLADE';
+      else initialSubId = 'LORENCIA';
+    } else if (initialCategory === 'HERO' && !['DK', 'DW', 'ELF', 'MG', 'DL'].includes(initialSubId)) {
+      initialSubId = 'DK';
+    }
+    this.viewer3DInstance = new Dasi3DFeatureViewer('dasi-3d-viewport', initialCategory, initialSubId);
 
     const badgeMode = document.getElementById('badge-3d-mode');
     const badgeGlow = document.getElementById('badge-3d-glow');
@@ -2393,10 +2403,10 @@ class DevClientApp {
     const armorySubmodeBtns = document.querySelectorAll('.btn-armory-submode');
 
     let currentCategory = initialCategory || 'HERO';
-    let currentHero = 'DK';
+    let currentHero = initialCategory === 'HERO' ? (initialSubId || 'DK') : 'DK';
     let currentSetTier = 'DRAGON';
     let currentMonster = 'SPIDER';
-    let currentEnv = initialEnv || 'LORENCIA';
+    let currentEnv = initialCategory === 'ENVIRONMENT' ? (initialSubId || 'LORENCIA') : 'LORENCIA';
     let currentArmorySub = 'WEAPON';
     let currentArmoryItem = 'DRAGON_BLADE';
 
