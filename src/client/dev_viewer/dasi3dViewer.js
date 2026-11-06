@@ -106,11 +106,11 @@ export class Dasi3DFeatureViewer {
   }
 
   initLights() {
-    const ambientLight = new THREE.AmbientLight(0x1a2238, 0.90);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
     this.scene.add(ambientLight);
 
-    this.keyLight = new THREE.DirectionalLight(0xffecd2, 1.85);
-    this.keyLight.position.set(4, 8, 5);
+    this.keyLight = new THREE.DirectionalLight(0xfff5ea, 2.2);
+    this.keyLight.position.set(2.5, 4.5, 3.5);
     this.keyLight.castShadow = true;
     this.keyLight.shadow.mapSize.width = 1024;
     this.keyLight.shadow.mapSize.height = 1024;
@@ -317,8 +317,8 @@ export class Dasi3DFeatureViewer {
       this.activeEntity = hero;
       this.scene.add(hero.group);
 
-      this.controls.target.set(0, 1.4, 0);
-      this.camera.position.set(0, 2.2, 4.8);
+      this.controls.target.set(0, 1.05, 0);
+      this.camera.position.set(0, 1.35, 2.75);
       this.controls.update();
       this.updateRefinementGlow(this.refinementLevel);
 
@@ -577,6 +577,9 @@ export class Dasi3DFeatureViewer {
   triggerAnimation(animName) {
     this.currentAnim = animName;
     this.animTime = 0.0;
+    if (this.activeEntity && typeof this.activeEntity.triggerAnimation === 'function') {
+      this.activeEntity.triggerAnimation(animName);
+    }
   }
 
   setCameraPreset(preset) {

@@ -44,6 +44,14 @@ export const GLTF_BIOME_MAP = {
 // MAPA DE MODELOS 3D GLB DAS 5 CLASSES HEROICAS COMPILADAS VIA BLENDER 5.2 LTS
 // ============================================================================
 export const GLTF_HERO_MAP = {
+  DK: 'models/animated_heroes/hero_dk_animated.glb',
+  DW: 'models/animated_heroes/hero_dw_animated.glb',
+  ELF: 'models/animated_heroes/hero_elf_animated.glb',
+  MG: 'models/animated_heroes/hero_mg_animated.glb',
+  DL: 'models/animated_heroes/hero_dl_animated.glb',
+};
+
+export const GLTF_BLOCKOUT_HERO_MAP = {
   DK: 'models/hero_dark_knight.glb',
   DW: 'models/hero_dark_wizard.glb',
   ELF: 'models/hero_fairy_elf.glb',
@@ -115,7 +123,7 @@ export function loadBestiaryCreatureGLB(creatureId, targetGroup, THREE, onComple
 }
 
 export function loadRealHeroGLTF(heroClass, targetGroup, THREE, onComplete) {
-  const glbPath = GLTF_HERO_MAP[heroClass];
+  const glbPath = GLTF_HERO_MAP[heroClass] || GLTF_BLOCKOUT_HERO_MAP[heroClass];
   if (!glbPath) return;
 
   try {
@@ -133,11 +141,20 @@ export function loadRealHeroGLTF(heroClass, targetGroup, THREE, onComplete) {
         });
         targetGroup.add(model);
         console.log(`[Dasi3D] Herói Real GLB carregado: ${heroClass} (${glbPath})`);
-        if (onComplete) onComplete(model);
+        if (onComplete) onComplete(model, gltf);
       },
       undefined,
       (err) => {
-        console.warn(`[Dasi3D] Fallback procedural mantido para ${heroClass}:`, err);
+        console.warn(`[Dasi3D] Falha ao carregar ${glbPath}, tentando fallback estático:`, err);
+        const fallbackPath = GLTF_BLOCKOUT_HERO_MAP[heroClass];
+        if (fallbackPath && fallbackPath !== glbPath) {
+          loader.load(fallbackPath, (fallbackGltf) => {
+            const fallbackModel = fallbackGltf.scene;
+            fallbackModel.name = `REAL_HERO_${heroClass}`;
+            targetGroup.add(fallbackModel);
+            if (onComplete) onComplete(fallbackModel, fallbackGltf);
+          });
+        }
       }
     );
   } catch (err) {
@@ -1157,18 +1174,156 @@ export function createHero(heroClass, options = {}, THREE) {
   parts.wingRight = wingR;
   wingsGroup.add(wingR);
 
-  // Carregamento Assíncrono do Modelo GLB Oficial (Blender 5.2) se disponível
+  // Carregamento Assíncrono do Modelo GLB Oficial (Blender 5.2 / Animated AAA)
   if (options.useRealGLB !== false && typeof GLTFLoader !== 'undefined') {
-    loadRealHeroGLTF(heroClass, heroRoot, THREE, (glbModel) => {
-      // Ajusta escala e posição para casar com o pedestal
+    loadRealHeroGLTF(heroClass, rootGroup, THREE, (glbModel, gltf) => {
       glbModel.position.set(0, 0, 0);
       parts.realGLB = glbModel;
-      if (torsoGroup) {
-        torsoGroup.visible = false;
+
+      // Oculta completamente todas as peças procedurais de placeholder
+      if (heroRoot) heroRoot.visible = false;
+      if (torsoGroup) torsoGroup.visible = false;
+      for (const [key, part] of Object.entries(parts)) {
+        if (key !== 'realGLB' && key !== 'pedestalRing' && key !== 'groundRing' && part && part.visible !== undefined) {
+          part.visible = false;
+        }
       }
+
+      // Adiciona materiais do GLB real na lista de refinamento
+      glbModel.traverse((c) => {
+        if (c.isMesh && c.material) {
+          const mats = Array.isArray(c.material) ? c.material : [c.material];
+          for (const m of mats) {
+            if (m && !/face|eyes|skin/i.test(m.name || '')) {
+              glowMaterials.push(m);
+            }
+          }
+        }
+      });
+
+      // Configura AnimationMixer e toca a animação Idle padrão
+      if (gltf && gltf.animations && gltf.animations.length > 0) {
+        const mixer = new THREE.AnimationMixer(glbModel);
+        glbModel.userData.mixer = mixer;
+        glbModel.userData.animations = gltf.animations;
+
+        const idleAnim = gltf.animations.find(a => /idle_shield|sword_idle|idle/i.test(a.name)) || gltf.animations[0];
+        if (idleAnim) {
+          const action = mixer.clipAction(idleAnim);
+          action.play();
+          glbModel.userData.currentAction = action;
+        }
+      }
+
+      // Mapeamento de slots de armadura no modelo real
+      const findChildMeshes = (patterns) => {
+        const found = [];
+        glbModel.traverse((child) => {
+          if (child.isMesh) {
+            const name = (child.name || '').toLowerCase();
+            const geomName = (child.geometry?.name || '').toLowerCase();
+            for (const p of patterns) {
+              const lp = p.toLowerCase();
+              if (name.includes(lp) || geomName.includes(lp)) {
+                found.push(child);
+                break;
+              }
+            }
+          }
+        });
+        return found;
+      };
+
+      const armorMeshes = {
+        helmet: findChildMeshes(['armet', 'crown', 'hood', 'helmet', 'ponytail', 'hair']),
+        chest: findChildMeshes(['body_armor', 'wizard_body', 'ranger_body', 'chest', 'body']),
+        shoulders: findChildMeshes(['pauldron', 'shoulders', 'gorget', 'scarf']),
+        gloves: findChildMeshes(['arms', 'gloves', 'bracer']),
+        legs: findChildMeshes(['legs_armor', 'wizard_legs', 'ranger_legs', 'legs']),
+        boots: findChildMeshes(['feet_armor', 'wizard_feet', 'feet_boots', 'feet', 'boots']),
+        weapon: findChildMeshes(['goldensword', 'staff', 'goldenbow', 'bow', 'weapon']),
+        shield: findChildMeshes(['celticshield', 'shield']),
+      };
+
+      rootGroup.setArmor = (slot, variant) => {
+        const list = armorMeshes[slot];
+        if (list && list.length > 0) {
+          const visible = (variant !== 'none' && variant !== '0');
+          list.forEach(m => { m.visible = visible; });
+          return true;
+        }
+        return false;
+      };
+
+      rootGroup.setWeapon = (weaponId) => {
+        const list = armorMeshes.weapon;
+        if (list && list.length > 0) {
+          const visible = (weaponId !== 'none');
+          list.forEach(m => { m.visible = visible; });
+          return true;
+        }
+        return false;
+      };
+
+      rootGroup.toggleBaseMesh = (visible) => {
+        glbModel.traverse((c) => {
+          if (c.isMesh && /face|beard|hair|superhero|asian|han/i.test(c.name)) {
+            c.visible = visible;
+          }
+        });
+      };
+
+      rootGroup.triggerAnimation = (animName) => {
+        const mixer = glbModel.userData.mixer;
+        const anims = glbModel.userData.animations;
+        if (!mixer || !anims) return;
+
+        let target = null;
+        const u = (animName || '').toUpperCase();
+        if (heroClass === 'DW' || heroClass === 'DL') {
+          if (u === 'TWISTING_SLASH') target = anims.find(a => /spellcast_shoot|spellcasting/i.test(a.name));
+          else if (u === 'DEATH_STAB') target = anims.find(a => /spellcast_raise|spellcast_long/i.test(a.name));
+        } else if (heroClass === 'ELF') {
+          if (u === 'TWISTING_SLASH') target = anims.find(a => /ranged_shoot/i.test(a.name));
+          else if (u === 'DEATH_STAB') target = anims.find(a => /aiming|shoot/i.test(a.name));
+        } else {
+          if (u === 'TWISTING_SLASH') target = anims.find(a => /spin|slice_diagonal|chop/i.test(a.name));
+          else if (u === 'DEATH_STAB') target = anims.find(a => /slice_horizontal|chop|stab/i.test(a.name));
+        }
+        if (u === 'WALK' || u === 'RUN') {
+          target = anims.find(a => /run|walk/i.test(a.name));
+        } else if (u === 'IDLE') {
+          target = anims.find(a => /idle_shield|sword_idle|idle/i.test(a.name));
+        }
+        if (!target) {
+          target = anims.find(a => a.name.toLowerCase().includes(animName.toLowerCase()));
+        }
+
+        if (target) {
+          const action = mixer.clipAction(target);
+          const curr = glbModel.userData.currentAction;
+          if (curr && curr !== action) curr.fadeOut(0.2);
+          action.reset().fadeIn(0.2).play();
+          glbModel.userData.currentAction = action;
+
+          if (u !== 'IDLE' && u !== 'WALK' && u !== 'RUN') {
+            const duration = target.duration || 1.2;
+            setTimeout(() => {
+              const idleClip = anims.find(a => /idle_shield|sword_idle|idle/i.test(a.name)) || anims[0];
+              if (idleClip) {
+                const idleAct = mixer.clipAction(idleClip);
+                action.fadeOut(0.3);
+                idleAct.reset().fadeIn(0.3).play();
+                glbModel.userData.currentAction = idleAct;
+              }
+            }, duration * 1000);
+          }
+        }
+      };
+
       const statusBadge = document.getElementById('lbl-real-scenery-status');
       if (statusBadge) {
-        statusBadge.textContent = '🎮 Modelo 3D: Real GLB (Blender 5.2 PBR)';
+        statusBadge.textContent = '🎮 Modelo 3D: Real GLB Animado (AAA PBR 4K)';
         statusBadge.style.color = '#34d399';
       }
     });
@@ -1178,18 +1333,13 @@ export function createHero(heroClass, options = {}, THREE) {
   // RIG & ANIMADOR CINEMÁTICO PROCEDURAL POR CLASSE
   // --------------------------------------------------------------------------
   const updateAnim = (animName, time, delta) => {
-    // 0. Animação Sutil do Modelo Real GLB se ativo
+    // 0. Atualização do AnimationMixer do modelo real GLB
+    if (parts.realGLB && parts.realGLB.userData && parts.realGLB.userData.mixer) {
+      parts.realGLB.userData.mixer.update(delta || 0.016);
+      return;
+    }
     if (parts.realGLB) {
       parts.realGLB.position.y = Math.sin(time * 2.2) * 0.015;
-      parts.realGLB.traverse((c) => {
-        if (c.name && c.name.includes('Wing_L')) {
-          c.rotation.y = Math.sin(time * 3.0) * 0.12;
-        } else if (c.name && c.name.includes('Wing_R')) {
-          c.rotation.y = -Math.sin(time * 3.0) * 0.12;
-        } else if (c.name && c.name.includes('Raven')) {
-          c.position.y = Math.sin(time * 4.0) * 0.02;
-        }
-      });
     }
 
     // 1. Rotação do Anel Rúnico
@@ -1301,6 +1451,10 @@ export function createHero(heroClass, options = {}, THREE) {
     weaponMat,
     armorMat,
     updateAnim,
+    setArmor: (slot, variant) => (rootGroup.setArmor ? rootGroup.setArmor(slot, variant) : false),
+    setWeapon: (weaponId) => (rootGroup.setWeapon ? rootGroup.setWeapon(weaponId) : false),
+    toggleBaseMesh: (visible) => (rootGroup.toggleBaseMesh ? rootGroup.toggleBaseMesh(visible) : undefined),
+    triggerAnimation: (animName) => (rootGroup.triggerAnimation ? rootGroup.triggerAnimation(animName) : undefined),
   };
 }
 

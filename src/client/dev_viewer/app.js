@@ -2708,16 +2708,16 @@ class DevClientApp {
     weaponSelect?.addEventListener('change', refreshModularLinks);
     document.getElementById('hero-armor-apply')?.addEventListener('click', () => {
       const viewer = this.viewer3DInstance;
-      if (viewer.currentCategory !== 'HERO' || !viewer.modularHeroMode || !viewer.activeEntity?.setArmor) {
-        modularStatus.textContent = 'Ative o blockout modular para trocar peças.'; return;
+      if (viewer.currentCategory !== 'HERO' || !viewer.activeEntity?.setArmor) {
+        modularStatus.textContent = 'Ative um herói válido para trocar peças.'; return;
       }
       const changed = viewer.activeEntity.setArmor(armorSlot.value, armorVariant.value);
       modularStatus.textContent = changed ? 'Peça trocada nesta prévia; não afeta inventário ou servidor.' : 'Peça ou variante inválida.';
     });
     document.getElementById('hero-weapon-apply')?.addEventListener('click', () => {
       const viewer = this.viewer3DInstance;
-      if (viewer.currentCategory !== 'HERO' || !viewer.modularHeroMode || !viewer.activeEntity?.setWeapon) {
-        modularStatus.textContent = 'Ative o blockout modular para trocar de arma.'; return;
+      if (viewer.currentCategory !== 'HERO' || !viewer.activeEntity?.setWeapon) {
+        modularStatus.textContent = 'Ative um herói válido para trocar de arma.'; return;
       }
       const changed = viewer.activeEntity.setWeapon(weaponSelect.value);
       modularStatus.textContent = changed ? `Arma trocada para ${WEAPON_NAMES[weaponSelect.value] || weaponSelect.value}.` : 'Arma inválida para esta classe.';
