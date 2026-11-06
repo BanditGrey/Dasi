@@ -1600,22 +1600,22 @@ class DevClientApp {
     });
 
     // 3. Toolbar Dev Spawners
-    document.getElementById('btn-spawn-bless').addEventListener('click', () => {
+    document.getElementById('btn-spawn-bless')?.addEventListener('click', () => {
       this.sendPacket(OPCODES.ITEM_SPAWN_DEV_REQ, { itemDefId: 'jewel_of_blessing', count: 1 });
     });
-    document.getElementById('btn-spawn-soul').addEventListener('click', () => {
+    document.getElementById('btn-spawn-soul')?.addEventListener('click', () => {
       this.sendPacket(OPCODES.ITEM_SPAWN_DEV_REQ, { itemDefId: 'jewel_of_soul', count: 1 });
     });
-    document.getElementById('btn-spawn-life').addEventListener('click', () => {
+    document.getElementById('btn-spawn-life')?.addEventListener('click', () => {
       this.sendPacket(OPCODES.ITEM_SPAWN_DEV_REQ, { itemDefId: 'jewel_of_life', count: 1 });
     });
-    document.getElementById('btn-spawn-chaos').addEventListener('click', () => {
+    document.getElementById('btn-spawn-chaos')?.addEventListener('click', () => {
       this.sendPacket(OPCODES.ITEM_SPAWN_DEV_REQ, { itemDefId: 'jewel_of_chaos', count: 1 });
     });
-    document.getElementById('btn-spawn-harmony').addEventListener('click', () => {
+    document.getElementById('btn-spawn-harmony')?.addEventListener('click', () => {
       this.sendPacket(OPCODES.ITEM_SPAWN_DEV_REQ, { itemDefId: 'jewel_of_harmony', count: 1 });
     });
-    document.getElementById('btn-spawn-blade').addEventListener('click', () => {
+    document.getElementById('btn-spawn-blade')?.addEventListener('click', () => {
       this.sendPacket(OPCODES.ITEM_SPAWN_DEV_REQ, {
         itemDefId: 'dragon_blade',
         level: 0,
@@ -1624,7 +1624,7 @@ class DevClientApp {
         excellentMask: 8,
       });
     });
-    document.getElementById('btn-spawn-wings').addEventListener('click', () => {
+    document.getElementById('btn-spawn-wings')?.addEventListener('click', () => {
       this.sendPacket(OPCODES.ITEM_SPAWN_DEV_REQ, { itemDefId: 'wings_of_dragon', level: 0, luck: true });
     });
 
@@ -1653,17 +1653,17 @@ class DevClientApp {
     });
 
     // 4. Reconectar
-    document.getElementById('btn-reconnect').addEventListener('click', () => {
+    document.getElementById('btn-reconnect')?.addEventListener('click', () => {
       this.connect();
     });
 
     // 5. Limpar Console
-    document.getElementById('btn-clear-log').addEventListener('click', () => {
+    document.getElementById('btn-clear-log')?.addEventListener('click', () => {
       this.domLogs.innerHTML = '';
     });
 
     // 6. Refinement Level Slider Override
-    this.domSlider.addEventListener('input', (e) => {
+    this.domSlider?.addEventListener('input', (e) => {
       const lvl = parseInt(e.target.value, 10);
       this.previewOverrideLevel = lvl;
       this.domSliderVal.textContent = `+${lvl}`;
@@ -2457,7 +2457,7 @@ class DevClientApp {
       if (tileCol?.value === '' || tileRow?.value === '') { tileStatus.textContent = 'Informe coluna e linha.'; return; }
       applyTile(Number(tileCol?.value), Number(tileRow?.value));
     });
-    this.viewer3DInstance.renderer.domElement.addEventListener('dblclick', (event) => {
+    this.viewer3DInstance?.renderer?.domElement?.addEventListener('dblclick', (event) => {
       const viewer = this.viewer3DInstance;
       const controller = viewer?.currentCategory === 'ENVIRONMENT' && viewer.activeEntity?.tileFloor;
       if (!controller) return;
@@ -3785,7 +3785,7 @@ class DevClientApp {
     let lastMouseX = 0;
     let lastMouseY = 0;
 
-    this.canvas.addEventListener('mousedown', (e) => {
+    this.canvas?.addEventListener('mousedown', (e) => {
       this.isDraggingMesh = true;
       lastMouseX = e.clientX;
       lastMouseY = e.clientY;
