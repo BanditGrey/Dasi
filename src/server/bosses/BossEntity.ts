@@ -27,6 +27,7 @@ export interface SerializedBoss {
   type: string;
   name: string;
   title: string;
+  location: string;
   level: number;
   currentHp: number;
   maxHp: number;
@@ -61,6 +62,7 @@ export class BossEntity {
   public readonly type: string;
   public readonly name: string;
   public readonly title: string;
+  public readonly location: string;
   public readonly level: number;
   public readonly maxHp: number;
   public currentHp: number;
@@ -96,13 +98,15 @@ export class BossEntity {
   public pendingAddSummons: { monsterType: string; count: number }[] = [];
 
   constructor(type: string, x: number, y: number) {
-    const config = BOSS_CONFIGS[type] || BOSS_CONFIGS.boss_gorgon;
+    const config = BOSS_CONFIGS[type];
+    if (!config) throw new Error(`Tipo de chefe desconhecido: ${type}`);
     this.config = config;
 
     this.id = `boss-${type}-${(bossIdCounter++).toString(16).padStart(4, '0')}`;
     this.type = type;
     this.name = config.name;
     this.title = config.title;
+    this.location = config.location;
     this.level = config.level;
     this.maxHp = config.maxHp;
     this.currentHp = config.maxHp;
@@ -382,6 +386,7 @@ export class BossEntity {
       type: this.type,
       name: this.name,
       title: this.title,
+      location: this.location,
       level: this.level,
       currentHp: this.currentHp,
       maxHp: this.maxHp,

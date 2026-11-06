@@ -724,6 +724,8 @@ A tabela a seguir define o roteiro de execução e o status de homologação de 
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
+> **Nota de escopo (novembro de 2026):** os doze arquivos de referência em `prototypes/3d_bestiary/` são protótipos visuais estáticos para o Dev Viewer: seis chefes e seis criaturas da Invasão Dourada. Eles não alteram o status `[SPEC]` dos seis assets `BOSS_*` da tabela abaixo: rigs, animações, budgets, texturas PBR e VFX de produção continuam pendentes. `GOLDEN_TITAN` integra a lista de invasores dourados do manifesto, mas não é um sétimo chefe na tabela de World Bosses.
+
 | Código do Asset | Categoria / Descrição | Prioridade | Tri Target (UE5 / Web) | Texturas / PBR | Rig / Animação | VFX / Audio Hooks | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `SK_HERO_DK_01` | DK Base + Leather/Bronze Sets | Crítica | Nanite / 14k | 2K PBR | 112 Bones / Humanoide | Footsteps, Sword Swing | `[SPEC]` |

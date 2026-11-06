@@ -16,6 +16,10 @@ import http from 'node:http';
 import { WebSocket } from 'ws';
 import { GameServer } from '../GameServer.ts';
 import { Opcodes, LocationType } from '../protocol.ts';
+// @ts-ignore - exercita o dispatch real do clique da arena 3D em um teste de integração.
+import { Dasi3DRealtimeArena } from '../../../client/dev_viewer/dasi3dRealtimeArena.js';
+// @ts-ignore - verifica paridade entre o protocolo do cliente e o servidor.
+import { OPCODES as ClientOpcodes } from '../../../client/dev_viewer/protocolOpcodes.js';
 
 const TEST_PORT = 8199;
 const SERVER_URL = `ws://127.0.0.1:${TEST_PORT}`;
@@ -92,6 +96,146 @@ describe('Servidor de Jogo Dasi (WebSocket / HTTP Dev Server)', () => {
     assert.equal(json.status, 'online');
     assert.ok(json.server.includes('Dasi MMORPG'));
     assert.equal(res.headers.get('access-control-allow-origin'), '*');
+  });
+
+  test('API HTTP de chefes e Invasão Dourada mantém tipo/tier e despawn corretos', async () => {
+    const spawnRes = await fetch(`${HTTP_URL}/api/bosses/spawn`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'boss_kundun', x: 410, y: 260 }),
+    });
+    assert.equal(spawnRes.status, 200);
+    const spawnData = await spawnRes.json();
+    assert.equal(spawnData.success, true);
+    assert.equal(spawnData.boss.type, 'boss_kundun');
+    assert.equal(spawnData.boss.x, 410);
+    assert.equal(spawnData.boss.location, 'KAL_01');
+
+    const unknownBossRes = await fetch(`${HTTP_URL}/api/bosses/spawn`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'boss_hydra' }),
+    });
+    assert.equal(unknownBossRes.status, 400, 'Tipo não configurado não deve virar Gorgon por fallback silencioso');
+
+    const invasionRes = await fetch(`${HTTP_URL}/api/events/trigger`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'GOLDEN_INVASION', tier: 5, mapId: 'LORENCIA' }),
+    });
+    assert.equal(invasionRes.status, 200);
+    const invasionData = await invasionRes.json();
+    assert.equal(invasionData.success, true);
+    assert.equal(invasionData.invasion.tier, 5);
+    assert.equal(invasionData.invasion.spawnedMonsterIds.length, 1);
+    assert.equal(server.combatEngine.spawner.getMonster(invasionData.invasion.spawnedMonsterIds[0])?.type, 'golden_dragon');
+
+    const despawnRes = await fetch(`${HTTP_URL}/api/bosses/despawn`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bossId: spawnData.boss.id }),
+    });
+    assert.equal(despawnRes.status, 200);
+    assert.equal((await despawnRes.json()).success, true);
+    const activeRes = await fetch(`${HTTP_URL}/api/bosses`);
+    const activeData = await activeRes.json();
+    assert.ok(!activeData.activeBosses.some((boss: any) => boss.id === spawnData.boss.id));
+  });
+
+  test('Clique 3D ataca boss via WebSocket e recebe snapshots do BossManager', async () => {
+    const ws = await createTestClient();
+    let bossId: string | null = null;
+    try {
+      const challengePromise = waitForPacket(ws, Opcodes.MSG_HANDSHAKE_CHALLENGE.opcode, Opcodes.MSG_HANDSHAKE_CHALLENGE.subcode);
+      sendPacket(ws, Opcodes.MSG_HANDSHAKE_HELLO, { clientVersion: '1.0.0', clientTime: Date.now() });
+      await challengePromise;
+
+      const loginPromise = waitForPacket(ws, Opcodes.MSG_AUTH_LOGIN_RES.opcode, Opcodes.MSG_AUTH_LOGIN_RES.subcode);
+      sendPacket(ws, Opcodes.MSG_AUTH_LOGIN_REQ, { username: 'BossSnapshotClient', characterClass: 'DK' });
+      const login = await loginPromise;
+      assert.equal(login.success, true);
+
+      const snapshotPromise = waitForPacket(ws, Opcodes.MSG_BOSS_UPDATE_RES.opcode, Opcodes.MSG_BOSS_UPDATE_RES.subcode);
+      const spawnRes = await fetch(`${HTTP_URL}/api/bosses/spawn`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'boss_balrog' }),
+      });
+      const spawned = await spawnRes.json();
+      assert.equal(spawnRes.status, 200);
+      bossId = spawned.boss.id;
+
+      const snapshot = await snapshotPromise;
+      assert.ok(Array.isArray(snapshot.bosses));
+      const spawnedBoss = snapshot.bosses.find((boss: any) => boss.id === bossId && boss.type === 'boss_balrog');
+      assert.ok(spawnedBoss, 'snapshot plural deve incluir o boss recém-criado');
+      assert.deepEqual(ClientOpcodes.COMBAT_ATTACK_REQ, Opcodes.MSG_COMBAT_ATTACK_REQ);
+      assert.deepEqual(ClientOpcodes.GROUND_ITEM_PICKUP_REQ, Opcodes.MSG_GROUND_ITEM_PICKUP_REQ);
+      assert.deepEqual(ClientOpcodes.BOSS_SPAWN_REQ, Opcodes.MSG_BOSS_SPAWN_REQ);
+      assert.deepEqual(ClientOpcodes.BOSS_UPDATE_RES, Opcodes.MSG_BOSS_UPDATE_RES);
+      assert.deepEqual(ClientOpcodes.BOSS_TELEGRAPH_CAST, Opcodes.MSG_BOSS_TELEGRAPH_CAST);
+      assert.deepEqual(ClientOpcodes.GOLDEN_INVASION_REQ, Opcodes.MSG_GOLDEN_INVASION_REQ);
+      assert.deepEqual(ClientOpcodes.GOLDEN_INVASION_RES, Opcodes.MSG_GOLDEN_INVASION_RES);
+      assert.deepEqual(ClientOpcodes.BOX_KUNDUN_OPEN_REQ, Opcodes.MSG_BOX_KUNDUN_OPEN_REQ);
+      assert.deepEqual(ClientOpcodes.BOX_KUNDUN_OPEN_RES, Opcodes.MSG_BOX_KUNDUN_OPEN_RES);
+
+      // Exercita o caminho usado pelo clique 3D. O app fake não expõe OPCODES,
+      // para garantir que a arena use o módulo compartilhado e não uma propriedade inexistente.
+      const dispatchedPackets: Array<{ opcode: { opcode: number; subcode: number }; payload: any }> = [];
+      const arena = Object.create(Dasi3DRealtimeArena.prototype) as any;
+      arena.app = {
+        activeBosses: new Map([[bossId, spawnedBoss]]),
+        monsters: new Map([['mob-test', { id: 'mob-test', isDead: false }]]),
+        groundDrops: new Map([['drop-test', { dropId: 'drop-test' }]]),
+        playerX: spawnedBoss.x - 20,
+        playerY: spawnedBoss.y - 10,
+        updateTargetHud() {},
+        sendPacket(opcode: { opcode: number; subcode: number }, payload: any) {
+          dispatchedPackets.push({ opcode, payload });
+        },
+      };
+      arena.triggerPlayerAttackAnim = () => {};
+
+      let attackResult: any = null;
+      for (let attempt = 0; attempt < 100; attempt++) {
+        dispatchedPackets.length = 0;
+        arena.onBossClicked(bossId);
+        const request = dispatchedPackets[0];
+        assert.ok(request, 'clique no boss deve emitir um pacote de combate');
+        assert.deepEqual(request.opcode, ClientOpcodes.COMBAT_ATTACK_REQ);
+
+        const attackPromise = waitForPacket(
+          ws,
+          Opcodes.MSG_COMBAT_ATTACK_RES.opcode,
+          Opcodes.MSG_COMBAT_ATTACK_RES.subcode
+        );
+        sendPacket(ws, request.opcode, request.payload);
+        attackResult = await attackPromise;
+        if (attackResult.success && !attackResult.isMiss && attackResult.damage > 0) break;
+      }
+      assert.ok(attackResult?.success && !attackResult.isMiss && attackResult.damage > 0, 'clique 3D deve causar dano autoritativo');
+      assert.equal(attackResult.targetId, bossId);
+      assert.ok(attackResult.targetHp < spawnedBoss.currentHp, 'snapshot de combate deve refletir HP reduzido');
+
+      dispatchedPackets.length = 0;
+      arena.onMonsterClicked('mob-test');
+      assert.deepEqual(dispatchedPackets[0]?.opcode, Opcodes.MSG_COMBAT_ATTACK_REQ, 'clique em monstro usa opcode autoritativo');
+      assert.equal(dispatchedPackets[0]?.payload.targetMobId, 'mob-test');
+
+      dispatchedPackets.length = 0;
+      arena.onDropClicked('drop-test');
+      assert.deepEqual(dispatchedPackets[0]?.opcode, Opcodes.MSG_GROUND_ITEM_PICKUP_REQ, 'clique em drop usa opcode de coleta');
+      assert.equal(dispatchedPackets[0]?.payload.dropId, 'drop-test');
+    } finally {
+      ws.close();
+      if (bossId) {
+        await fetch(`${HTTP_URL}/api/bosses/despawn`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bossId }),
+        });
+      }
+    }
   });
 
   test('Sanidade HTTP: /api/shops, /api/chaos/recipes e 404 para rotas desconhecidas', async () => {
@@ -763,6 +907,12 @@ describe('Padrões seguros do sandbox', () => {
     try {
       const response = await fetch('http://127.0.0.1:8200/api/box/open', { method: 'POST', body: '{}' });
       assert.equal(response.status, 403);
+      const bossSpawn = await fetch('http://127.0.0.1:8200/api/bosses/spawn', { method: 'POST', body: '{}' });
+      const bossDespawn = await fetch('http://127.0.0.1:8200/api/bosses/despawn', { method: 'POST', body: '{}' });
+      const invasion = await fetch('http://127.0.0.1:8200/api/events/trigger', { method: 'POST', body: '{}' });
+      assert.equal(bossSpawn.status, 403);
+      assert.equal(bossDespawn.status, 403);
+      assert.equal(invasion.status, 403);
       const ws = new WebSocket('ws://127.0.0.1:8200');
       await new Promise<void>((resolve) => ws.once('open', resolve));
       const login = new Promise<void>((resolve) => ws.on('message', (data) => {

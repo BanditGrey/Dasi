@@ -23,7 +23,9 @@
     "test:watch": "node --experimental-strip-types --test --watch src/server/inventory/tests/inventory.test.ts",
     "test:parity": "node --experimental-strip-types --test src/server/world/tests/scenario_parity.test.ts",
     "typecheck": "tsc -p tsconfig.json",
-    "test:3d": "node --experimental-strip-types --test src/server/world/tests/scenario_3d_coverage.test.ts"
+    "test:3d": "node --experimental-strip-types --test src/server/world/tests/scenario_3d_coverage.test.ts src/server/world/tests/bestiary_glb_coverage.test.ts",
+    "build:event-glb": "node tools/export_event_arenas.mjs ALL",
+    "build:bestiary-glb": "node tools/export_bestiary_glbs.mjs ALL"
   },
   "keywords": [
     "mmorpg",

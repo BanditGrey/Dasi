@@ -15,6 +15,7 @@ import { SessionManager } from '../../network/SessionManager.ts';
 import { Opcodes, encodeBinaryPacket, decodeBinaryPacket } from '../../network/protocol.ts';
 import { Item } from '../../inventory/Item.ts';
 import { WeaponExcellentOption, EquipmentSlot } from '../../inventory/types.ts';
+import { BossManager } from '../../bosses/BossManager.ts';
 
 describe('1. Entidade de Monstros & Sistema de Drops (Monster.ts)', () => {
   it('Criação correta dos monstros clássicos de Lorencia (Spider, Hound, Skeleton, Bull Fighter)', () => {
@@ -211,6 +212,31 @@ describe('3. Motor de Combate Autoritativo & Cálculo de Cores (CombatEngine.ts)
     assert.ok(['NORMAL', 'SKILL', 'CRITICAL', 'EXCELLENT', 'IGNORE_DEFENSE'].includes(result.damageType));
     assert.ok(result.colorHex.startsWith('#'));
     assert.equal(result.targetHp, mob.currentHp);
+  });
+
+  it('Aplica ataques autoritativos a chefes usando o snapshot separado do BossManager', () => {
+    const bosses = new BossManager();
+    const engine = new CombatEngine(undefined, bosses);
+    const sessions = new SessionManager();
+    const session = sessions.createSession('boss-combat-socket');
+    sessions.authenticateSession(session.sessionId, 'BossFighter', 'DK');
+    const boss = bosses.spawnBoss('boss_gorgon', 400, 250);
+
+    let result: ReturnType<CombatEngine['processPlayerAttack']> | null = null;
+    for (let attempt = 0; attempt < 100; attempt++) {
+      result = engine.processPlayerAttack(session, {
+        targetMobId: boss.id,
+        skillId: 'twisting_slash',
+        playerX: 380,
+        playerY: 240,
+      });
+      if (!result.isMiss) break;
+    }
+
+    assert.ok(result && !result.isMiss, 'Ataque dentro do alcance deve conseguir acertar o chefe');
+    assert.equal(result.targetId, boss.id);
+    assert.ok(result.damage > 0);
+    assert.equal(result.targetHp, boss.currentHp);
   });
 
   it('Identifica tipo de dano excelente e cores correspondentes', () => {

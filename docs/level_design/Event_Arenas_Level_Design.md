@@ -27,6 +27,18 @@ As **Event Arenas (Arenas de Evento & Desafios Clássicos)** resgatam a adrenali
 └────────────────┘     └────────────────┘             └────────────────┘     └────────────────┘
 ```
 
+### Modelos GLB dedicados de eventos
+
+Os três eventos além de Blood Castle têm modelos próprios e carregáveis. Esses arquivos são **assets visuais estáticos**: não substituem colisões do servidor nem partículas, luzes e animações do runtime.
+
+| Cenário | GLB de protótipo | Cópia do Dev Viewer | Elementos principais |
+| :--- | :--- | :--- | :--- |
+| `EVT_02` — Devil Square | [`devil_square.glb`](../../prototypes/3d_scenery/devil_square.glb) | `src/client/dev_viewer/models/events/devil_square.glb` | Piso circular de granito, pentagrama rúnico, grade ciclópica, quatro totens de crânios e pedestal do triunfo. |
+| `EVT_03` — Chaos Castle | [`chaos_castle.glb`](../../prototypes/3d_scenery/chaos_castle.glb) | `src/client/dev_viewer/models/events/chaos_castle.glb` | 36 lajes nomeadas individualmente, abismo, barreira visual translúcida e ruínas góticas suspensas. |
+| `EVT_04` — Coliseu de Duelos | [`duel_coliseum.glb`](../../prototypes/3d_scenery/duel_coliseum.glb) | `src/client/dev_viewer/models/events/duel_coliseum.glb` | Arena octogonal, tablado de mármore, quatro níveis de arquibancada, arcadas, barreira e placar geométrico. |
+
+Regeneração reproduzível com `npm run build:event-glb` (`tools/event_arena_models.mjs` + `tools/export_event_arenas.mjs`). Os GLBs são sincronizados byte a byte entre as pastas de protótipos e do viewer.
+
 ---
 
 ## 2. DETALHAMENTO ARQUITETÔNICO & LEVEL DESIGN DOS 4 CENÁRIOS

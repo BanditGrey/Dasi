@@ -23,92 +23,11 @@ import {
   PortalSystem,
   IdleAutoCombatEngine,
 } from './dasiActionGameplay.js';
+import { OPCODES } from './protocolOpcodes.js';
 
 // ============================================================================
 // CONSTANTES & CONFIGURAÇÕES
 // ============================================================================
-const OPCODES = {
-  HANDSHAKE_HELLO: { opcode: 0x01, subcode: 0x01 },
-  HANDSHAKE_CHALLENGE: { opcode: 0x01, subcode: 0x02 },
-  AUTH_LOGIN_REQ: { opcode: 0x01, subcode: 0x03 },
-  AUTH_LOGIN_RES: { opcode: 0x01, subcode: 0x04 },
-  PING: { opcode: 0x02, subcode: 0x01 },
-  PONG: { opcode: 0x02, subcode: 0x02 },
-  SESSION_TERMINATE: { opcode: 0x03, subcode: 0x01 },
-  MONSTER_SPAWN_OR_MOVE: { opcode: 0x15, subcode: 0x01 },
-  GROUND_ITEM_DROP: { opcode: 0x16, subcode: 0x01 },
-  GROUND_ITEM_PICKUP_REQ: { opcode: 0x16, subcode: 0x02 },
-  GROUND_ITEM_PICKUP_RES: { opcode: 0x16, subcode: 0x02 },
-  GROUND_ITEM_REMOVE: { opcode: 0x16, subcode: 0x03 },
-  COMBAT_ATTACK_REQ: { opcode: 0x50, subcode: 0x01 },
-  COMBAT_ATTACK_RES: { opcode: 0x50, subcode: 0x02 },
-  INVENTORY_SYNC_ALL: { opcode: 0x70, subcode: 0x01 },
-  ITEM_MOVE_REQ: { opcode: 0x70, subcode: 0x02 },
-  ITEM_MOVE_RES: { opcode: 0x70, subcode: 0x03 },
-  ITEM_USE_JEWEL_REQ: { opcode: 0x71, subcode: 0x01 },
-  ITEM_USE_JEWEL_RES: { opcode: 0x71, subcode: 0x02 },
-  CHAOS_MACHINE_MIX_REQ: { opcode: 0x72, subcode: 0x01 },
-  CHAOS_MACHINE_MIX_RES: { opcode: 0x72, subcode: 0x02 },
-  ITEM_SPAWN_DEV_REQ: { opcode: 0x73, subcode: 0x01 },
-  ITEM_SPAWN_DEV_RES: { opcode: 0x73, subcode: 0x02 },
-  NPC_SHOP_BUY_REQ: { opcode: 0x74, subcode: 0x01 },
-  NPC_SHOP_BUY_RES: { opcode: 0x74, subcode: 0x02 },
-  STAT_POINT_ALLOC_REQ: { opcode: 0x75, subcode: 0x01 },
-  STAT_POINT_ALLOC_RES: { opcode: 0x75, subcode: 0x02 },
-  NPC_SHOP_SELL_REQ: { opcode: 0x74, subcode: 0x03 },
-  NPC_SHOP_SELL_RES: { opcode: 0x74, subcode: 0x04 },
-  FRUIT_CONSUME_REQ: { opcode: 0x75, subcode: 0x03 },
-  FRUIT_CONSUME_RES: { opcode: 0x75, subcode: 0x04 },
-  BOSS_SPAWN_REQ: { opcode: 0x80, subcode: 0x01 },
-  BOSS_UPDATE_RES: { opcode: 0x80, subcode: 0x02 },
-  BOSS_TELEGRAPH_CAST: { opcode: 0x80, subcode: 0x03 },
-  GOLDEN_INVASION_REQ: { opcode: 0x80, subcode: 0x04 },
-  GOLDEN_INVASION_RES: { opcode: 0x80, subcode: 0x05 },
-  BOX_KUNDUN_OPEN_REQ: { opcode: 0x80, subcode: 0x06 },
-  BOX_KUNDUN_OPEN_RES: { opcode: 0x80, subcode: 0x07 },
-
-  EVENT_STATUS_REQ: { opcode: 0x81, subcode: 0x01 },
-  EVENT_STATUS_RES: { opcode: 0x81, subcode: 0x02 },
-  EVENT_ENTER_REQ: { opcode: 0x81, subcode: 0x03 },
-  EVENT_ENTER_RES: { opcode: 0x81, subcode: 0x04 },
-  BLOOD_CASTLE_ACTION_REQ: { opcode: 0x81, subcode: 0x05 },
-  BLOOD_CASTLE_UPDATE_RES: { opcode: 0x81, subcode: 0x06 },
-  DEVIL_SQUARE_ACTION_REQ: { opcode: 0x81, subcode: 0x07 },
-  DEVIL_SQUARE_UPDATE_RES: { opcode: 0x81, subcode: 0x08 },
-  CHAOS_CASTLE_ACTION_REQ: { opcode: 0x81, subcode: 0x09 },
-  CHAOS_CASTLE_UPDATE_RES: { opcode: 0x81, subcode: 0x0a },
-  DUEL_ACTION_REQ: { opcode: 0x81, subcode: 0x0b },
-  DUEL_UPDATE_RES: { opcode: 0x81, subcode: 0x0c },
-
-  DUNGEON_ENTER_REQ: { opcode: 0x82, subcode: 0x01 },
-  DUNGEON_ENTER_RES: { opcode: 0x82, subcode: 0x02 },
-  DUNGEON_PROGRESS_REQ: { opcode: 0x82, subcode: 0x03 },
-  DUNGEON_PROGRESS_RES: { opcode: 0x82, subcode: 0x04 },
-
-  // Social / Guildas (0xB0)
-  GUILD_STATUS_REQ: { opcode: 0xb0, subcode: 0x01 },
-  GUILD_STATUS_RES: { opcode: 0xb0, subcode: 0x02 },
-  GUILD_CREATE_REQ: { opcode: 0xb0, subcode: 0x03 },
-  GUILD_INVITE_REQ: { opcode: 0xb0, subcode: 0x05 },
-  GUILD_RESPOND_INVITE_REQ: { opcode: 0xb0, subcode: 0x07 },
-  GUILD_RANK_REQ: { opcode: 0xb0, subcode: 0x09 },
-  GUILD_LEAVE_REQ: { opcode: 0xb0, subcode: 0x0b },
-  GUILD_ALLIANCE_REQ: { opcode: 0xb0, subcode: 0x0d },
-  GUILD_TREASURY_REQ: { opcode: 0xb0, subcode: 0x0f },
-
-  // Cerco ao Castelo (0xB1)
-  SIEGE_STATUS_REQ: { opcode: 0xb1, subcode: 0x01 },
-  SIEGE_STATUS_RES: { opcode: 0xb1, subcode: 0x02 },
-  SIEGE_REGISTER_REQ: { opcode: 0xb1, subcode: 0x03 },
-  SIEGE_REGISTER_RES: { opcode: 0xb1, subcode: 0x04 },
-  SIEGE_ATTACK_STRUCTURE_REQ: { opcode: 0xb1, subcode: 0x05 },
-  SIEGE_ATTACK_STRUCTURE_RES: { opcode: 0xb1, subcode: 0x06 },
-  SIEGE_PEDESTAL_REQ: { opcode: 0xb1, subcode: 0x07 },
-  SIEGE_PEDESTAL_RES: { opcode: 0xb1, subcode: 0x08 },
-  SIEGE_CROWN_SEAL_REQ: { opcode: 0xb1, subcode: 0x09 },
-  SIEGE_CROWN_SEAL_RES: { opcode: 0xb1, subcode: 0x0a },
-};
-
 const LOCATION_TYPE = {
   GRID: 0,
   EQUIPMENT: 1,
@@ -1122,10 +1041,12 @@ class DevClientApp {
 
   // Queda de Itens no Chão
   handleGroundItemDrop(payload) {
-    if (!payload.drops) return;
+    const drops = Array.isArray(payload?.drops) ? payload.drops : payload?.drop ? [payload.drop] : [];
+    if (drops.length === 0) return;
     let hasJewel = false;
 
-    for (const drop of payload.drops) {
+    for (const drop of drops) {
+      if (!drop?.dropId) continue;
       this.groundDrops.set(drop.dropId, drop);
       if (drop.isJewel) hasJewel = true;
     }
@@ -1182,6 +1103,7 @@ class DevClientApp {
   handleCombatAttackResult(payload) {
     const { targetId, damage, damageType, colorHex, isMiss, isDead, staggered, targetHp, targetMaxHp, xpGained } = payload;
     const mob = this.monsters.get(targetId);
+    const boss = this.activeBosses.get(targetId);
 
     if (this.idleEngine) {
       if (!isMiss && damage > 0) {
@@ -1206,8 +1128,19 @@ class DevClientApp {
       this.updateTargetHud(mob);
     }
 
-    const posX = mob ? (mob.displayX || mob.x) : this.playerX + 50;
-    const posY = mob ? (mob.displayY || mob.y) : this.playerY - 20;
+    if (boss) {
+      boss.currentHp = targetHp;
+      boss.maxHp = targetMaxHp;
+      boss.isDead = isDead;
+      if (this.arena3D && typeof this.arena3D.syncBosses === 'function') {
+        this.arena3D.syncBosses(this.activeBosses);
+      }
+      this.updateBossHud(boss);
+    }
+
+    const target = mob || boss;
+    const posX = target ? (target.displayX || target.x) : this.playerX + 50;
+    const posY = target ? (target.displayY || target.y) : this.playerY - 20;
 
     // Adiciona número flutuante de dano colorido
     this.floatingDamages.push({
@@ -4375,103 +4308,115 @@ class DevClientApp {
 
   async spawnBoss(bossDefId) {
     this.log(`👹 Invocando chefe autoritativo: [${bossDefId}]...`, 'info');
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.sendPacket(OPCODES.BOSS_SPAWN_REQ, { bossDefId });
-    }
+    const request = { type: bossDefId };
+
+    // Controles administrativos usam a API HTTP, que também devolve erros de permissão
+    // sem fechar a sessão WebSocket autenticada do jogador.
     try {
       const res = await fetch('/api/bosses/spawn', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bossDefId }),
+        body: JSON.stringify(request),
       });
       const data = await res.json();
-      if (data.success && data.boss) {
+      if (!res.ok || !data.success) throw new Error(data.error || `HTTP ${res.status}`);
+      if (data.boss) {
         this.activeBosses.set(data.boss.id, data.boss);
         this.selectedBossId = data.boss.id;
+        this.syncBossesInArena();
         this.updateBossHud(data.boss);
         this.updateActiveBossesList();
-        this.log(`👑 Chefe ${data.boss.name} despertou em ${data.boss.map}! [HP: ${data.boss.currentHp} / Escudo: ${data.boss.shield}]`, 'success');
+        this.log(`👑 Chefe ${data.boss.name} despertou em ${data.boss.location || 'Mundo Aberto'}! [HP: ${data.boss.currentHp}]`, 'success');
         if (this.sfx) this.sfx.playSuccessSound();
       }
     } catch (err) {
-      console.warn('Erro ao invocar chefe via HTTP:', err);
+      this.log(`❌ Não foi possível invocar ${bossDefId}: ${err.message}`, 'warning');
+      console.warn('Erro ao invocar chefe:', err);
     }
   }
 
   async triggerGoldenInvasion(tier = 1) {
-    this.log(`🌟 Disparando Invasão Dourada Tier ${tier}...`, 'info');
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.sendPacket(OPCODES.GOLDEN_INVASION_REQ, { tier });
-    }
+    const safeTier = Math.max(1, Math.min(5, Number.parseInt(tier, 10) || 1));
+    this.log(`🌟 Disparando Invasão Dourada Tier ${safeTier}...`, 'info');
     try {
-      const res = await fetch('/api/bosses/spawn', {
+      const res = await fetch('/api/events/trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'trigger_invasion', tier }),
+        body: JSON.stringify({ type: 'GOLDEN_INVASION', tier: safeTier, mapId: 'LORENCIA' }),
       });
       const data = await res.json();
-      if (data.success) {
-        this.log(`🌟 [Invasão Dourada] ${data.announcement || `Dragões Dourados invadiram os reinos!`}`, 'success');
-        this.refreshActiveBosses();
-      }
+      if (!res.ok || !data.success) throw new Error(data.error || `HTTP ${res.status}`);
+      if (data.invasion) this.handleGoldenInvasion({ invasion: data.invasion });
     } catch (err) {
-      console.warn('Erro ao disparar invasão via HTTP:', err);
+      this.log(`❌ Não foi possível disparar a Invasão Dourada: ${err.message}`, 'warning');
+      console.warn('Erro ao disparar invasão dourada:', err);
     }
   }
 
   async openBoxOfKundun(tier = 1) {
+    const safeTier = Math.max(1, Math.min(5, Number.parseInt(tier, 10) || 1));
     const lootBox = document.getElementById('box-loot-result');
-    if (lootBox) lootBox.innerHTML = `<em>Invocando bênção de Kundun (Caixa +${tier})...</em>`;
+    if (lootBox) lootBox.innerHTML = `<em>Invocando bênção de Kundun (Caixa +${safeTier})...</em>`;
 
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.sendPacket(OPCODES.BOX_KUNDUN_OPEN_REQ, { tier });
-    }
     try {
       const res = await fetch('/api/box/open', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tier, x: 125, y: 125 }),
+        body: JSON.stringify({
+          boxId: `box_of_kundun_${safeTier}`,
+          playerX: this.playerX ?? 125,
+          playerY: this.playerY ?? 125,
+        }),
       });
       const data = await res.json();
-      if (data.success && data.loot) {
-        const itemNames = data.loot.items.map((i) => `${i.name} (+${i.level || 0})`).join(', ');
-        const jewelNames = data.loot.jewels.length > 0 ? `Joias: ${data.loot.jewels.join(', ')}` : 'Sem joias extras';
+      if (!res.ok || !data.success) throw new Error(data.error || `HTTP ${res.status}`);
+      const loot = data.loot;
+      if (loot) {
+        const generatedItems = Array.isArray(loot.items) ? loot.items : [];
+        const itemNames = generatedItems.map((item) => `${item.name || item.defId || item.item?.defId || 'Item'} (+${item.level || 0})`).join(', ');
+        const jewels = generatedItems.filter((item) => String(item.defId || '').startsWith('jewel_')).map((item) => item.defId);
+        const jewelNames = jewels.length > 0 ? `Joias: ${jewels.join(', ')}` : 'Sem joias extras';
         if (lootBox) {
-          lootBox.innerHTML = `<strong style="color: #4ade80;">🎁 Drops da Box +${tier} Gerados:</strong><br>${itemNames}<br><span style="color: #fde047;">${jewelNames}</span> &bull; <span style="color: #cbd5e1;">${data.loot.zen.toLocaleString()} Zen</span>`;
+          lootBox.innerHTML = `<strong style="color: #4ade80;">🎁 Drops da Box +${safeTier} Gerados:</strong><br>${itemNames || 'Itens espalhados no chão'}<br><span style="color: #fde047;">${jewelNames}</span> &bull; <span style="color: #cbd5e1;">${(loot.zen || 0).toLocaleString()} Zen</span>`;
         }
-        this.log(`🎁 [Box +${tier}] Sucesso: ${itemNames} | ${jewelNames}`, 'success');
+        this.log(`🎁 [Box +${safeTier}] Bênção de Kundun aberta.`, 'success');
         if (this.sfx) this.sfx.playSuccessSound();
       }
     } catch (err) {
-      console.warn('Erro ao abrir Box via HTTP:', err);
+      this.log(`❌ Não foi possível abrir a Box of Kundun: ${err.message}`, 'warning');
+      console.warn('Erro ao abrir Box of Kundun:', err);
     }
   }
 
   async refreshActiveBosses() {
     try {
       const res = await fetch('/api/bosses');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      if (data.activeBosses) {
+      if (Array.isArray(data.activeBosses)) {
         this.activeBosses.clear();
-        for (const b of data.activeBosses) {
-          this.activeBosses.set(b.id, b);
-        }
+        for (const boss of data.activeBosses) this.activeBosses.set(boss.id, boss);
+        this.syncBossesInArena();
+
         const activeCount = document.getElementById('bosses-active-count');
-        if (activeCount) activeCount.textContent = this.activeBosses.size;
+        if (activeCount) activeCount.textContent = Array.from(this.activeBosses.values()).filter((boss) => !boss.isDead).length;
         const invasionCount = document.getElementById('invasions-active-count');
         if (invasionCount) invasionCount.textContent = (data.activeInvasions || []).length;
 
-        if (this.activeBosses.size > 0 && !this.selectedBossId) {
-          this.selectedBossId = Array.from(this.activeBosses.keys())[0];
+        if (!this.activeBosses.has(this.selectedBossId)) {
+          this.selectedBossId = this.activeBosses.keys().next().value || null;
         }
-
-        if (this.selectedBossId && this.activeBosses.has(this.selectedBossId)) {
-          this.updateBossHud(this.activeBosses.get(this.selectedBossId));
-        }
+        if (this.selectedBossId) this.updateBossHud(this.activeBosses.get(this.selectedBossId));
         this.updateActiveBossesList();
       }
     } catch (err) {
       console.warn('Erro ao buscar chefes ativos:', err);
+    }
+  }
+
+  syncBossesInArena() {
+    if (this.arena3D && typeof this.arena3D.syncBosses === 'function') {
+      this.arena3D.syncBosses(this.activeBosses);
     }
   }
 
@@ -4489,61 +4434,98 @@ class DevClientApp {
     const iconEl = document.getElementById('boss-hud-icon');
     const auraText = document.getElementById('boss-aura-text');
 
-    if (nameEl) nameEl.textContent = `${boss.name}`;
-    if (locEl) locEl.textContent = `Localização: ${boss.map || 'Mundo Aberto'} &bull; Nível ${boss.level || 50}`;
-    if (phaseEl) phaseEl.textContent = `FASE ${boss.currentPhase || 1}`;
+    const maxHp = Math.max(1, Number(boss.maxHp) || 1);
+    const currentHp = Math.max(0, Number(boss.currentHp) || 0);
+    const currentShield = Math.max(0, Number(boss.currentShield ?? boss.shield) || 0);
+    const maxShield = Math.max(0, Number(boss.maxShield) || 0);
+    const currentPoise = Math.max(0, Number(boss.poise) || 0);
+    const maxPoise = Math.max(1, Number(boss.maxPoise) || 100);
+    const type = String(boss.type || boss.id || '').toLowerCase();
+
+    if (nameEl) nameEl.textContent = boss.name || boss.title || 'Chefe';
+    if (locEl) locEl.textContent = `Localização: ${boss.location || boss.map || 'Mundo Aberto'} • Nível ${boss.level || 50}`;
+    if (phaseEl) phaseEl.textContent = boss.currentPhaseName || `FASE ${boss.currentPhaseIndex || boss.currentPhase || 1}`;
     if (stateEl) {
-      stateEl.textContent = boss.isEnraged ? 'FÚRIA' : (boss.isStaggered ? 'ATDOADO' : 'NORMAL');
-      stateEl.style.borderColor = boss.isEnraged ? '#ef4444' : '#f59e0b';
+      const isStaggered = boss.state === 'STAGGERED' || boss.isStaggered;
+      const isDead = boss.isDead || boss.state === 'DEAD';
+      stateEl.textContent = isDead ? 'DERROTADO' : boss.isEnraged ? 'FÚRIA' : isStaggered ? 'ATORDOADO' : boss.state === 'ATTACKING' ? 'CANALIZANDO' : 'NORMAL';
+      stateEl.style.borderColor = isDead ? '#64748b' : boss.isEnraged ? '#ef4444' : isStaggered ? '#38bdf8' : '#f59e0b';
     }
 
-    const hpPct = Math.max(0, Math.min(100, (boss.currentHp / (boss.maxHp || 1)) * 100));
-    const shieldPct = Math.max(0, Math.min(100, ((boss.shield || 0) / (boss.maxHp || 1)) * 100));
-
+    const hpPct = Math.max(0, Math.min(100, (currentHp / maxHp) * 100));
+    const shieldPct = maxShield > 0 ? Math.max(0, Math.min(100, (currentShield / maxShield) * 100)) : 0;
+    const poisePct = Math.max(0, Math.min(100, (currentPoise / maxPoise) * 100));
     if (hpFill) hpFill.style.width = `${hpPct}%`;
     if (shieldFill) shieldFill.style.width = `${shieldPct}%`;
-    if (hpText) hpText.textContent = `${(boss.currentHp || 0).toLocaleString()} / ${(boss.maxHp || 0).toLocaleString()} (Escudo: ${(boss.shield || 0).toLocaleString()})`;
-
-    const poisePct = Math.max(0, Math.min(100, ((boss.poise || 0) / (boss.maxPoise || 100)) * 100));
+    if (hpText) hpText.textContent = `${currentHp.toLocaleString()} / ${maxHp.toLocaleString()} (Escudo: ${currentShield.toLocaleString()})`;
     if (poiseFill) poiseFill.style.width = `${poisePct}%`;
     if (poiseText) poiseText.textContent = `${Math.round(poisePct)}% ${boss.isEnraged ? '(Imune a Stagger)' : ''}`;
 
     if (iconEl) {
-      if (boss.id.includes('gorgon')) iconEl.textContent = '🐍';
-      else if (boss.id.includes('ice_queen')) iconEl.textContent = '❄️';
-      else if (boss.id.includes('balrog')) iconEl.textContent = '🔥';
-      else if (boss.id.includes('zaikan')) iconEl.textContent = '🦂';
-      else if (boss.id.includes('kundun')) iconEl.textContent = '👑';
+      if (type.includes('gorgon')) iconEl.textContent = '🐍';
+      else if (type.includes('ice_queen')) iconEl.textContent = '❄️';
+      else if (type.includes('hydra')) iconEl.textContent = '🐲';
+      else if (type.includes('balrog')) iconEl.textContent = '🔥';
+      else if (type.includes('zaikan')) iconEl.textContent = '🦂';
+      else if (type.includes('kundun')) iconEl.textContent = '👑';
+      else iconEl.textContent = '👹';
     }
 
-    if (auraText && boss.aura) {
-      auraText.textContent = `Aura de Proximidade: ${boss.aura.name || 'Ativa'} (Raio ${boss.aura.radius}m &bull; ${boss.aura.damagePerSecond} DPS)`;
-    }
-  }
-
-  handleBossUpdate(payload) {
-    if (payload.boss) {
-      this.activeBosses.set(payload.boss.id, payload.boss);
-      if (this.selectedBossId === payload.boss.id || !this.selectedBossId) {
-        this.selectedBossId = payload.boss.id;
-        this.updateBossHud(payload.boss);
-      }
-      this.updateActiveBossesList();
+    if (auraText) {
+      auraText.textContent = boss.auraActive
+        ? `Aura de proximidade: ${boss.auraType || 'Ativa'}`
+        : '';
     }
   }
 
-  handleBossTelegraph(payload) {
+  handleBossUpdate(payload = {}) {
+    if (payload.error) this.log(`❌ [Chefe] ${payload.error}`, 'warning');
+    const isFullSnapshot = Array.isArray(payload.bosses) || Array.isArray(payload.activeBosses);
+    const bosses = Array.isArray(payload.bosses)
+      ? payload.bosses
+      : Array.isArray(payload.activeBosses)
+        ? payload.activeBosses
+        : payload.boss
+          ? [payload.boss]
+          : [];
+
+    if (isFullSnapshot) this.activeBosses.clear();
+    for (const boss of bosses) {
+      if (boss?.id) this.activeBosses.set(boss.id, boss);
+    }
+
+    if (!this.activeBosses.has(this.selectedBossId)) {
+      this.selectedBossId = this.activeBosses.keys().next().value || null;
+    }
+    if (this.selectedBossId) this.updateBossHud(this.activeBosses.get(this.selectedBossId));
+    const activeCount = document.getElementById('bosses-active-count');
+    if (activeCount) {
+      activeCount.textContent = Array.from(this.activeBosses.values()).filter((boss) => !boss.isDead).length;
+    }
+    this.updateActiveBossesList();
+    this.syncBossesInArena();
+  }
+
+  handleBossTelegraph(payload = {}) {
     const nameEl = document.getElementById('boss-telegraph-name');
     const descEl = document.getElementById('boss-telegraph-desc');
     const fillEl = document.getElementById('boss-telegraph-fill');
+    const telegraph = payload.telegraph || {};
+    const skill = telegraph.skill || {};
+    const ability = skill.name || telegraph.skillName || payload.abilityName || 'Golpe Fatal';
+    const shape = skill.shape || telegraph.shape || telegraph.type || 'CIRCLE';
+    const duration = Number(skill.castDurationMs || telegraph.durationMs || telegraph.remainingMs || 2500);
+    const radius = Number(skill.radius || telegraph.radius || 12);
+    const angleDegrees = Number(skill.angleDeg || telegraph.angleDeg || 90);
+    const originX = telegraph.originX ?? telegraph.x ?? payload.x ?? 125;
+    const originY = telegraph.originY ?? telegraph.y ?? payload.y ?? 125;
+    const targetX = telegraph.targetX ?? originX;
+    const targetY = telegraph.targetY ?? originY;
+    const direction = Math.atan2(targetY - originY, targetX - originX);
+    const renderType = shape === 'ARENA_WIDE' ? 'ARENA' : shape;
 
-    const ability = payload.abilityName || 'Golpe Fatal';
-    const tel = payload.telegraph || {};
-    const duration = tel.durationMs || 2500;
-
-    if (nameEl) nameEl.textContent = `${ability.toUpperCase()} (${tel.type || 'CONE'})`;
-    if (descEl) descEl.innerHTML = `<span>Área: ${tel.type} &bull; Raio: ${tel.radius || 12}m &bull; Cast: ${(duration / 1000).toFixed(1)}s</span>`;
-
+    if (nameEl) nameEl.textContent = `${String(ability).toUpperCase()} (${renderType})`;
+    if (descEl) descEl.textContent = `Área: ${renderType} • Raio: ${radius} • Canalização: ${(duration / 1000).toFixed(1)}s`;
     if (fillEl) {
       fillEl.style.transition = 'none';
       fillEl.style.width = '0%';
@@ -4555,20 +4537,24 @@ class DevClientApp {
 
     if (this.arena3D && typeof this.arena3D.renderTelegraph === 'function') {
       this.arena3D.renderTelegraph({
-        ...tel,
-        x: payload.x || 125,
-        y: payload.y || 125,
-        direction: payload.direction || 0,
+        type: renderType,
+        radius,
+        angleDegrees,
+        width: Number(skill.lineWidth || 4),
+        durationMs: duration,
+        x: originX,
+        y: originY,
+        direction,
       });
     }
 
     this.log(`⚠️ [Telégrafo de Chefe] ${ability} canalizando por ${(duration / 1000).toFixed(1)}s! Esquive da área vermelha!`, 'warning');
   }
 
-  handleGoldenInvasion(payload) {
-    this.log(`🌟 [Invasão Dourada] ${payload.announcement || 'Dragões Dourados avistados!'}`, 'success');
-    const invCount = document.getElementById('invasions-active-count');
-    if (invCount && payload.totalActive) invCount.textContent = payload.totalActive;
+  handleGoldenInvasion(payload = {}) {
+    const invasion = payload.invasion || payload;
+    this.log(`🌟 [Invasão Dourada] ${invasion.announcement || payload.announcement || 'Dragões Dourados avistados!'}`, 'success');
+    this.refreshActiveBosses();
   }
 
   testAttackBoss() {
@@ -4577,26 +4563,37 @@ class DevClientApp {
       return;
     }
     const boss = this.activeBosses.get(this.selectedBossId);
-    if (!boss) return;
+    if (!boss || boss.isDead) return;
 
     this.log(`⚔️ Desferindo golpe em ${boss.name}...`, 'info');
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.sendPacket(OPCODES.COMBAT_ATTACK_REQ, {
         targetMobId: boss.id,
         skillId: 'twisting_slash',
+        playerX: this.playerX,
+        playerY: this.playerY,
       });
     }
   }
 
-  despawnSelectedBoss() {
+  async despawnSelectedBoss() {
     if (!this.selectedBossId) return;
-    this.activeBosses.delete(this.selectedBossId);
-    this.selectedBossId = Array.from(this.activeBosses.keys())[0] || null;
-    this.updateActiveBossesList();
-    if (this.selectedBossId) {
-      this.updateBossHud(this.activeBosses.get(this.selectedBossId));
+    const bossId = this.selectedBossId;
+    try {
+      const res = await fetch('/api/bosses/despawn', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bossId }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || `HTTP ${res.status}`);
+      this.log('Chefe removido do mundo pelo console de desenvolvimento.', 'info');
+      this.selectedBossId = null;
+      await this.refreshActiveBosses();
+    } catch (err) {
+      this.log(`❌ Não foi possível remover o chefe: ${err.message}`, 'warning');
+      console.warn('Erro ao remover chefe:', err);
     }
-    this.log('Chefe despawnado do console de desenvolvimento.', 'info');
   }
 
   updateActiveBossesList() {
@@ -4610,12 +4607,15 @@ class DevClientApp {
     listEl.innerHTML = '';
     for (const [id, boss] of this.activeBosses.entries()) {
       const card = document.createElement('div');
+      const phase = boss.currentPhaseName || `Fase ${boss.currentPhaseIndex || boss.currentPhase || 1}`;
+      const location = boss.location || boss.map || 'Mundo Aberto';
+      const state = boss.isDead ? 'Derrotado' : `${phase} • HP: ${(boss.currentHp || 0).toLocaleString()}`;
       card.className = 'boss-roster-item';
       card.style.cssText = `display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(30, 41, 59, 0.7); border: 1px solid ${this.selectedBossId === id ? '#f59e0b' : 'rgba(255,255,255,0.1)'}; border-radius: 4px; cursor: pointer;`;
       card.innerHTML = `
         <div>
           <strong style="color: #fde047; font-size: 13px;">${boss.name}</strong>
-          <div style="font-size: 11px; color: #94a3b8;">Fase ${boss.currentPhase} &bull; HP: ${boss.currentHp.toLocaleString()} &bull; ${boss.map}</div>
+          <div style="font-size: 11px; color: #94a3b8;">${state} • ${location}</div>
         </div>
         <button style="padding: 4px 8px; font-size: 11px; background: #3b82f6; border: none; color: #fff; border-radius: 4px; cursor: pointer;">Focar</button>
       `;
@@ -4628,9 +4628,6 @@ class DevClientApp {
     }
   }
 
-  // ==========================================================================
-  // MÉTODOS DO SISTEMA DE ARENAS DE EVENTOS & DUNGEONS
-  // ==========================================================================
   initEventsPanel() {
     const btnRefresh = document.getElementById('btn-refresh-events');
     if (btnRefresh) {

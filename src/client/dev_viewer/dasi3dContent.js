@@ -30,14 +30,14 @@ export const GLTF_BIOME_MAP = {
   TARKAN: 'models/tarkan_desert.glb',
   VALLEY_OF_LOREN: 'models/valley_of_loren_citadel.glb',
   BLOOD_CASTLE: 'models/blood_castle_bridge.glb',
-  // Arenas de evento sem GLB dedicado reutilizam a arte 3D canônica do bioma
-  // temático mais próximo (a geometria procedural de dasi3dScenarios.js cobre o resto).
-  EVT_02: 'models/dungeon_catacombs.glb',
-  EVT_03: 'models/lost_tower_abyss.glb',
-  EVT_04: 'models/lorencia_citadel.glb',
-  DEVIL_SQUARE: 'models/dungeon_catacombs.glb',
-  CHAOS_CASTLE: 'models/lost_tower_abyss.glb',
-  DUEL_COLISEUM: 'models/lorencia_citadel.glb',
+  // Arenas de evento com assets estáticos dedicados; geometria dinâmica e colisões
+  // continuam no catálogo procedural/runtime e no CollisionSystem, respectivamente.
+  EVT_02: 'models/events/devil_square.glb',
+  EVT_03: 'models/events/chaos_castle.glb',
+  EVT_04: 'models/events/duel_coliseum.glb',
+  DEVIL_SQUARE: 'models/events/devil_square.glb',
+  CHAOS_CASTLE: 'models/events/chaos_castle.glb',
+  DUEL_COLISEUM: 'models/events/duel_coliseum.glb',
 };
 
 // ============================================================================
@@ -50,6 +50,69 @@ export const GLTF_HERO_MAP = {
   MG: 'models/hero_magic_gladiator.glb',
   DL: 'models/hero_dark_lord.glb',
 };
+
+// Protótipos estáticos do bestiário. Os modelos não substituem o conteúdo de jogo:
+// rig, animações, colisões e VFX continuam pertencendo ao runtime.
+export const GLTF_BESTIARY_MAP = Object.freeze({
+  ICE_QUEEN: 'models/bestiary/ice_queen.glb',
+  GORGON: 'models/bestiary/gorgon.glb',
+  HYDRA: 'models/bestiary/hydra.glb',
+  BALROG: 'models/bestiary/balrog.glb',
+  ZAIKAN: 'models/bestiary/zaikan.glb',
+  KUNDUN: 'models/bestiary/kundun.glb',
+  GOLDEN_TITAN: 'models/bestiary/golden_titan.glb',
+  GOLDEN_BUDGE_DRAGON: 'models/bestiary/golden_budge_dragon.glb',
+  GOLDEN_SOLDIER: 'models/bestiary/golden_soldier.glb',
+  GOLDEN_LIZARD_KING: 'models/bestiary/golden_lizard_king.glb',
+  GOLDEN_TANTALOS: 'models/bestiary/golden_tantalos.glb',
+  GOLDEN_DRAGON: 'models/bestiary/golden_dragon.glb',
+});
+
+/** Carrega um GLB estático no grupo ativo do Dev Viewer, preservando o anel de spawn opcional. */
+export function loadBestiaryCreatureGLB(creatureId, targetGroup, THREE, onComplete, preserve = []) {
+  const id = String(creatureId ?? '').trim().toUpperCase();
+  const glbPath = GLTF_BESTIARY_MAP[id];
+  if (!glbPath || typeof window === 'undefined' || !targetGroup) return;
+
+  try {
+    const loader = new GLTFLoader();
+    loader.load(
+      glbPath,
+      (gltf) => {
+        const model = gltf.scene;
+        model.name = `GLTF_BESTIARY_${id}`;
+        model.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
+        });
+
+        // A seleção pode ter mudado durante o carregamento assíncrono.
+        if (!targetGroup.parent) {
+          model.traverse((child) => {
+            if (!child.isMesh) return;
+            child.geometry?.dispose?.();
+            const materials = Array.isArray(child.material) ? child.material : [child.material];
+            for (const material of materials) material?.dispose?.();
+          });
+          return;
+        }
+        const keep = new Set(preserve.filter(Boolean));
+        for (const child of targetGroup.children) {
+          if (!keep.has(child)) child.visible = false;
+        }
+        targetGroup.add(model);
+        console.info(`[Dasi3D] Protótipo GLB estático carregado: ${id} (${glbPath})`);
+        if (onComplete) onComplete(model);
+      },
+      undefined,
+      (err) => console.warn(`[Dasi3D] GLB estático indisponível para ${id}; conteúdo procedural preservado:`, err)
+    );
+  } catch (err) {
+    console.warn(`[Dasi3D] Erro ao carregar protótipo do bestiário ${id}:`, err);
+  }
+}
 
 export function loadRealHeroGLTF(heroClass, targetGroup, THREE, onComplete) {
   const glbPath = GLTF_HERO_MAP[heroClass];

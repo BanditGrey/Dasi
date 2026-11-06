@@ -24,8 +24,10 @@ describe('1. Sistema de Chefes Mundiais (BossEntity.ts)', () => {
       assert.strictEqual(boss.currentHp, boss.maxHp);
       assert.strictEqual(boss.state, 'IDLE');
       assert.strictEqual(boss.currentPhaseIndex, 1);
+      assert.strictEqual(boss.toJSON().location, boss.config.location);
       assert.ok(boss.config.phases.length >= 3);
     }
+    assert.throws(() => new BossEntity('boss_hydra', 400, 250), /Tipo de chefe desconhecido/);
   });
 
   it('Transiciona fluidamente pelas 3 fases de Gorgon conforme a vida diminui', () => {
