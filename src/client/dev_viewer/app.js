@@ -2287,6 +2287,8 @@ class DevClientApp {
         if (!this.viewer3DInstance) {
           this.initViewer3D('HERO');
         } else {
+          const heroCatBtn = document.querySelector('.btn-3d-cat[data-cat="HERO"]');
+          if (heroCatBtn && !heroCatBtn.classList.contains('active')) heroCatBtn.click();
           setTimeout(() => {
             if (this.viewer3DInstance) this.viewer3DInstance.onWindowResize();
           }, 60);
@@ -2311,8 +2313,32 @@ class DevClientApp {
     if (tabSplit) tabSplit.addEventListener('click', () => setMode('split'));
     if (tabViewer3D) tabViewer3D.addEventListener('click', () => setMode('viewer3d'));
 
-    // Inicia imediatamente no modo 3D de Cenários (Lorencia)
-    setMode('scenery');
+    // Inicia de acordo com parâmetros de URL ou padrão 'scenery'
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialTab = urlParams.get('tab') || 'scenery';
+    setMode(initialTab);
+
+    if (urlParams.get('cat')) {
+      setTimeout(() => {
+        const catBtn = document.querySelector(`.btn-3d-cat[data-cat="${urlParams.get('cat')}"]`);
+        if (catBtn) catBtn.click();
+      }, 150);
+    }
+    if (urlParams.get('hero')) {
+      setTimeout(() => {
+        const heroBtn = document.querySelector(`.btn-sub-entity[data-cat="HERO"][data-id="${urlParams.get('hero')}"]`);
+        if (heroBtn) heroBtn.click();
+      }, 250);
+    }
+    if (urlParams.get('modular') === '1' || urlParams.get('modular') === 'true') {
+      setTimeout(() => {
+        const modCheck = document.getElementById('hero-modular-mode');
+        if (modCheck && !modCheck.checked) {
+          modCheck.checked = true;
+          modCheck.dispatchEvent(new Event('change'));
+        }
+      }, 350);
+    }
 
     // 10. Atalhos de Teclado & Action Bar Moderna 3D
     window.addEventListener('keydown', (e) => {
@@ -2636,6 +2662,19 @@ class DevClientApp {
       this.viewer3DInstance.modularHeroMode = modularMode.checked;
       if (currentCategory === 'HERO') this.viewer3DInstance.selectEntity('HERO', currentHero, { setTier: currentSetTier });
       modularStatus.textContent = modularMode.checked ? 'Blockout modular ativo; trocas são apenas visuais e temporárias.' : 'Modelo anterior ativo; blockout modular desativado.';
+    });
+    const baseMeshToggle = document.getElementById('hero-base-mesh-toggle');
+    baseMeshToggle?.addEventListener('change', () => {
+      const viewer = this.viewer3DInstance;
+      if (viewer?.activeEntity?.group) {
+        const bodyBlockout = viewer.activeEntity.group.getObjectByName('body_blockout');
+        if (bodyBlockout) {
+          bodyBlockout.visible = baseMeshToggle.checked;
+          if (modularStatus) {
+            modularStatus.textContent = baseMeshToggle.checked ? 'Corpo base visível sob as peças de armadura.' : 'Corpo base oculto (apenas peças de armadura visíveis).';
+          }
+        }
+      }
     });
     armorSlot?.addEventListener('change', refreshModularLinks);
     armorVariant?.addEventListener('change', refreshModularLinks);
