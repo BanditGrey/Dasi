@@ -196,6 +196,57 @@ Integrações atuais:
 Em ambos os casos, se o arquivo articulado não existir, o carregamento recai
 para o protótipo estático e depois para o conteúdo procedural — nada quebra.
 
+## Revisão visual pendente
+
+Os testes garantem estrutura, geometria e reprodutibilidade — **não** garantem
+que o movimento seja bonito. A revisão criatura por criatura no navegador segue
+pendente. Roteiro:
+
+1. Aba **💎 Heróis & Monstros 3D** → categoria **👹 Monstros** → criatura.
+2. O badge deve ler `🦴 Bestiário: GLB articulado — 5 clips (<locomoção>)`.
+   Qualquer outro texto significa que o asset articulado não carregou.
+3. Painel **CLIPS DO BESTIÁRIO ARTICULADO**: IDLE, Locomoção, ATTACK, HURT,
+   DEATH.
+4. Comportamento em jogo (giro para o alvo, ataque por alcance, morte antes do
+   afundamento): abas **👹 Chefes & Invasões** e **⚔️ Arena de Combate**.
+
+### Pontos de atenção conhecidos
+
+| Criatura | O que olhar primeiro | Por quê |
+| --- | --- | --- |
+| ICE_QUEEN | rigidez da passada, cetro e coroa acompanhando | só 7 pivôs; o vestido é peça rígida única |
+| GORGON | as 8 serpentes seguirem a cabeça | eram nós soltos, anexados por proximidade |
+| HYDRA | interpenetração das 3 cabeças e propagação da ondulação | 3 pescoços de 5 níveis animados em fase |
+| BALROG | chifres e olhos seguirem a cabeça; asa casando com a passada | adereços anexados rigidamente |
+| ZAIKAN | tremor no ciclo de 0,55 s e alternância das 4 pernas | locomocão mais rápida do elenco |
+| KUNDUN | giro contínuo do halo sem salto; alternância dos 4 braços | canal `spin` dá voltas completas |
+| GOLDEN_TITAN | ombreiras **não** acompanham a cabeça, de propósito | ficaram fora da absorção para não grudarem no elmo |
+| GOLDEN_BUDGE_DRAGON | textura esticada nas asas | UVs planares injetadas |
+| GOLDEN_SOLDIER | escudo e machado permanecerem na mão no ATTACK | armas vêm de subárvores aninhadas |
+| GOLDEN_LIZARD_KING | placas dorsais seguirem a coluna; passada quadrúpede | 49 pivôs em corpo anfíbio |
+| GOLDEN_TANTALOS | projeção da capa do deserto; peso do maul no golpe | UVs planares injetadas na capa |
+| GOLDEN_DRAGON | alongamento nas asas e amplitude suficiente para o porte | UVs injetadas + maior envergadura do elenco |
+
+Três eixos de defeito provável: **rig** (parte que não acompanha o pai,
+interpenetração, salto no reinício do loop, amplitude e fase), **textura**
+(detalhe forte ou fraco, repetição visível, emenda de UV, alongamento, metal sem
+leitura de metal) e **runtime** (ataque disparando na distância errada, monstro
+andando de lado ou de costas, afundamento antes do clip terminar).
+
+### Parâmetros de ajuste
+
+| Camada | Onde | O que muda |
+| --- | --- | --- |
+| Amplitude e fase | `bestiaryRig.js` (`createBestiaryAnimationClips`) | intensidade por canal, decaimento `0,72^nível`, atraso `-0,42*nível` |
+| Durações | `bestiaryRig.js` | IDLE 6 s · WALK 1,0 · SCUTTLE 0,55 · SLITHER 1,5 · SWIM 1,8 · FLOAT 3,2 · FLY 0,9 · ATTACK 1,15 (1,5 conjurador) · HURT 0,55 · DEATH 2,0 (2,4 `sink`) |
+| Superfície | `procedural_textures.mjs` (`BESTIARY_TEXTURE_PROFILES`) | mistura e frequência dos padrões, `contrast`, `normalScale`, `roughnessRange`, `metalnessRange`, `tint`, resolução |
+| UVs injetadas | `glb_texture_injector.mjs` (`ensureMeshUvs`) | `tileWorldSize` (repetição por metro) |
+| Arena | `dasi3dRealtimeArena.js` | alcance do ataque (chefe 4,6 / mob 3,0), cooldown (2,4 s / 1,7 s), limiar de MOVE (0,35), suavização do giro |
+
+Toda alteração nesses parâmetros exige regenerar os arquivos
+(`npm run build:bestiary-animated-glb`) e rodar `npm run test:3d`, porque os
+testes comparam os GLBs publicados byte a byte contra o que o código produz.
+
 ## Limitações e próximos passos
 
 - É animação de partes rígidas: não há deformação de malha, secundariedade
