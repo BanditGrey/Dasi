@@ -725,6 +725,8 @@ A tabela a seguir define o roteiro de execução e o status de homologação de 
 ```
 
 > **Nota de escopo (novembro de 2026):** os doze arquivos de referência em `prototypes/3d_bestiary/` são protótipos visuais estáticos para o Dev Viewer: seis chefes e seis criaturas da Invasão Dourada. Eles não alteram o status `[SPEC]` dos seis assets `BOSS_*` da tabela abaixo: rigs, animações, budgets, texturas PBR e VFX de produção continuam pendentes. `GOLDEN_TITAN` integra a lista de invasores dourados do manifesto, mas não é um sétimo chefe na tabela de World Bosses.
+>
+> **Atualização (08/11/2026):** existe agora uma segunda família, `prototypes/3d_bestiary_animated/` (espelhada em `models/bestiary_animated/`), com as mesmas doze geometrias acrescidas de pivôs e cinco clips GLTF (IDLE, locomocão do arquétipo, ATTACK, HURT, DEATH). É um **puppet de partes rígidas**, não skinning: 0 `SkinnedMesh`, 0 ossos, 0 texturas. Isso **não** entrega os rigs especificados na coluna `Rig/Skeleton` abaixo (110 a 210 ossos, caudas e vestuário com física), nem os budgets `Nanite`, nem as texturas PBR 2x/4x 4K, nem os VFX de produção — o status `[SPEC]` permanece. Detalhes técnicos em [docs/art/Bestiario_Animado.md](../art/Bestiario_Animado.md).
 
 | Código do Asset | Categoria / Descrição | Prioridade | Tri Target (UE5 / Web) | Texturas / PBR | Rig / Animação | VFX / Audio Hooks | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |

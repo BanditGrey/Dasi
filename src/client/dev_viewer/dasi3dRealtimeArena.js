@@ -24,6 +24,8 @@ import {
   createEnvironment,
   createProceduralCanvasTexture,
   loadBestiaryCreatureGLB,
+  loadBestiaryCreatureAnimatedGLB,
+  GLTF_BESTIARY_ANIMATED_MAP,
 } from './dasi3dContent.js';
 import { resolveBestiaryRuntimeModel } from './bestiaryRuntimeMap.js';
 import { DasiCollisionEngine } from './dasiCollisionEngine.js';
@@ -694,9 +696,17 @@ export class Dasi3DRealtimeArena {
 
     if (visual?.modelId) {
       const preserved = [entity.parts?.groundRing, bossRing, goldRing, hpSprite];
-      loadBestiaryCreatureGLB(visual.modelId, entity.group, THREE, (model) => {
+      const onModel = (model, controller) => {
         synchronizedEntity.glbModel = model;
-      }, preserved);
+        synchronizedEntity.animController = controller ?? null;
+      };
+      // Prefere o GLB articulado (clips IDLE/locomoção/ATTACK/HURT/DEATH) e
+      // recai para o protótipo estático quando o arquivo animado não existe.
+      if (GLTF_BESTIARY_ANIMATED_MAP[visual.modelId]) {
+        loadBestiaryCreatureAnimatedGLB(visual.modelId, entity.group, THREE, onModel, preserved);
+      } else {
+        loadBestiaryCreatureGLB(visual.modelId, entity.group, THREE, onModel, preserved);
+      }
     }
 
     return synchronizedEntity;
@@ -726,6 +736,13 @@ export class Dasi3DRealtimeArena {
       synchronizedEntity.hpTex.needsUpdate = true;
     }
 
+    // Reação de dano: o clip HURT toca quando o HP cai sem a entidade morrer.
+    const previousHp = synchronizedEntity.lastHp ?? null;
+    synchronizedEntity.lastHp = currentHp;
+    if (previousHp !== null && currentHp < previousHp && !synchronizedEntity.isDead) {
+      synchronizedEntity.animController?.trigger?.('HURT');
+    }
+
     if (entityData.isDead && !synchronizedEntity.isDead) {
       synchronizedEntity.isDead = true;
       this.animateMonsterDeath(synchronizedEntity);
@@ -753,6 +770,8 @@ export class Dasi3DRealtimeArena {
 
     for (const [entityId, synchronizedEntity] of renderEntities.entries()) {
       if (!activeIds.has(entityId)) {
+        synchronizedEntity.animController?.dispose?.();
+        synchronizedEntity.animController = null;
         this.scene.remove(synchronizedEntity.group);
         renderEntities.delete(entityId);
       }
@@ -768,17 +787,26 @@ export class Dasi3DRealtimeArena {
   }
 
   animateMonsterDeath(mob3D) {
-    let fade = 1.0;
-    const sink = () => {
-      fade -= 0.05;
-      mob3D.group.position.y -= 0.04;
-      if (fade > 0) {
-        requestAnimationFrame(sink);
-      } else {
-        this.scene.remove(mob3D.group);
-      }
-    };
-    sink();
+    const controller = mob3D.animController ?? null;
+    if (controller) controller.die();
+    // O clip DEATH toca primeiro; o afundamento começa perto do fim da queda.
+    const deathClip = controller?.clips?.find((clip) => clip.name === 'DEATH');
+    const delayMs = controller ? Math.round((deathClip?.duration ?? 2) * 700) : 0;
+    setTimeout(() => {
+      let fade = 1.0;
+      const sink = () => {
+        fade -= 0.05;
+        mob3D.group.position.y -= 0.04;
+        if (fade > 0) {
+          requestAnimationFrame(sink);
+        } else {
+          controller?.dispose?.();
+          mob3D.animController = null;
+          this.scene.remove(mob3D.group);
+        }
+      };
+      sink();
+    }, delayMs);
   }
 
   // ==========================================================================
@@ -1012,9 +1040,38 @@ export class Dasi3DRealtimeArena {
     for (const entityMap of [this.monsters3D, this.bosses3D]) {
       for (const entity3D of entityMap.values()) {
         if (!entity3D.isDead) {
+          const travelDistance = entity3D.group.position.distanceTo(entity3D.targetPos);
           entity3D.group.position.lerp(entity3D.targetPos, 0.15);
+
+          // Vira a criatura para a direção do deslocamento (modelos olham para +Z).
+          if (travelDistance > 0.35) {
+            const facing = Math.atan2(
+              entity3D.targetPos.x - entity3D.group.position.x,
+              entity3D.targetPos.z - entity3D.group.position.z
+            );
+            let angleDiff = facing - entity3D.group.rotation.y;
+            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+            entity3D.group.rotation.y += angleDiff * Math.min(1, 8 * delta);
+          }
+
+          const controller = entity3D.animController;
+          if (controller) {
+            controller.update(delta);
+            entity3D.attackCooldown = Math.max(0, (entity3D.attackCooldown ?? 0) - delta);
+            const reach = entity3D.isBoss ? 4.6 : 3.0;
+            const distanceToPlayer = entity3D.group.position.distanceTo(this.playerGroup.position);
+            const busy = controller.state === 'ATTACK' || controller.state === 'HURT';
+            if (!busy && distanceToPlayer < reach && entity3D.attackCooldown <= 0) {
+              controller.trigger('ATTACK');
+              entity3D.attackCooldown = entity3D.isBoss ? 2.4 : 1.7;
+            } else {
+              controller.setBaseState(travelDistance > 0.35 ? 'MOVE' : 'IDLE');
+            }
+          }
+
           if (entity3D.entity && entity3D.entity.updateAnim) {
-            entity3D.entity.updateAnim('WALK', elapsed, delta);
+            entity3D.entity.updateAnim(travelDistance > 0.35 ? 'WALK' : 'IDLE', elapsed, delta);
           }
         }
       }
