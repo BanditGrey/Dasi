@@ -25,7 +25,7 @@ com o estágio de protótipo. Deformação suave exige skinning e continua pende
 | Família | Diretórios | Conteúdo |
 | --- | --- | --- |
 | Estática (inalterada) | `src/client/dev_viewer/models/bestiary/`, `prototypes/3d_bestiary/` | referência visual, **0 clips, 0 skins** |
-| Articulada (nova) | `src/client/dev_viewer/models/bestiary_animated/`, `prototypes/3d_bestiary_animated/` | mesma geometria + pivôs + **5 clips** |
+| Articulada (nova) | `src/client/dev_viewer/models/bestiary_animated/`, `prototypes/3d_bestiary_animated/` | mesma geometria + pivôs + **5 clips** + **3 texturas PBR** |
 
 Regenerar: `npm run build:bestiary-animated-glb` (ou
 `node tools/export_bestiary_animated.mjs ALL | <ID>`). Os estáticos continuam
@@ -46,6 +46,10 @@ Cada GLB articulado tem raiz `BESTIARY_<ID>` com estes metadados:
   "animationLocomotion": "WALK",      // clip de locomocão do arquétipo
   "animationStates": ["IDLE", "WALK", "ATTACK", "HURT", "DEATH"],
   "rigJointCount": 28,                // pivôs criados
+  "pbrTexturesIncluded": true,
+  "pbrTextureSource": "procedural",
+  "pbrTextureSize": 256,
+  "pbrTextureMaps": ["baseColor", "metallicRoughness", "normal"],
   "collisionsIncluded": false,        // colisão continua no servidor
   "runtimeEffectsIncluded": false     // VFX continua no runtime
 }
@@ -59,6 +63,13 @@ Garantias verificadas por teste (`npm run test:3d`):
 - zero `SkinnedMesh`, zero `Bone`, zero luzes e zero partículas;
 - cada track de clip aponta para um pivô existente (`userData.jointPivot`);
 - clips de loop (IDLE e locomocão) fecham o ciclo;
+- 3 imagens PNG por criatura, todas as malhas com `TEXCOORD_0`, todos os
+  materiais ligados às três texturas, `byteLength` do buffer coerente com o
+  chunk BIN e chunks alinhados a 4 bytes;
+- pixels dentro das faixas do perfil (alpha opaco, canal R do
+  metallicRoughness zerado, normais unitárias com +Z dominante) e mapas sem
+  emenda no wrap;
+- regenerar as texturas reproduz os mesmos bytes;
 - as duas cópias (viewer e prototypes) são byte a byte iguais.
 
 ## Como o rig é montado
@@ -84,6 +95,51 @@ Viewer e pelos testes. O processo:
 5. **Pivô de corpo** — um `*_rig_body` envolve todo o conteúdo e carrega
    respiração, avanço do golpe, recuo do dano e a queda da morte. Partes não
    articuladas acompanham o corpo.
+
+## Texturas PBR procedurais
+
+Os GLBs estáticos não têm imagens. A família articulada embute **três mapas
+256×256 por criatura**, gerados por `tools/procedural_textures.mjs` e injetados
+no contêiner GLB por `tools/glb_texture_injector.mjs`.
+
+O `GLTFExporter` do three só codifica imagens com canvas DOM (`putImageData`,
+`toBlob`), que não existe no Node. Por isso o caminho é: gerar pixels RGBA →
+codificar PNG (codec próprio, `zlib` + CRC32 + filtros por linha) → anexar ao
+chunk BIN já exportado e declarar `bufferViews`, `images`, `samplers` e
+`textures`. Nenhum byte de geometria ou animação é tocado.
+
+| Mapa | Canais | Como atua |
+| --- | --- | --- |
+| baseColor | RGB | multiplicado pelo `baseColorFactor` de cada material: modula cor e escurece cavidades (AO de detalhe) |
+| metallicRoughness | G = roughness, B = metalness | multiplicados pelos factors do material; R fica zerado, como pede o glTF |
+| normal | RGB tangente-espaço | derivado do mesmo campo de altura; `normalTexture.scale` vem do perfil |
+
+Um único sampler (`REPEAT` + mipmaps lineares) é compartilhado, e **o mesmo
+conjunto de mapas atende todos os materiais da criatura**: a identidade de cor
+continua nos `baseColorFactor`/`metallicFactor`/`roughnessFactor` de cada
+material, e as texturas entram como modulação. É isso que mantém o arquivo
+leve — cerca de 150 a 260 KB de PNG por criatura.
+
+Superfícies disponíveis: `scales` (escamas), `plates` (placas de armadura),
+`cracks` (rachaduras), `leather` (couro/membrana), `facets` (cristais) e `rock`
+(rocha/areia). Cada perfil combina de uma a três camadas com pesos; por exemplo,
+o Balrog é 50% placas + 34% rachaduras + 16% rocha, e o Dragão Dourado é 72%
+escamas + 28% placas.
+
+Três regras fazem os mapas fecharem no wrap:
+
+1. **Ruído periódico** — todo `fbm`/`ridged`/`voronoi` recebe um domínio inteiro
+   igual ao seu período base, então `f(0) == f(período)`.
+2. **Fase de meia célula** — grades de placas e escamas são deslocadas em 0,5
+   célula para a costura do mapa cair no meio de uma placa/escama, nunca no
+   sulco (além de evitar um vinco reto nas bordas de UV).
+3. **Contagem par de linhas** — a alternância de escamas tem período 2, então a
+   frequência é arredondada para par (13 → 14 no Dragão Dourado).
+
+Duas malhas do bestiário eram construídas à mão e não tinham UV (as asas do
+Dragão Dourado e do Wyrmling, mais a capa do Tantalos). `ensureMeshUvs` projeta
+UVs planares nelas — descartando o eixo de menor extensão e repetindo conforme
+o tamanho real — apenas no caminho animado; os protótipos estáticos não mudam.
 
 ## Clips por criatura
 
@@ -149,7 +205,9 @@ para o protótipo estático e depois para o conteúdo procedural — nada quebra
   ajuste de amplitude, fase e pivôs.
 - Nenhum VFX, áudio, colisão, hitbox, atributo ou comportamento de IA foi
   alterado: os clips são apenas a camada visual.
-- Texturas PBR continuam ausentes nos protótipos do bestiário (0 imagens nos
-  GLBs); é a próxima frente de acabamento.
+- As texturas são 256², procedurais e compartilhadas por criatura: não são os
+  conjuntos 2x/4K do manifesto, não há mapas por peça (cada material recebe o
+  mesmo detalhe) e não existem `emissive`, `occlusion` ou mapas de detalhe
+  secundários. Os GLBs estáticos seguem sem imagens.
 - O ataque na arena é disparado por proximidade no cliente, apenas como leitura
   visual; o servidor segue autoritativo para dano e habilidades.

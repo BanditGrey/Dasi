@@ -100,10 +100,12 @@ continua sendo gerada por `npm run build:bestiary-glb`.
 [Bestiário articulado] 12/12 criaturas exportadas
 [Pivôs]                5 (Gorgon) a 54 (Zaikan / Dragão Dourado)
 [Clips por criatura]   5 (IDLE, locomocão, ATTACK, HURT, DEATH)
+[Texturas por criatura] 3 mapas PBR procedurais 256² (150 a 260 KB)
 [Geometria]            triângulos e malhas idênticos aos estáticos
-[Pose de repouso]      desvio máx. 4.4e-16 (nulo na prática)
+[Pose de repouso]      desvio máx. 5.0e-16 (nulo na prática)
 [Skins / ossos]        0 / 0 (puppet rígido, como decidido)
-[Suíte de testes]      235 testes | 235 aprovados | 0 falhas
+[Tamanho da família]   6 MB por diretório (eram 4 MB sem texturas)
+[Suíte de testes]      241 testes | 241 aprovados | 0 falhas
 [Typecheck]            0 erros (TypeScript strict)
 ```
 
@@ -125,13 +127,82 @@ continua sendo gerada por `npm run build:bestiary-glb`.
 6. Quatro tracks usavam meia-frequência (`angle * 0.5`) com número ímpar de
    ciclos e não fechavam o loop.
 
-## 5. PENDÊNCIAS E PRÓXIMOS PASSOS
+## 5. SEGUNDA ETAPA — TEXTURAS PBR PROCEDURAIS
 
-- **Revisão visual no navegador** criatura por criatura (amplitude, fase,
-  pivôs, interseções). Teste automatizado não substitui essa revisão.
-- **Texturas PBR** para o bestiário: os GLBs continuam com 0 imagens.
+Concluída na mesma sessão, fechando o item de texturas do escopo.
+
+### 5.1 Por que injetar no contêiner em vez de exportar
+
+O `GLTFExporter` do three codifica imagens com canvas DOM (`putImageData` e
+`toBlob`), indisponível no Node — por esse caminho o exportador simplesmente não
+consegue escrever uma imagem. As alternativas eram uma dependência nativa de
+canvas (`node-canvas`/`@napi-rs/canvas`) ou fazer a cirurgia no contêiner.
+Optou-se pela segunda: **zero dependências novas**, determinística e testável.
+
+Fluxo: pixels RGBA gerados por ruído → PNG codificado por codec próprio (`zlib`
++ CRC32 + escolha de filtro por linha) → anexado ao chunk BIN do GLB já
+exportado → `bufferViews`, `images`, `samplers` e `textures` declarados → todos
+os materiais ligados aos três mapas. Geometria, clips e fatores de material não
+são tocados.
+
+### 5.2 Decisões de conteúdo
+
+- **Um conjunto de mapas por criatura**, compartilhado por todos os materiais. A
+  identidade de cor continua nos fatores (`baseColorFactor`, `metallicFactor`,
+  `roughnessFactor`); as texturas entram como **modulação multiplicativa**, que
+  é exatamente a semântica do glTF. Custo: 150 a 260 KB por criatura, em vez de
+  um mapa por peça.
+- **Sem mapa de emissão**: com conjunto compartilhado, tudo brilharia. Os fatores
+  `emissive` existentes (olhos, coração de magma, halo) foram mantidos.
+- Seis superfícies combináveis: `scales`, `plates`, `cracks`, `leather`,
+  `facets`, `rock`.
+- `ensureMeshUvs` projetou UVs planares nas cinco malhas construídas à mão que
+  não tinham (asas do Dragão Dourado e do Wyrmling, capa do Tantalos), apenas no
+  caminho animado; os estáticos não mudam.
+
+### 5.3 Defeitos de periodicidade encontrados pelo teste de emenda
+
+O teste compara a variação entre a última e a primeira coluna/linha com a
+variação média interna do campo de altura. Reprovou três vezes seguidas, e cada
+reprovação era um defeito real:
+
+1. **Períodos fixos não divisores do domínio** — `cracks` amostrava domínio 5 com
+   período 6, `leather` domínio 20,4 com período 8, `facets` domínio 7,2 com
+   período 4. Corrigido derivando o período do domínio (spans inteiros).
+2. **`crown` assimétrico em `plates`** — usava `min(lu, lv)` contra
+   `min(1-lu, 1-lv)`, que salta no wrap. Substituído por `|du - dv|`, com
+   `du = min(lu, 1-lu)`, periódico nos dois eixos.
+3. **Grade alinhada à borda e contagem ímpar de linhas** — o wrap caía exatamente
+   no sulco da placa (rampa mais íngreme que a média interna) e a alternância de
+   escamas, de período 2, não fechava com 13 linhas. Corrigido com fase de meia
+   célula e arredondamento para contagem par.
+
+Resultado final: pior razão emenda/interna 1,08 (Rainha de Gelo), dentro do
+limite de 2,0; as demais entre 0,32 e 0,86.
+
+### 5.4 Verificações acrescentadas
+
+- `bestiary_texture_coverage.test.ts` (6 testes): perfis e faixas, contêiner GLB
+  (alinhamento, `byteLength`, reescrita idêntica, cópias iguais), três imagens
+  PNG e materiais ligados, pixels dentro das faixas do perfil (alpha opaco, R
+  zerado, normais unitárias), reprodutibilidade byte a byte e ausência de
+  emenda, e estáticos continuam sem imagens.
+- `decodePNG` valida assinatura, CRC de cada chunk, IHDR e filtros; o inflate é
+  feito pelo `zlib` do Node, ou seja, por um decodificador independente do
+  codificador.
+- Os testes que carregam GLB passaram a definir `globalThis.self` (o
+  `GLTFLoader` referencia `self.URL` para decodificar imagens) e a silenciar os
+  avisos de textura, já que decodificar imagem é capacidade do navegador.
+
+## 6. PENDÊNCIAS E PRÓXIMOS PASSOS
+
+- **Revisão visual no navegador** criatura por criatura (amplitude, fase, pivôs,
+  interseções e leitura das texturas sob luz real). Teste automatizado não
+  substitui essa revisão.
+- **Texturas por peça** e mapas de emissão/oclusão quando houver UVs definitivos;
+  hoje há um conjunto compartilhado por criatura.
 - **Skinning** quando houver malhas definitivas; o puppet rígido é estágio de
-  protótipo.
+  protótipo. Os GLBs estáticos seguem sem imagens, de propósito (referência).
 - **Medição de custo**: FPS com vários chefes articulados em cena e orçamento de
   tracks por mixer.
 - **Monstros comuns e montarias** (demon, bull, wolf, yeti, mount_dragon,

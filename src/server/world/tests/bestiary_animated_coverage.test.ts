@@ -42,10 +42,25 @@ const ASSETS = [
 
 const EXPECTED_CLIPS = (locomotion: string) => ['IDLE', locomotion, 'ATTACK', 'HURT', 'DEATH'];
 
+// O GLTFLoader referencia `self.URL` ao decodificar imagens embutidas; no Node
+// esse global não existe. Com o shim, a decodificação falha de forma controlada
+// (textura vira null, como só o navegador decodifica) e o resto do arquivo —
+// geometria, nós, clips — continua sendo carregado normalmente.
+(globalThis as any).self ??= globalThis;
+
 async function loadGlb(path: string) {
   const bytes = readFileSync(path);
   const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
-  return { bytes, gltf: await new GLTFLoader().parseAsync(buffer, '') };
+  const originalError = console.error;
+  const originalWarn = console.warn;
+  console.error = () => {};
+  console.warn = () => {};
+  try {
+    return { bytes, gltf: await new GLTFLoader().parseAsync(buffer, '') };
+  } finally {
+    console.error = originalError;
+    console.warn = originalWarn;
+  }
 }
 
 describe('GLBs articulados do bestiário', () => {

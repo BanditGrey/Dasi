@@ -9,7 +9,7 @@ Protótipo de MMORPG / ARPG inspirado na atmosfera clássica de **MU Online**, c
 - **Cenários:** 56 concepts individuais e 56 GLBs procedurais de blockout. O editor experimental permite alterações visuais em todos os cenários e exportação individual ou em lote; isso não atualiza colisões ou o servidor. As bordas circulares ainda têm áreas não editáveis.
 - **Arenas de evento:** GLBs estáticos dedicados para Devil Square (`EVT_02`), Chaos Castle (`EVT_03`) e Coliseu de Duelos (`EVT_04`), além dos 56 blockouts. Os GLBs são visuais e não contêm colisões, animações nem VFX de runtime.
 - **Bestiário:** 12 protótipos GLB estáticos para seis chefes e seis criaturas da Invasão Dourada; integrados ao Dev Viewer, mas não são assets finais nem contêm colisões ou VFX de runtime.
-- **Bestiário articulado:** os mesmos 12 protótipos em uma segunda família de GLBs com puppet de partes rígidas (pivôs) e 5 clips cada (IDLE, locomocão do arquétipo, ATTACK, HURT e DEATH). A geometria e a pose de repouso são idênticas às estáticas, sem skins nem ossos; colisão, dano e VFX continuam no runtime. Detalhes em [bestiário articulado](docs/art/Bestiario_Animado.md).
+- **Bestiário articulado:** os mesmos 12 protótipos em uma segunda família de GLBs com puppet de partes rígidas (pivôs), 5 clips cada (IDLE, locomocão do arquétipo, ATTACK, HURT e DEATH) e 3 texturas PBR procedurais por criatura (baseColor, metallicRoughness, normal). A geometria e a pose de repouso são idênticas às estáticas, sem skins nem ossos; colisão, dano e VFX continuam no runtime. Detalhes em [bestiário articulado](docs/art/Bestiario_Animado.md).
 - **Personagens:** cinco concepts iniciais e cinco blockouts GLB modulares, com 60 peças experimentais de armadura. São formas procedurais simples, sem rig esquelético, skinning ou animações GLTF; não são modelos finais.
 - **Servidor:** protótipo sem autenticação real, persistência completa ou autoridade integral de movimento. Não exponha a redes não confiáveis.
 - **Validação:** execute `npm run typecheck` e `npm test`; os testes automatizados não substituem revisão visual, testes em navegador nem medição de desempenho.
@@ -104,7 +104,9 @@ Dasi/
     ├── bestiary_models.mjs               # Construtores estáticos dos protótipos de chefes
     ├── golden_invasion_models.mjs        # Geometria estática das criaturas douradas
     ├── export_bestiary_glbs.mjs          # Exportação/sincronização dos GLBs estáticos do bestiário
-    └── export_bestiary_animated.mjs      # Rig rígido + clips GLTF do bestiário articulado
+    ├── export_bestiary_animated.mjs      # Rig rígido + clips GLTF do bestiário articulado
+    ├── procedural_textures.mjs           # Mapas PBR procedurais (ruído periódico) + codec PNG
+    └── glb_texture_injector.mjs          # Injeta as texturas no contêiner GLB e completa UVs
 ```
 
 ---
@@ -123,7 +125,7 @@ Para regenerar os GLBs de arenas e bestiário (Node.js/Three.js):
 ```bash
 npm run build:event-glb
 npm run build:bestiary-glb           # família estática
-npm run build:bestiary-animated-glb  # família articulada (pivôs + 5 clips)
+npm run build:bestiary-animated-glb  # família articulada (pivôs + 5 clips + PBR)
 ```
 
 No Dev Viewer, a categoria **Monstros** permite inspecionar os 12 protótipos. Com os GLBs articulados presentes, o painel **Clips do Bestiário Articulado** reproduz IDLE, locomocão, ATTACK, HURT e DEATH; sem eles, o visualizador recai para o protótipo estático. Combate, colisão e efeitos permanecem fora dos GLBs.
