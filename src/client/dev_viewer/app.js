@@ -2407,6 +2407,7 @@ class DevClientApp {
     const rangeRefine = document.getElementById('range-3d-refinement');
     const groupRefine = document.getElementById('group-3d-refinement');
     const groupAnims = document.getElementById('group-3d-animations');
+    const groupBestiaryAnims = document.getElementById('group-3d-bestiary-anims');
 
     const subHeroes = document.getElementById('sub-group-heroes');
     const subMonsters = document.getElementById('sub-group-monsters');
@@ -2598,6 +2599,11 @@ class DevClientApp {
 
     const updateAnimButtons = (category, id) => {
       const btnSkill1 = document.getElementById('btn-anim-skill1');
+      // O painel de clips só aparece para criaturas com GLB articulado.
+      if (groupBestiaryAnims) {
+        const articulated = category === 'MONSTER' && !!this.viewer3DInstance?.hasAnimatedBestiary?.(id);
+        groupBestiaryAnims.style.display = articulated ? 'flex' : 'none';
+      }
       const btnSkill2 = document.getElementById('btn-anim-skill2');
       const btnRoll = document.getElementById('btn-anim-roll');
 
@@ -2738,6 +2744,7 @@ class DevClientApp {
         if (subArmory) subArmory.style.display = currentCategory === 'ARMORY' ? 'flex' : 'none';
         if (groupRefine) groupRefine.style.display = (currentCategory === 'HERO' || currentCategory === 'CHAOS_MACHINE' || currentCategory === 'ARMORY') ? 'flex' : 'none';
         if (groupAnims) groupAnims.style.display = (currentCategory === 'HERO' || currentCategory === 'MONSTER') ? 'flex' : 'none';
+        if (groupBestiaryAnims) groupBestiaryAnims.style.display = 'none';
 
         if (currentCategory === 'HERO') {
           this.viewer3DInstance.selectEntity('HERO', currentHero, { setTier: currentSetTier });
@@ -2952,6 +2959,16 @@ class DevClientApp {
         btn.classList.add('active');
         const anim = btn.dataset.anim;
         if (this.viewer3DInstance) this.viewer3DInstance.triggerAnimation(anim);
+      });
+    });
+
+    // 6b. Botões de Clips do Bestiário Articulado (IDLE/MOVE/ATTACK/HURT/DEATH)
+    const bestiaryAnimButtons = document.querySelectorAll('.btn-3d-bestiary-anim');
+    bestiaryAnimButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        bestiaryAnimButtons.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (this.viewer3DInstance) this.viewer3DInstance.triggerBestiaryAnimation(btn.dataset.bestiaryAnim);
       });
     });
 
