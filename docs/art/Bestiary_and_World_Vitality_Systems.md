@@ -23,6 +23,7 @@ Os modelos animados em formato `.glb` estão alocados em `src/client/dev_viewer/
 | **Hound** (Lobo / Cão de Caça) | `hound_animated.glb` | Lorencia (Planícies do Poente) | `Idle`, `Walk`, `Gallop`, `Attack`, `Idle_HitReact_Left`, `Death` |
 | **Bull Fighter** (Touro Guerreiro) | `bull_fighter_animated.glb` | Lorencia (Charcos do Sul) | `Idle`, `Walk`, `Gallop`, `Attack_Headbutt`, `Attack_Kick`, `Death` |
 | **Skeleton** (Soldado Esqueleto) | `skeleton_animated.glb` | Lorencia (Cemitério) / Dungeon | `Idle`, `Walking_A`, `Running_A`, `1H_Melee_Attack_Chop`, `Hit_A`, `Death_A` |
+| **Skeleton Warrior** (Guerreiro Esqueleto de Elite) | `skeleton_warrior_animated.glb` | Dungeon / Lorencia | `Idle`, `Walking_A`, `Running_A`, `1H_Melee_Attack_Chop`, `1H_Melee_Attack_Stab`, `Block`, `Hit_A`, `Death_A`, `Cheer` |
 | **Lich** (Feiticeiro do Abismo) | `lich_animated.glb` | Dungeon Catacombs | `Idle`, `Walking_A`, `Spellcast_Shoot`, `Spellcast_Long`, `Hit_A`, `Death_A` |
 | **Yeti** (A Fera Glacial) | `yeti_animated.glb` | Devias Boreal | `CharacterArmature\|Idle`, `CharacterArmature\|Walk`, `CharacterArmature\|Bite_Front`, `CharacterArmature\|HitRecieve`, `CharacterArmature\|Death` |
 | **Lesser Demon** (Cria de Balrog) | `demon_animated.glb` | Lost Tower Inferno | `CharacterArmature\|Flying_Idle`, `CharacterArmature\|Fast_Flying`, `CharacterArmature\|Punch`, `CharacterArmature\|HitReact`, `CharacterArmature\|Death` |
@@ -149,4 +150,5 @@ O ecossistema conta com cobertura integral na suíte de testes do projeto:
 - `src/client/dev_viewer/tests/ambient_life_systems.test.ts`: 11 testes de fauna por bioma (aves, morcegos, peixes, águas-vivas, fadas, lebres, raposas), NPCs 3D, áudio procedural, toggle de HUD, flicker de tochas e soundscapes.
 - `src/server/combat/tests/mob_spawner_fsm.test.ts`: 6 testes de IA de detecção, alcance de ataque, leash, serialização angular e multi-bioma.
 - `src/server/combat/tests/canonical_skills.test.ts`: 7 testes de catálogo e execução autoritativa de habilidades das 5 classes.
-- Total de **432 testes executados e 100% aprovados em 99 suítes** (0 falhas) com `npm test` e tipagem estrita com `npm run typecheck`.
+- `src/server/combat/tests/multibiome_spawner.test.ts`: 9 testes de orquestração multi-bioma (Noria, Devias, Dungeon, Lost Tower, Atlans, Tarkan, Icarus) e entidades canônicas expandidas.
+- Total de **441 testes executados e 100% aprovados em 101 suítes** (0 falhas) com `npm test` e tipagem estrita com `npm run typecheck`.

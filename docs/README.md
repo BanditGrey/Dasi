@@ -3,7 +3,7 @@
 > **Servidor Autoritativo:** Node.js / TypeScript (`ws://localhost:8080` & `http://localhost:8080`)  
 > **Cliente WebGL 3D:** Three.js PBR (`src/client/dev_viewer/`)  
 > **Cliente Desktop AAA:** Unreal Engine 5.5 C++ (`src/client/ue5_project/`)  
-> **Status dos Testes:** 🟢 **432 / 432 testes aprovados em 99 suítes (100% green)** + `npm run typecheck` sem erros
+> **Status dos Testes:** 🟢 **441 / 441 testes aprovados em 101 suítes (100% green)** + `npm run typecheck` sem erros
 
 ---
 

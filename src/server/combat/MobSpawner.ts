@@ -83,11 +83,32 @@ export class MobSpawner {
   }
 
   /**
-   * Registra zonas dinâmicas para biomas específicos (Devias, Dungeon, Lost Tower)
+   * Registra zonas dinâmicas para biomas específicos (Noria, Devias, Dungeon, Lost Tower, Atlans, Tarkan, Icarus)
    */
   public initBiomeZones(biome: string): void {
     const b = String(biome || '').toUpperCase();
-    if (b === 'DEVIAS') {
+    if (b === 'NORIA') {
+      this.addZone({
+        id: 'zone_noria_dragons',
+        name: 'Clareira dos Pequenos Dragões',
+        monsterType: 'budge_dragon',
+        centerX: 220,
+        centerY: 220,
+        radius: 90,
+        maxMobs: 4,
+        respawnDelayMs: 4500,
+      });
+      this.addZone({
+        id: 'zone_noria_orcs',
+        name: 'Bosque dos Invasores Orcs',
+        monsterType: 'orc',
+        centerX: 420,
+        centerY: 380,
+        radius: 100,
+        maxMobs: 4,
+        respawnDelayMs: 5500,
+      });
+    } else if (b === 'DEVIAS') {
       this.addZone({
         id: 'zone_devias_yetis',
         name: 'Fortaleza dos Yetis',
@@ -97,6 +118,16 @@ export class MobSpawner {
         radius: 100,
         maxMobs: 4,
         respawnDelayMs: 6000,
+      });
+      this.addZone({
+        id: 'zone_devias_orcs',
+        name: 'Patrulha Orc Glacial',
+        monsterType: 'orc',
+        centerX: 460,
+        centerY: 240,
+        radius: 90,
+        maxMobs: 3,
+        respawnDelayMs: 5500,
       });
     } else if (b === 'DUNGEON') {
       this.addZone({
@@ -112,12 +143,22 @@ export class MobSpawner {
       this.addZone({
         id: 'zone_dungeon_skeletons',
         name: 'Garras do Abismo',
-        monsterType: 'skeleton',
+        monsterType: 'skeleton_warrior',
         centerX: 400,
         centerY: 400,
         radius: 90,
         maxMobs: 4,
         respawnDelayMs: 6000,
+      });
+      this.addZone({
+        id: 'zone_dungeon_ghosts',
+        name: 'Catacumba dos Espectros',
+        monsterType: 'ghost',
+        centerX: 180,
+        centerY: 380,
+        radius: 100,
+        maxMobs: 3,
+        respawnDelayMs: 6500,
       });
     } else if (b === 'LOST_TOWER') {
       this.addZone({
@@ -129,6 +170,49 @@ export class MobSpawner {
         radius: 110,
         maxMobs: 4,
         respawnDelayMs: 8000,
+      });
+      this.addZone({
+        id: 'zone_lost_tower_dragons',
+        name: 'Guarda do Fogo Ancestral',
+        monsterType: 'dragon_evolved',
+        centerX: 220,
+        centerY: 220,
+        radius: 100,
+        maxMobs: 3,
+        respawnDelayMs: 9000,
+      });
+    } else if (b === 'ATLANS') {
+      this.addZone({
+        id: 'zone_atlans_hydra',
+        name: 'Fosso da Hidra Abissal',
+        monsterType: 'hydra',
+        centerX: 300,
+        centerY: 300,
+        radius: 120,
+        maxMobs: 2,
+        respawnDelayMs: 12000,
+      });
+    } else if (b === 'TARKAN') {
+      this.addZone({
+        id: 'zone_tarkan_zaikan',
+        name: 'Dunas do Zaikan',
+        monsterType: 'zaikan',
+        centerX: 350,
+        centerY: 350,
+        radius: 130,
+        maxMobs: 2,
+        respawnDelayMs: 15000,
+      });
+    } else if (b === 'ICARUS') {
+      this.addZone({
+        id: 'zone_icarus_dragons',
+        name: 'Ninho dos Dragões Celestes',
+        monsterType: 'dragon_evolved',
+        centerX: 300,
+        centerY: 300,
+        radius: 120,
+        maxMobs: 3,
+        respawnDelayMs: 10000,
       });
     }
     this.spawnInitialMobs();
