@@ -29,6 +29,7 @@ Os modelos animados em formato `.glb` estão alocados em `src/client/dev_viewer/
 | **Dragon Evolved** | `dragon_animated.glb` | Invasões Douradas / Noria | `CharacterArmature\|Flying_Idle`, `CharacterArmature\|Fast_Flying`, `CharacterArmature\|Headbutt`, `CharacterArmature\|HitReact`, `CharacterArmature\|Death` |
 | **Ghost** (Espectro Abissal) | `ghost_animated.glb` | Dungeon Catacombs | `CharacterArmature\|Flying_Idle`, `CharacterArmature\|Fast_Flying`, `CharacterArmature\|Punch`, `CharacterArmature\|Death` |
 | **Orc** (Guerreiro Orc) | `orc_animated.glb` | Devias / Dungeon | `CharacterArmature\|Idle`, `CharacterArmature\|Walk`, `CharacterArmature\|Punch`, `CharacterArmature\|HitReact`, `CharacterArmature\|Death` |
+| **Wild Fox** (Raposa Selvagem) | `models/critters/fox_animated.glb` | Lorencia / Noria | `Idle`, `Idle_2`, `Walk`, `Gallop`, `Attack`, `Idle_HitReact_Left`, `Death` |
 
 ---
 
@@ -58,6 +59,13 @@ Gerencia a vitalidade visual e a fauna dinâmica dos cenários:
 4. **TorchFlickerSystem (Flicker Dinâmico de Tochas & Braseiros):**
    - Modulação de intensidade luminosa (`PointLight`) usando sobreposição de três frequências senoidais para simular chamas vivas sem travar o processador.
    - Partículas pontuais de fuligem e brasas que sobem continuamente da boca da tocha.
+5. **WildCritters (Fauna Terrestre Pacífica - Raposas em Lorencia & Noria):**
+   - Pequenos animais perambulam pacificamente em clareiras (`GRAZING` e `PATROL` a 1,1 m/s).
+   - Ao detectar a aproximação veloz do herói (< 4,5m), entram imediatamente em pânico (`FLEEING` a 4,2 m/s no clipe `Gallop`), emitindo áudio procedural de revoada/fuga e buscando distância segura (> 8m).
+6. **Síntese de Áudio Procedural da Fauna & Bestiário (`HarmonicAudioSynthesizer`):**
+   - Áudio sintetizado em tempo real via Web Audio API: `playWildlifeSound('wings')` na decolagem de aves, `playWildlifeSound('bat')` nas catacumbas, rugidos e agonias de monstros (`playMonsterHitSound`, `playMonsterDeathSound`).
+7. **Controles de HUD & Telemetria no Dev Viewer:**
+   - Botão interativo `🕊️ Fauna: ON / OFF` no painel superior do Viewport 3D (`#btn-toggle-ambient-life`) permitindo alternar instantaneamente a visibilidade e processamento da fauna e efeitos de vitalidade.
 
 ---
 
@@ -90,6 +98,6 @@ A máquina de estados dos monstros no servidor opera em um ciclo contínuo:
 
 O sistema conta com cobertura integral na suíte de testes do projeto:
 - `src/client/dev_viewer/tests/animated_monsters_runtime.test.ts`: 4 testes de integridade de malha, cabeçalho GLTF, presença de ossos e AnimationMixer.
-- `src/client/dev_viewer/tests/ambient_life_systems.test.ts`: 6 testes de fauna por bioma, reação de fuga de aves, flicker de tochas e liberação de recursos.
+- `src/client/dev_viewer/tests/ambient_life_systems.test.ts`: 9 testes de fauna por bioma, reação de fuga de aves e raposas selvagens, áudio procedural na decolagem, toggle de HUD, flicker de tochas e liberação de recursos.
 - `src/server/combat/tests/mob_spawner_fsm.test.ts`: 6 testes de IA de detecção, alcance de ataque, leash, serialização angular e multi-bioma.
-- Total de **371 testes executados e 100% aprovados** (0 falhas).
+- Total de **374 testes executados e 100% aprovados em 82 suítes** (0 falhas).
