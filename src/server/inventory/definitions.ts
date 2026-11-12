@@ -2965,6 +2965,25 @@ export const ITEM_DEFINITIONS: Record<string, ItemDefinition> = {
   },
 
   // ==========================================
+  // ITENS DO EVENTO DE KALIMA (MAPAS & MARCAS)
+  // ==========================================
+  lost_map_1: { id: 'lost_map_1', name: 'Lost Map +1', category: ItemCategory.EVENT, width: 1, height: 1, baseDurability: 1, requirements: { strength: 0, agility: 0 } },
+  lost_map_2: { id: 'lost_map_2', name: 'Lost Map +2', category: ItemCategory.EVENT, width: 1, height: 1, baseDurability: 1, requirements: { strength: 0, agility: 0 } },
+  lost_map_3: { id: 'lost_map_3', name: 'Lost Map +3', category: ItemCategory.EVENT, width: 1, height: 1, baseDurability: 1, requirements: { strength: 0, agility: 0 } },
+  lost_map_4: { id: 'lost_map_4', name: 'Lost Map +4', category: ItemCategory.EVENT, width: 1, height: 1, baseDurability: 1, requirements: { strength: 0, agility: 0 } },
+  lost_map_5: { id: 'lost_map_5', name: 'Lost Map +5', category: ItemCategory.EVENT, width: 1, height: 1, baseDurability: 1, requirements: { strength: 0, agility: 0 } },
+  lost_map_6: { id: 'lost_map_6', name: 'Lost Map +6', category: ItemCategory.EVENT, width: 1, height: 1, baseDurability: 1, requirements: { strength: 0, agility: 0 } },
+  lost_map_7: { id: 'lost_map_7', name: 'Lost Map +7 (Lord Kundun)', category: ItemCategory.EVENT, width: 1, height: 1, baseDurability: 1, requirements: { strength: 0, agility: 0 } },
+
+  kundun_mark_1: { id: 'kundun_mark_1', name: 'Symbol of Kundun +1', category: ItemCategory.EVENT, width: 1, height: 1, baseDurability: 1, requirements: { strength: 0, agility: 0 } },
+  kundun_mark_2: { id: 'kundun_mark_2', name: 'Symbol of Kundun +2', category: ItemCategory.EVENT, width: 1, height: 1, baseDurability: 1, requirements: { strength: 0, agility: 0 } },
+  kundun_mark_3: { id: 'kundun_mark_3', name: 'Symbol of Kundun +3', category: ItemCategory.EVENT, width: 1, height: 1, baseDurability: 1, requirements: { strength: 0, agility: 0 } },
+  kundun_mark_4: { id: 'kundun_mark_4', name: 'Symbol of Kundun +4', category: ItemCategory.EVENT, width: 1, height: 1, baseDurability: 1, requirements: { strength: 0, agility: 0 } },
+  kundun_mark_5: { id: 'kundun_mark_5', name: 'Symbol of Kundun +5', category: ItemCategory.EVENT, width: 1, height: 1, baseDurability: 1, requirements: { strength: 0, agility: 0 } },
+  kundun_mark_6: { id: 'kundun_mark_6', name: 'Symbol of Kundun +6', category: ItemCategory.EVENT, width: 1, height: 1, baseDurability: 1, requirements: { strength: 0, agility: 0 } },
+  kundun_mark_7: { id: 'kundun_mark_7', name: 'Symbol of Kundun +7', category: ItemCategory.EVENT, width: 1, height: 1, baseDurability: 1, requirements: { strength: 0, agility: 0 } },
+
+  // ==========================================
   // CHAVES & ITENS DE DUNGEON
   // ==========================================
   dungeon_key_floor2: {
