@@ -49,6 +49,11 @@ export const GLTF_HERO_MAP = {
   ELF: 'models/animated_heroes/hero_elf_animated.glb',
   MG: 'models/animated_heroes/hero_mg_animated.glb',
   DL: 'models/animated_heroes/hero_dl_animated.glb',
+  DARK_KNIGHT: 'models/animated_heroes/hero_dk_animated.glb',
+  DARK_WIZARD: 'models/animated_heroes/hero_dw_animated.glb',
+  FAIRY_ELF: 'models/animated_heroes/hero_elf_animated.glb',
+  MAGIC_GLADIATOR: 'models/animated_heroes/hero_mg_animated.glb',
+  DARK_LORD: 'models/animated_heroes/hero_dl_animated.glb',
 };
 
 export const GLTF_BLOCKOUT_HERO_MAP = {
@@ -57,6 +62,11 @@ export const GLTF_BLOCKOUT_HERO_MAP = {
   ELF: 'models/hero_fairy_elf.glb',
   MG: 'models/hero_magic_gladiator.glb',
   DL: 'models/hero_dark_lord.glb',
+  DARK_KNIGHT: 'models/hero_dark_knight.glb',
+  DARK_WIZARD: 'models/hero_dark_wizard.glb',
+  FAIRY_ELF: 'models/hero_fairy_elf.glb',
+  MAGIC_GLADIATOR: 'models/hero_magic_gladiator.glb',
+  DARK_LORD: 'models/hero_dark_lord.glb',
 };
 
 // Protótipos estáticos do bestiário. Os modelos não substituem o conteúdo de jogo:
@@ -74,6 +84,13 @@ export const GLTF_BESTIARY_MAP = Object.freeze({
   GOLDEN_LIZARD_KING: 'models/bestiary/golden_lizard_king.glb',
   GOLDEN_TANTALOS: 'models/bestiary/golden_tantalos.glb',
   GOLDEN_DRAGON: 'models/bestiary/golden_dragon.glb',
+  SPIDER: 'models/bestiary/spider.glb',
+  BULL_FIGHTER: 'models/bestiary/bull_fighter.glb',
+  HOUND: 'models/bestiary/hound.glb',
+  SKELETON: 'models/bestiary/skeleton.glb',
+  LICH: 'models/bestiary/lich.glb',
+  DEATH_KNIGHT: 'models/bestiary/death_knight.glb',
+  BUDGE_DRAGON: 'models/bestiary/golden_budge_dragon.glb',
 });
 
 /** Carrega um GLB estático no grupo ativo do Dev Viewer, preservando o anel de spawn opcional. */
@@ -122,9 +139,124 @@ export function loadBestiaryCreatureGLB(creatureId, targetGroup, THREE, onComple
   }
 }
 
-export function loadRealHeroGLTF(heroClass, targetGroup, THREE, onComplete) {
-  const glbPath = GLTF_HERO_MAP[heroClass] || GLTF_BLOCKOUT_HERO_MAP[heroClass];
-  if (!glbPath) return;
+export function resolveHeroAnimationClip(anims, heroClass, requestName) {
+  if (!anims || anims.length === 0) return null;
+  const req = String(requestName || '').trim();
+  const u = req.toUpperCase();
+
+  // 1. Busca exata (insensível a maiúsculas)
+  const exact = anims.find(a => a.name.toLowerCase() === req.toLowerCase());
+  if (exact) return exact;
+
+  // 2. Locomoção
+  if (u === 'WALK' || u === 'WALKING' || u === 'WALKING_A') {
+    return anims.find(a => /^walking_a$/i.test(a.name)) ||
+           anims.find(a => /walk/i.test(a.name)) ||
+           anims.find(a => /run/i.test(a.name));
+  }
+  if (u === 'RUN' || u === 'RUNNING' || u === 'RUNNING_A' || u === 'SPRINT') {
+    return anims.find(a => /^running_a$/i.test(a.name)) ||
+           anims.find(a => /sprint/i.test(a.name)) ||
+           anims.find(a => /run/i.test(a.name)) ||
+           anims.find(a => /walk/i.test(a.name));
+  }
+  if (u === 'IDLE') {
+    return anims.find(a => /^idle$/i.test(a.name)) ||
+           anims.find(a => /idle_shield|sword_idle|idle_loop/i.test(a.name)) ||
+           anims.find(a => /idle/i.test(a.name));
+  }
+
+  // 3. Skills de combate canônicas por classe
+  const cls = (heroClass || '').toUpperCase();
+  if (u === 'TWISTING_SLASH' || u === 'CYCLONE' || u === 'SPIN') {
+    if (cls === 'DW' || cls === 'DL') {
+      return anims.find(a => /spellcast_shoot|spellcasting/i.test(a.name));
+    } else if (cls === 'ELF') {
+      return anims.find(a => /2h_ranged_shoot|ranged_shoot/i.test(a.name));
+    } else {
+      return anims.find(a => /2h_melee_attack_spin|spin/i.test(a.name));
+    }
+  }
+
+  if (u === 'DEATH_STAB' || u === 'STAB' || u === 'ATTACK') {
+    if (cls === 'DW' || cls === 'DL') {
+      return anims.find(a => /spellcast_raise|spellcast_long/i.test(a.name)) ||
+             anims.find(a => /spellcast_shoot|spellcasting/i.test(a.name));
+    } else if (cls === 'ELF') {
+      return anims.find(a => /aiming/i.test(a.name)) ||
+             anims.find(a => /shoot/i.test(a.name));
+    } else {
+      return anims.find(a => /1h_melee_attack_slice_horizontal|slice_diagonal|chop/i.test(a.name));
+    }
+  }
+
+  if (u === 'HIT' || u === 'HURT') {
+    return anims.find(a => /^hit_a$/i.test(a.name)) || anims.find(a => /hit/i.test(a.name));
+  }
+
+  if (u === 'DEATH' || u === 'DIE') {
+    return anims.find(a => /^death_a$/i.test(a.name)) || anims.find(a => /death/i.test(a.name));
+  }
+
+  // 4. Substring fallback
+  return anims.find(a => a.name.toLowerCase().includes(req.toLowerCase())) || anims[0];
+}
+
+export function resolveMonsterAnimationClip(anims, requestAction) {
+  if (!anims || anims.length === 0) return null;
+  const req = String(requestAction || '').trim().toLowerCase();
+
+  // 1. Busca exata (insensível a maiúsculas)
+  const exact = anims.find((a) => a.name.toLowerCase() === req);
+  if (exact) return exact;
+
+  // 2. Mapeamento semântico por categoria de ação
+  if (req === 'idle') {
+    return (
+      anims.find((a) => /(^|\||_)(idle|flying_idle|idle1_action|idle_2)($|\||_)/i.test(a.name)) ||
+      anims.find((a) => /idle/i.test(a.name)) ||
+      anims[0]
+    );
+  }
+  if (req === 'walk' || req === 'moving') {
+    return (
+      anims.find((a) => /(^|\||_)(walk|walking|walking_a|walk1_action|fast_flying|gallop)($|\||_)/i.test(a.name)) ||
+      anims.find((a) => /walk/i.test(a.name)) ||
+      anims.find((a) => /run|fly|gallop/i.test(a.name))
+    );
+  }
+  if (req === 'run') {
+    return (
+      anims.find((a) => /(^|\||_)(run|running_a|gallop|fast_flying)($|\||_)/i.test(a.name)) ||
+      anims.find((a) => /run|gallop|sprint/i.test(a.name)) ||
+      resolveMonsterAnimationClip(anims, 'walk')
+    );
+  }
+  if (req === 'attack' || req === 'attacking') {
+    return (
+      anims.find((a) => /(^|\||_)(attack|headbutt|kick|bite|punch|spellcast_shoot|1h_melee_attack_chop|1h_melee_attack_slice)($|\||_)/i.test(a.name)) ||
+      anims.find((a) => /attack|punch|bite|headbutt|kick|spellcast|slash|chop|slice/i.test(a.name))
+    );
+  }
+  if (req === 'hit' || req === 'staggered') {
+    return (
+      anims.find((a) => /(^|\||_)(hit|damage|hitreact|hitrecieve|damage_action|idle_hitreact_left)($|\||_)/i.test(a.name)) ||
+      anims.find((a) => /hit|damage|stagger/i.test(a.name))
+    );
+  }
+  if (req === 'death' || req === 'dead') {
+    return (
+      anims.find((a) => /(^|\||_)(death|death_a|death_action)($|\||_)/i.test(a.name)) ||
+      anims.find((a) => /death/i.test(a.name))
+    );
+  }
+
+  // 3. Fallback por substring
+  return anims.find((a) => a.name.toLowerCase().includes(req)) || anims[0];
+}
+
+export function loadAnimatedCreatureGLB(glbPath, targetGroup, THREE, onComplete, preserve = []) {
+  if (!glbPath || typeof window === 'undefined' || !targetGroup) return;
 
   try {
     const loader = new GLTFLoader();
@@ -132,7 +264,109 @@ export function loadRealHeroGLTF(heroClass, targetGroup, THREE, onComplete) {
       glbPath,
       (gltf) => {
         const model = gltf.scene;
-        model.name = `REAL_HERO_${heroClass}`;
+        model.name = `ANIMATED_CREATURE_${glbPath.split('/').pop().replace('.glb', '')}`;
+        model.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
+        });
+
+        if (!targetGroup.parent) {
+          model.traverse((child) => {
+            if (!child.isMesh) return;
+            child.geometry?.dispose?.();
+            const materials = Array.isArray(child.material) ? child.material : [child.material];
+            for (const material of materials) material?.dispose?.();
+          });
+          return;
+        }
+
+        const keep = new Set(preserve.filter(Boolean));
+        for (const child of targetGroup.children) {
+          if (!keep.has(child)) child.visible = false;
+        }
+
+        const anims = gltf.animations || [];
+        let mixer = null;
+        const actions = new Map();
+
+        if (anims.length > 0) {
+          mixer = new THREE.AnimationMixer(model);
+          for (const clip of anims) {
+            actions.set(clip.name, mixer.clipAction(clip));
+          }
+        }
+
+        const animController = {
+          mixer,
+          anims,
+          actions,
+          currentAction: null,
+          currentActionName: null,
+          playAction: function (actionName, duration = 0.25) {
+            if (!mixer || anims.length === 0) return;
+            const clip = resolveMonsterAnimationClip(anims, actionName);
+            if (!clip) return;
+            const nextAction = actions.get(clip.name) || mixer.clipAction(clip);
+            if (this.currentAction === nextAction && nextAction.isRunning()) return;
+
+            const isDeath = /death/i.test(clip.name) || actionName === 'death';
+            if (isDeath) {
+              nextAction.setLoop(THREE.LoopOnce, 1);
+              nextAction.clampWhenFinished = true;
+            }
+
+            if (this.currentAction && this.currentAction !== nextAction) {
+              nextAction.reset();
+              nextAction.enabled = true;
+              nextAction.play();
+              this.currentAction.crossFadeTo(nextAction, duration, true);
+            } else {
+              nextAction.reset();
+              nextAction.enabled = true;
+              nextAction.play();
+            }
+            this.currentAction = nextAction;
+            this.currentActionName = actionName;
+          },
+          update: function (delta) {
+            if (mixer) mixer.update(delta);
+          },
+        };
+
+        if (mixer && anims.length > 0) {
+          animController.playAction('idle');
+        }
+
+        targetGroup.add(model);
+        model.userData.animController = animController;
+        console.info(`[Dasi3D] Monstro animado carregado: ${glbPath} (${anims.length} animações)`);
+
+        if (onComplete) onComplete(model, animController);
+      },
+      undefined,
+      (err) => console.warn(`[Dasi3D] Falha ao carregar monstro animado ${glbPath}:`, err)
+    );
+  } catch (err) {
+    console.warn(`[Dasi3D] Erro ao carregar monstro animado ${glbPath}:`, err);
+  }
+}
+
+export function loadRealHeroGLTF(heroClass, targetGroup, THREE, onComplete) {
+  if (typeof window === 'undefined' || typeof window.document === 'undefined') return;
+  const rawId = String(heroClass || 'DK').trim().toUpperCase();
+  const cls = rawId.startsWith('HERO_') ? rawId.slice(5) : rawId;
+  const glbPath = GLTF_HERO_MAP[cls] || GLTF_HERO_MAP[rawId] || GLTF_BLOCKOUT_HERO_MAP[cls] || GLTF_BLOCKOUT_HERO_MAP[rawId];
+  if (!glbPath || !targetGroup) return;
+
+  try {
+    const loader = new GLTFLoader();
+    loader.load(
+      glbPath,
+      (gltf) => {
+        const model = gltf.scene;
+        model.name = `REAL_HERO_${cls}`;
         model.traverse((child) => {
           if (child.isMesh) {
             child.castShadow = true;
@@ -140,17 +374,17 @@ export function loadRealHeroGLTF(heroClass, targetGroup, THREE, onComplete) {
           }
         });
         targetGroup.add(model);
-        console.log(`[Dasi3D] Herói Real GLB carregado: ${heroClass} (${glbPath})`);
+        console.log(`[Dasi3D] Herói Real GLB carregado: ${cls} (${glbPath})`);
         if (onComplete) onComplete(model, gltf);
       },
       undefined,
       (err) => {
         console.warn(`[Dasi3D] Falha ao carregar ${glbPath}, tentando fallback estático:`, err);
-        const fallbackPath = GLTF_BLOCKOUT_HERO_MAP[heroClass];
+        const fallbackPath = GLTF_BLOCKOUT_HERO_MAP[cls] || GLTF_BLOCKOUT_HERO_MAP[rawId];
         if (fallbackPath && fallbackPath !== glbPath) {
           loader.load(fallbackPath, (fallbackGltf) => {
             const fallbackModel = fallbackGltf.scene;
-            fallbackModel.name = `REAL_HERO_${heroClass}`;
+            fallbackModel.name = `REAL_HERO_${cls}`;
             targetGroup.add(fallbackModel);
             if (onComplete) onComplete(fallbackModel, fallbackGltf);
           });
@@ -1175,17 +1409,26 @@ export function createHero(heroClass, options = {}, THREE) {
   wingsGroup.add(wingR);
 
   // Carregamento Assíncrono do Modelo GLB Oficial (Blender 5.2 / Animated AAA)
-  if (options.useRealGLB !== false && typeof GLTFLoader !== 'undefined') {
+  if (options.useRealGLB !== false && typeof window !== 'undefined' && typeof window.document !== 'undefined') {
     loadRealHeroGLTF(heroClass, rootGroup, THREE, (glbModel, gltf) => {
       glbModel.position.set(0, 0, 0);
       parts.realGLB = glbModel;
 
-      // Oculta completamente todas as peças procedurais de placeholder
-      if (heroRoot) heroRoot.visible = false;
-      if (torsoGroup) torsoGroup.visible = false;
+      // Oculta e remove completamente todas as peças procedurais de placeholder
+      if (heroRoot) {
+        heroRoot.visible = false;
+        if (heroRoot.parent) heroRoot.parent.remove(heroRoot);
+      }
+      if (torsoGroup) {
+        torsoGroup.visible = false;
+        if (torsoGroup.parent) torsoGroup.parent.remove(torsoGroup);
+      }
       for (const [key, part] of Object.entries(parts)) {
-        if (key !== 'realGLB' && key !== 'pedestalRing' && key !== 'groundRing' && part && part.visible !== undefined) {
-          part.visible = false;
+        if (key !== 'realGLB' && key !== 'pedestalRing' && key !== 'groundRing' && part) {
+          if (part.visible !== undefined) part.visible = false;
+          if (part.parent && part.parent !== heroRoot && part.parent !== torsoGroup) {
+            part.parent.remove(part);
+          }
         }
       }
 
@@ -1206,12 +1449,15 @@ export function createHero(heroClass, options = {}, THREE) {
         const mixer = new THREE.AnimationMixer(glbModel);
         glbModel.userData.mixer = mixer;
         glbModel.userData.animations = gltf.animations;
+        rootGroup.userData.mixer = mixer;
+        rootGroup.userData.animations = gltf.animations;
 
-        const idleAnim = gltf.animations.find(a => /idle_shield|sword_idle|idle/i.test(a.name)) || gltf.animations[0];
+        const idleAnim = resolveHeroAnimationClip(gltf.animations, heroClass, 'Idle');
         if (idleAnim) {
           const action = mixer.clipAction(idleAnim);
           action.play();
           glbModel.userData.currentAction = action;
+          glbModel.userData.currentClipName = idleAnim.name;
         }
       }
 
@@ -1222,9 +1468,10 @@ export function createHero(heroClass, options = {}, THREE) {
           if (child.isMesh) {
             const name = (child.name || '').toLowerCase();
             const geomName = (child.geometry?.name || '').toLowerCase();
+            const matName = (child.material?.name || '').toLowerCase();
             for (const p of patterns) {
               const lp = p.toLowerCase();
-              if (name.includes(lp) || geomName.includes(lp)) {
+              if (name.includes(lp) || geomName.includes(lp) || matName.includes(lp)) {
                 found.push(child);
                 break;
               }
@@ -1235,13 +1482,14 @@ export function createHero(heroClass, options = {}, THREE) {
       };
 
       const armorMeshes = {
-        helmet: findChildMeshes(['armet', 'crown', 'hood', 'helmet', 'ponytail', 'hair']),
-        chest: findChildMeshes(['body_armor', 'wizard_body', 'ranger_body', 'chest', 'body']),
-        shoulders: findChildMeshes(['pauldron', 'shoulders', 'gorget', 'scarf']),
-        gloves: findChildMeshes(['arms', 'gloves', 'bracer']),
-        legs: findChildMeshes(['legs_armor', 'wizard_legs', 'ranger_legs', 'legs']),
-        boots: findChildMeshes(['feet_armor', 'wizard_feet', 'feet_boots', 'feet', 'boots']),
-        weapon: findChildMeshes(['goldensword', 'staff', 'goldenbow', 'bow', 'weapon']),
+        helmet: findChildMeshes(['armet', 'crown', 'hood', 'helmet', 'ponytail', 'hair', 'head', 'head_03', 'head_13m', 'head_a05']),
+        chest: findChildMeshes(['body_armor', 'wizard_body', 'ranger_body', 'chest', 'body', 'upper', 'kupp', 'upper_03', 'upper_13m', 'upper_15m']),
+        shoulders: findChildMeshes(['pauldron', 'shoulders', 'gorget', 'scarf', 'neww', 'ndw', 'kmpp']),
+        gloves: findChildMeshes(['arms', 'gloves', 'bracer', 'kgpp', 'gloves_03', 'gloves_13m', 'gloves_15m']),
+        legs: findChildMeshes(['legs_armor', 'wizard_legs', 'ranger_legs', 'legs', 'lower', 'klpp', 'lower_03', 'lower_13m', 'lower_15m']),
+        boots: findChildMeshes(['feet_armor', 'wizard_feet', 'feet_boots', 'feet', 'boots', 'kbpp', 'boots_03', 'boots_13m', 'boots_15m']),
+        weapon: findChildMeshes(['goldensword', 'staff', 'goldenbow', 'bow', 'weapon', 'sword', 'u2u', 'sep02', 'msword', 'scepter']),
+        wings: findChildMeshes(['wing', 'cape', 'devil_wing', 'newingel', 'level_man']),
         shield: findChildMeshes(['celticshield', 'shield']),
       };
 
@@ -1258,8 +1506,17 @@ export function createHero(heroClass, options = {}, THREE) {
       rootGroup.setWeapon = (weaponId) => {
         const list = armorMeshes.weapon;
         if (list && list.length > 0) {
-          const visible = (weaponId !== 'none');
+          const visible = (weaponId !== 'none' && weaponId !== false);
           list.forEach(m => { m.visible = visible; });
+          return true;
+        }
+        return false;
+      };
+
+      rootGroup.setWings = (visible) => {
+        const list = armorMeshes.wings;
+        if (list && list.length > 0) {
+          list.forEach(m => { m.visible = !!visible; });
           return true;
         }
         return false;
@@ -1267,7 +1524,7 @@ export function createHero(heroClass, options = {}, THREE) {
 
       rootGroup.toggleBaseMesh = (visible) => {
         glbModel.traverse((c) => {
-          if (c.isMesh && /face|beard|hair|superhero|asian|han/i.test(c.name)) {
+          if (c.isMesh && /face|beard|hair|superhero|asian|han|skin/i.test(c.name || c.material?.name || '')) {
             c.visible = visible;
           }
         });
@@ -1278,46 +1535,37 @@ export function createHero(heroClass, options = {}, THREE) {
         const anims = glbModel.userData.animations;
         if (!mixer || !anims) return;
 
-        let target = null;
+        const target = resolveHeroAnimationClip(anims, heroClass, animName);
+        if (!target) return;
+
+        if (glbModel.userData.currentClipName === target.name) {
+          return;
+        }
+
+        const action = mixer.clipAction(target);
+        const curr = glbModel.userData.currentAction;
+        if (curr && curr !== action) {
+          curr.fadeOut(0.2);
+        }
+        action.reset().fadeIn(0.2).play();
+        glbModel.userData.currentAction = action;
+        glbModel.userData.currentClipName = target.name;
+
         const u = (animName || '').toUpperCase();
-        if (heroClass === 'DW' || heroClass === 'DL') {
-          if (u === 'TWISTING_SLASH') target = anims.find(a => /spellcast_shoot|spellcasting/i.test(a.name));
-          else if (u === 'DEATH_STAB') target = anims.find(a => /spellcast_raise|spellcast_long/i.test(a.name));
-        } else if (heroClass === 'ELF') {
-          if (u === 'TWISTING_SLASH') target = anims.find(a => /ranged_shoot/i.test(a.name));
-          else if (u === 'DEATH_STAB') target = anims.find(a => /aiming|shoot/i.test(a.name));
-        } else {
-          if (u === 'TWISTING_SLASH') target = anims.find(a => /spin|slice_diagonal|chop/i.test(a.name));
-          else if (u === 'DEATH_STAB') target = anims.find(a => /slice_horizontal|chop|stab/i.test(a.name));
-        }
-        if (u === 'WALK' || u === 'RUN') {
-          target = anims.find(a => /run|walk/i.test(a.name));
-        } else if (u === 'IDLE') {
-          target = anims.find(a => /idle_shield|sword_idle|idle/i.test(a.name));
-        }
-        if (!target) {
-          target = anims.find(a => a.name.toLowerCase().includes(animName.toLowerCase()));
-        }
-
-        if (target) {
-          const action = mixer.clipAction(target);
-          const curr = glbModel.userData.currentAction;
-          if (curr && curr !== action) curr.fadeOut(0.2);
-          action.reset().fadeIn(0.2).play();
-          glbModel.userData.currentAction = action;
-
-          if (u !== 'IDLE' && u !== 'WALK' && u !== 'RUN') {
-            const duration = target.duration || 1.2;
-            setTimeout(() => {
-              const idleClip = anims.find(a => /idle_shield|sword_idle|idle/i.test(a.name)) || anims[0];
-              if (idleClip) {
-                const idleAct = mixer.clipAction(idleClip);
-                action.fadeOut(0.3);
-                idleAct.reset().fadeIn(0.3).play();
-                glbModel.userData.currentAction = idleAct;
-              }
-            }, duration * 1000);
-          }
+        const isLooping = ['IDLE', 'WALK', 'WALKING_A', 'RUN', 'RUNNING_A', 'SPRINT'].includes(u);
+        if (!isLooping) {
+          const duration = target.duration || 1.1;
+          if (glbModel.userData.animTimeout) clearTimeout(glbModel.userData.animTimeout);
+          glbModel.userData.animTimeout = setTimeout(() => {
+            const idleClip = resolveHeroAnimationClip(anims, heroClass, 'Idle');
+            if (idleClip) {
+              const idleAct = mixer.clipAction(idleClip);
+              action.fadeOut(0.25);
+              idleAct.reset().fadeIn(0.25).play();
+              glbModel.userData.currentAction = idleAct;
+              glbModel.userData.currentClipName = idleClip.name;
+            }
+          }, Math.max(200, (duration - 0.25) * 1000));
         }
       };
 
@@ -1335,6 +1583,9 @@ export function createHero(heroClass, options = {}, THREE) {
   const updateAnim = (animName, time, delta) => {
     // 0. Atualização do AnimationMixer do modelo real GLB
     if (parts.realGLB && parts.realGLB.userData && parts.realGLB.userData.mixer) {
+      if (animName && rootGroup.triggerAnimation) {
+        rootGroup.triggerAnimation(animName);
+      }
       parts.realGLB.userData.mixer.update(delta || 0.016);
       return;
     }
@@ -1453,6 +1704,7 @@ export function createHero(heroClass, options = {}, THREE) {
     updateAnim,
     setArmor: (slot, variant) => (rootGroup.setArmor ? rootGroup.setArmor(slot, variant) : false),
     setWeapon: (weaponId) => (rootGroup.setWeapon ? rootGroup.setWeapon(weaponId) : false),
+    setWings: (visible) => (rootGroup.setWings ? rootGroup.setWings(visible) : false),
     toggleBaseMesh: (visible) => (rootGroup.toggleBaseMesh ? rootGroup.toggleBaseMesh(visible) : undefined),
     triggerAnimation: (animName) => (rootGroup.triggerAnimation ? rootGroup.triggerAnimation(animName) : undefined),
   };

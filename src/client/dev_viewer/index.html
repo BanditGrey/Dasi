@@ -63,6 +63,7 @@
           <span class="telemetry-label">Sessão:</span>
           <span class="telemetry-val" id="telemetry-session">--</span>
         </div>
+        <a href="validator.html" class="btn-refresh" id="btn-open-validator" style="background: linear-gradient(180deg, #10b981, #047857); border-color: #34d399; color: #fff; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 4px; margin-right: 6px;" title="Abrir Estúdio de Validação Canônica (Sim / Não)">📋 Validar 3D (Sim/Não)</a>
         <button class="btn-refresh" id="btn-quick-scenery" style="background: linear-gradient(180deg, #d97706, #92400e); border-color: #f59e0b; color: #fff; font-weight: bold; margin-right: 6px;">🏰 Ver Cenários 3D</button>
         <button class="btn-refresh" id="btn-reconnect" title="Reconectar">🔄 Reconectar</button>
       </div>
@@ -123,6 +124,7 @@
       <button class="tab-btn" id="tab-inventory" data-mode="inventory">🎒 Forja & Bolsa 8x8</button>
       <button class="tab-btn" id="tab-split" data-mode="split">⚔️🎒 Visão Simultânea (Arena + Bolsa)</button>
       <button class="tab-btn" id="tab-viewer3d" data-mode="viewer3d">💎 Heróis & Monstros 3D</button>
+      <a href="validator.html" class="tab-btn" style="background: rgba(16, 185, 129, 0.15); border-color: #10b981; color: #34d399; text-decoration: none; display: inline-flex; align-items: center; font-weight: bold;" title="Abrir Estúdio de Validação Canônica (Sim / Não)">📋 Validador (Sim/Não)</a>
     </div>
 
     <!-- COMBAT ARENA SECTION -->
@@ -337,8 +339,8 @@
         <div class="viewer-3d-telemetry">
           <span class="badge-mode-active" id="badge-3d-mode">MODO: CENÁRIO (LORENCIA)</span>
           <span class="badge-glow-active" id="badge-3d-glow">BIOMA: 3D REALTIME PBR</span>
-          <button class="btn-quick-feature" id="btn-open-art-modal" style="background: linear-gradient(180deg, #6366f1, #4338ca); border-color: #818cf8; color: #fff; font-weight: bold; margin-left: 10px; cursor: pointer;">🖼️ Ver Concept Art</button>
-          <button class="btn-quick-feature" id="btn-toggle-art-split" style="background: linear-gradient(180deg, #059669, #047857); border-color: #34d399; color: #fff; font-weight: bold; margin-left: 6px; cursor: pointer;" title="Exibir pintura conceitual original lado a lado com o modelo 3D">🖼️ Comparar com Concept Art</button>
+          <button class="btn-quick-feature" id="btn-open-art-modal" style="background: linear-gradient(180deg, #6366f1, #4338ca); border-color: #818cf8; color: #fff; font-weight: bold; margin-left: 10px; cursor: pointer;">📜 Dossiê de Estudo</button>
+          <button class="btn-quick-feature" id="btn-toggle-art-split" style="background: linear-gradient(180deg, #059669, #047857); border-color: #34d399; color: #fff; font-weight: bold; margin-left: 6px; cursor: pointer;" title="Exibir dossiê técnico de engenharia reversa do cenário">📜 Engenharia Reversa</button>
         </div>
       </div>
 
@@ -371,14 +373,14 @@
           <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 8px;">
             <div style="display: flex; align-items: center; gap: 6px;">
               <span style="font-size: 16px;">🖼️</span>
-              <h4 style="margin: 0; color: #38bdf8; font-family: 'Cinzel', serif; font-size: 14px; letter-spacing: 0.5px;">ARTE CONCEITUAL BASE</h4>
+              <h4 style="margin: 0; color: #38bdf8; font-family: 'Cinzel', serif; font-size: 14px; letter-spacing: 0.5px;">MATERIAL DE ESTUDO CANÔNICO</h4>
             </div>
             <button id="btn-close-art-split" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; padding: 0 4px;" title="Fechar Painel Comparativo">&times;</button>
           </div>
           <div style="border-radius: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.18); box-shadow: 0 4px 16px rgba(0,0,0,0.6); background: #000;">
-            <img id="split-concept-art-img" src="art/classic/lorencia.jpg" alt="Arte Conceitual" style="width: 100%; height: auto; display: block; object-fit: contain; max-height: 320px;">
+            <img id="split-concept-art-img" src="" alt="Dossiê Canônico" style="width: 100%; height: auto; display: none; object-fit: contain; max-height: 320px;">
           </div>
-          <a id="scenario-blockout-download" href="models/scenarios/lor_01.glb" download style="display: none; color: #fcd34d; font-size: 12px;">⬇ Baixar blockout GLB (não final)</a>
+          <a id="scenario-blockout-download" href="models/scenarios/lor_01.glb" download style="display: none; color: #fcd34d; font-size: 12px;">⬇ Baixar blockout GLB (Material de Estudo)</a>
           <div style="background: rgba(30, 41, 59, 0.7); border-radius: 6px; padding: 10px; border-left: 3px solid #f59e0b;">
             <h5 id="split-concept-art-title" style="margin: 0 0 4px 0; color: #fbbf24; font-family: 'Cinzel', serif; font-size: 13px;">Lorencia Citadel</h5>
             <p id="split-concept-art-desc" style="margin: 0; font-size: 11.5px; color: #cbd5e1; line-height: 1.45;">Melancolia medieval gótica sob chuva fria contínua. Fonte octogonal de pedra com estátua em bronze do Arcanjo de Loren, ladeada pelo Bazar com tendas coloridas, a Taverna e a muralha fortificada.</p>
@@ -1478,7 +1480,7 @@
       <div class="dasi-modal-header">
         <div class="modal-title-wrap">
           <span class="modal-icon">🖼️</span>
-          <h3>GALERIA DE CONCEPT ART — REFERÊNCIAS VISUAIS</h3>
+          <h3>DOSSIÊ CANÔNICO DE ENGENHARIA REVERSA — MATERIAL DE ESTUDO</h3>
         </div>
         <button class="btn-close-modal" data-close="modal-concept-art">&times;</button>
       </div>
@@ -1505,7 +1507,7 @@
           <button class="btn-art-tab" data-biome="HERO_DL" style="padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.15); color: #fcd34d; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">👑 Dark Lord</button>
         </div>
         <div class="art-viewer-display" style="border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; overflow: hidden; background: #000; box-shadow: 0 8px 32px rgba(0,0,0,0.6); text-align: center;">
-          <img id="concept-art-img" src="art/classic/lorencia.jpg" alt="Concept Art" style="width: 100%; height: auto; display: block; object-fit: contain; max-height: 520px;">
+          <img id="concept-art-img" src="" alt="Dossiê Canônico" style="width: 100%; height: auto; display: none; object-fit: contain; max-height: 520px;">
         </div>
         <div class="art-info-box" style="margin-top: 10px; padding: 12px; background: rgba(15, 23, 42, 0.7); border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
           <h4 id="concept-art-title" style="margin: 0 0 4px 0; color: #fbbf24; font-family: 'Cinzel', serif;">Lorencia Citadel — Praça Central & Fonte do Arcanjo</h4>

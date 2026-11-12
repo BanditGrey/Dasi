@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dasi MMORPG — Validador Canônico 3D (Sim / Não)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./libs/three.module.js",
+      "three/addons/": "./libs/",
+      "#dasi/server/": "/src/server/"
+    }
+  }
+  </script>
+  <style>
+    :root {
+      --bg-dark: #07090d;
+      --bg-panel: #0d121c;
+      --bg-card: #131b29;
+      --border-gold: #b45309;
+      --gold-accent: #f59e0b;
+      --gold-bright: #fbbf24;
+      --green-approve: #10b981;
+      --green-glow: rgba(16, 185, 129, 0.35);
+      --red-reject: #ef4444;
+      --red-glow: rgba(239, 68, 68, 0.35);
+      --yellow-pending: #f59e0b;
+      --cyan-metric: #06b6d4;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-dark);
+      color: #e2e8f0;
+      font-family: 'Rajdhani', sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* TOP BAR */
+    .val-top-nav {
+      background: linear-gradient(180deg, #151d2d, #0b101a);
+      border-bottom: 2px solid var(--border-gold);
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+      z-index: 100;
+      flex-shrink: 0;
+    }
+
+    .val-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .val-brand h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 20px;
+      color: var(--gold-bright);
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+    }
+    .val-brand .badge {
+      font-size: 11px;
+      background: rgba(245, 158, 11, 0.2);
+      border: 1px solid var(--gold-accent);
+      color: var(--gold-bright);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .val-progress-bar-wrap {
+      flex: 1;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .val-progress-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .val-progress-track {
+      height: 8px;
+      background: #1e293b;
+      border-radius: 4px;
+      overflow: hidden;
+      display: flex;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .val-progress-approved {
+      background: var(--green-approve);
+      transition: width 0.3s ease;
+    }
+    .val-progress-rejected {
+      background: var(--red-reject);
+      transition: width 0.3s ease;
+    }
+
+    .val-top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-val-action {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #cbd5e1;
+      padding: 6px 14px;
+      border-radius: 4px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .btn-val-action:hover {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: var(--gold-accent);
+      color: var(--gold-bright);
+    }
+    .btn-val-primary {
+      background: linear-gradient(180deg, #d97706, #92400e);
+      border-color: #f59e0b;
+      color: #fff;
+    }
+    .btn-val-primary:hover {
+      background: linear-gradient(180deg, #f59e0b, #b45309);
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
+    }
+
+    /* MAIN LAYOUT */
+    .val-main-container {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 320px 1fr 360px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* LEFT SIDEBAR: LIST & FILTERS */
+    .val-sidebar-left {
+      background: var(--bg-panel);
+      border-right: 1px solid rgba(245, 158, 11, 0.25);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .val-search-box {
+      padding: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .val-search-input {
+      background: #080c14;
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #f1f5f9;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 14px;
+      outline: none;
+    }
+    .val-search-input:focus {
+      border-color: var(--gold-accent);
+      box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+    }
+
+    .val-filter-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .btn-val-pill {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #94a3b8;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-val-pill:hover, .btn-val-pill.active {
+      background: rgba(245, 158, 11, 0.25);
+      border-color: var(--gold-accent);
+      color: var(--gold-bright);
+    }
+
+    .val-item-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .val-item-card {
+      background: var(--bg-card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 6px;
+      padding: 10px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      transition: all 0.2s;
+    }
+    .val-item-card:hover {
+      background: #1a2538;
+      border-color: rgba(245, 158, 11, 0.4);
+      transform: translateX(2px);
+    }
+    .val-item-card.active {
+      background: linear-gradient(90deg, rgba(245, 158, 11, 0.2), rgba(15, 23, 42, 0.9));
+      border: 1px solid var(--gold-accent);
+      box-shadow: 0 0 14px rgba(245, 158, 11, 0.25);
+    }
+
+    .val-item-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow: hidden;
+    }
+    .val-item-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #f8fafc;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .val-item-sub {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    .val-status-chip {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+    }
+    .val-status-pending {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid var(--yellow-pending);
+      color: var(--yellow-pending);
+    }
+    .val-status-approved {
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid var(--green-approve);
+      color: var(--green-approve);
+      box-shadow: 0 0 8px var(--green-glow);
+    }
+    .val-status-rejected {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid var(--red-reject);
+      color: var(--red-reject);
+      box-shadow: 0 0 8px var(--red-glow);
+    }
+
+    /* CENTER: 3D VIEWPORT & ACTIONS */
+    .val-center-viewport {
+      position: relative;
+      background: radial-gradient(circle at center, #0e1626 0%, #04060a 100%);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #val-canvas-container {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    /* FLOATING OVERLAY BAR (3D Controls) */
+    .val-3d-toolbar {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(10, 14, 23, 0.88);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 30px;
+      padding: 6px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+      z-index: 50;
+    }
+    .btn-val-tool {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #cbd5e1;
+      padding: 4px 10px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-val-tool:hover, .btn-val-tool.active {
+      background: rgba(245, 158, 11, 0.3);
+      border-color: var(--gold-accent);
+      color: var(--gold-bright);
+    }
+
+    /* BARRA FLUTUANTE DE CAMADAS MODULARES */
+    .val-layers-bar {
+      position: absolute;
+      top: 58px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      border-radius: 20px;
+      padding: 4px 10px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.8);
+      z-index: 45;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 95%;
+      transition: all 0.3s ease;
+    }
+    .btn-val-layer {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #94a3b8;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+    .btn-val-layer:hover {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: var(--gold-accent);
+      color: #f8fafc;
+    }
+    .btn-val-layer.active {
+      background: linear-gradient(180deg, rgba(245, 158, 11, 0.35), rgba(180, 83, 9, 0.45));
+      border-color: var(--gold-bright);
+      color: #fff;
+      box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+    }
+    .val-layer-sep {
+      width: 1px;
+      height: 16px;
+      background: rgba(255,255,255,0.15);
+      margin: 0 2px;
+    }
+
+    /* GRID DE CAMADAS NA SIDEBAR DIREITA */
+    .val-sidebar-layers-box {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 6px;
+      padding: 10px;
+      margin-top: 6px;
+    }
+    .val-layers-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+    .val-layer-tile {
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 4px;
+      padding: 6px 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s;
+    }
+    .val-layer-tile:hover {
+      border-color: var(--gold-accent);
+      background: rgba(245, 158, 11, 0.15);
+    }
+    .val-layer-tile.active {
+      border-color: var(--gold-accent);
+      background: rgba(245, 158, 11, 0.22);
+    }
+    .val-layer-tile-lbl {
+      font-size: 11px;
+      font-weight: 700;
+      color: #cbd5e1;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .val-layer-tile-toggle {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+    .val-layer-tile.active .val-layer-tile-toggle {
+      background: var(--green-approve);
+      color: #064e3b;
+    }
+    .val-layer-tile:not(.active) .val-layer-tile-toggle {
+      background: rgba(239, 68, 68, 0.3);
+      color: #f87171;
+    }
+    .val-layer-presets {
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .btn-val-preset {
+      flex: 1;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #cbd5e1;
+      padding: 4px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+    .btn-val-preset:hover {
+      background: rgba(245, 158, 11, 0.25);
+      border-color: var(--gold-accent);
+      color: var(--gold-bright);
+    }
+
+    /* BOTTOM DECISION CONSOLE (SIM / NÃO) */
+    .val-decision-bar {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(10, 14, 23, 0.94);
+      backdrop-filter: blur(14px);
+      border: 2px solid var(--border-gold);
+      border-radius: 16px;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.9);
+      z-index: 60;
+    }
+    .btn-vote-sim {
+      background: linear-gradient(180deg, #10b981, #047857);
+      border: 2px solid #34d399;
+      color: #ffffff;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-family: 'Cinzel', serif;
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 0 18px rgba(16, 185, 129, 0.4);
+      transition: all 0.2s;
+    }
+    .btn-vote-sim:hover {
+      background: linear-gradient(180deg, #34d399, #059669);
+      transform: scale(1.04);
+      box-shadow: 0 0 25px rgba(16, 185, 129, 0.7);
+    }
+    .btn-vote-nao {
+      background: linear-gradient(180deg, #ef4444, #991b1b);
+      border: 2px solid #f87171;
+      color: #ffffff;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-family: 'Cinzel', serif;
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 0 18px rgba(239, 68, 68, 0.4);
+      transition: all 0.2s;
+    }
+    .btn-vote-nao:hover {
+      background: linear-gradient(180deg, #f87171, #b91c1c);
+      transform: scale(1.04);
+      box-shadow: 0 0 25px rgba(239, 68, 68, 0.7);
+    }
+
+    .val-nav-arrows {
+      display: flex;
+      gap: 6px;
+      border-left: 1px solid rgba(255,255,255,0.15);
+      padding-left: 14px;
+    }
+
+    /* RIGHT SIDEBAR: TECHNICAL AUDIT & CONCEPT ART */
+    .val-sidebar-right {
+      background: var(--bg-panel);
+      border-left: 1px solid rgba(245, 158, 11, 0.25);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 16px;
+      gap: 16px;
+    }
+
+    .val-section-title {
+      font-family: 'Cinzel', serif;
+      font-size: 14px;
+      color: var(--gold-bright);
+      letter-spacing: 1px;
+      border-bottom: 1px solid rgba(245, 158, 11, 0.3);
+      padding-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .val-tech-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .val-tech-tile {
+      background: var(--bg-card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 4px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .val-tech-lbl {
+      font-size: 11px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .val-tech-val {
+      font-size: 14px;
+      font-weight: 700;
+      color: #f1f5f9;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .val-concept-box {
+      background: #000;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: 6px;
+      overflow: hidden;
+      min-height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .val-concept-img {
+      max-width: 100%;
+      max-height: 220px;
+      object-fit: contain;
+      display: block;
+    }
+    .val-concept-placeholder {
+      font-size: 12px;
+      color: #64748b;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .val-notes-box {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .val-notes-textarea {
+      background: #080c14;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 4px;
+      color: #f1f5f9;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 13px;
+      padding: 10px;
+      height: 90px;
+      resize: vertical;
+      outline: none;
+    }
+    .val-notes-textarea:focus {
+      border-color: var(--gold-accent);
+      box-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
+    }
+
+    /* KEYBOARD SHORTCUTS LEGEND */
+    .val-hotkeys-strip {
+      font-size: 11px;
+      color: #64748b;
+      background: rgba(0,0,0,0.3);
+      padding: 8px;
+      border-radius: 4px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .val-hotkeys-strip span kbd {
+      background: #1e293b;
+      color: var(--gold-bright);
+      padding: 1px 5px;
+      border-radius: 3px;
+      border: 1px solid rgba(255,255,255,0.2);
+      font-family: monospace;
+    }
+
+    /* NOTIFICATION TOAST */
+    .val-toast {
+      position: fixed;
+      top: 70px;
+      right: 20px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--gold-accent);
+      color: #f8fafc;
+      padding: 10px 18px;
+      border-radius: 6px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      font-weight: 700;
+      z-index: 9999;
+      transform: translateY(-20px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+    .val-toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <header class="val-top-nav">
+    <div class="val-brand">
+      <span style="font-size: 24px;">⚔️</span>
+      <div>
+        <h1>DASI MMORPG</h1>
+        <span class="badge">ESTÚDIO DE VALIDAÇÃO CANÔNICA (SIM / NÃO)</span>
+      </div>
+    </div>
+
+    <!-- BARRA DE PROGRESSO GLOBAL -->
+    <div class="val-progress-bar-wrap">
+      <div class="val-progress-labels">
+        <span id="val-progress-stats">0 de 23 validados (0%)</span>
+        <span id="val-approval-stats">✅ 0 Aprovados &bull; ❌ 0 Reprovados</span>
+      </div>
+      <div class="val-progress-track">
+        <div class="val-progress-approved" id="val-progress-app-bar" style="width: 0%;"></div>
+        <div class="val-progress-rejected" id="val-progress-rej-bar" style="width: 0%;"></div>
+      </div>
+    </div>
+
+    <div class="val-top-actions">
+      <button class="btn-val-action" id="btn-export-markdown" title="Exportar Relatório Completo para Obsidian">📄 Exportar Relatório (.md)</button>
+      <button class="btn-val-action" id="btn-copy-summary" title="Copiar Resumo Rápido para a Área de Transferência">📋 Copiar Resumo</button>
+      <a href="index.html" class="btn-val-action btn-val-primary" title="Voltar ao Dev Client / Arena de Jogo">🏰 Voltar ao Jogo</a>
+    </div>
+  </header>
+
+  <!-- MAIN 3-COLUMN WORKSPACE -->
+  <main class="val-main-container">
+
+    <!-- COLUNA ESQUERDA: LISTA & FILTROS -->
+    <aside class="val-sidebar-left">
+      <div class="val-search-box">
+        <input type="text" id="val-search-input" class="val-search-input" placeholder="🔍 Buscar criatura, classe ou chefe...">
+        <div class="val-filter-pills">
+          <button class="btn-val-pill active" data-filter="ALL">Todos (24)</button>
+          <button class="btn-val-pill" data-filter="HERO">Classes (6)</button>
+          <button class="btn-val-pill" data-filter="BOSS">Chefes (6)</button>
+          <button class="btn-val-pill" data-filter="GOLDEN">Dourados (6)</button>
+          <button class="btn-val-pill" data-filter="FIELD">Campo (6)</button>
+          <button class="btn-val-pill" data-filter="PENDING">Pendentes</button>
+          <button class="btn-val-pill" data-filter="APPROVED">✅ Aprovados</button>
+          <button class="btn-val-pill" data-filter="REJECTED">❌ Reprovados</button>
+        </div>
+      </div>
+
+      <div class="val-item-list" id="val-item-list">
+        <!-- Itens inseridos dinamicamente via JS -->
+      </div>
+    </aside>
+
+    <!-- COLUNA CENTRAL: VIEWPORT 3D & DECISÃO -->
+    <section class="val-center-viewport">
+      <!-- 3D TOOLBAR -->
+      <div class="val-3d-toolbar">
+        <button class="btn-val-tool" id="tool-reset-cam" title="Resetar Câmera [Espaço]">🎥 Resetar Câmera</button>
+        <button class="btn-val-tool" id="tool-toggle-wireframe" title="Alternar Malha Wireframe [W]">🕸️ Wireframe</button>
+        <button class="btn-val-tool active" id="tool-toggle-collision" title="Exibir Cápsula de Colisão Oficial [C]">🛡️ Colisor 3D</button>
+        <button class="btn-val-tool active" id="tool-toggle-wings" title="Alternar Visibilidade das Asas/Capas [X]">🪽 Asas (On/Off)</button>
+        <button class="btn-val-tool active" id="tool-toggle-grid" title="Exibir Grade de Chão Métrico">📐 Grade (Solo)</button>
+        <button class="btn-val-tool" id="tool-toggle-anim" title="Reproduzir/Pausar Animações">⏸️ Parado (Clique p/ Animar)</button>
+        <select id="val-anim-select" class="btn-val-tool" style="outline: none; display: none;">
+          <!-- Opções de clipes -->
+        </select>
+      </div>
+
+      <!-- BARRA FLUTUANTE DE CAMADAS MODULARES -->
+      <div class="val-layers-bar" id="val-layers-bar" style="display: none;">
+        <span style="font-size: 11px; font-weight: 800; color: var(--gold-bright); margin-right: 4px;">CAMADAS:</span>
+        <button class="btn-val-layer active" id="layer-btn-body" title="Alternar Visibilidade do Corpo / Anatomia">👤 Corpo Base</button>
+        <button class="btn-val-layer active" id="layer-btn-helm" title="Alternar Elmo">🪖 Elmo</button>
+        <button class="btn-val-layer active" id="layer-btn-chest" title="Alternar Peitoral e Ombreiras">🛡️ Peitoral</button>
+        <button class="btn-val-layer active" id="layer-btn-gloves" title="Alternar Luvas / Manoplas">🧤 Luvas</button>
+        <button class="btn-val-layer active" id="layer-btn-legs" title="Alternar Calças / Perneiras">👖 Calças</button>
+        <button class="btn-val-layer active" id="layer-btn-boots" title="Alternar Botas de Placas">🥾 Botas</button>
+        <button class="btn-val-layer active" id="layer-btn-wings" title="Alternar Asas / Capa">🪽 Asas</button>
+        <button class="btn-val-layer active" id="layer-btn-weapon-r" title="Alternar Arma Principal Direita">⚔️ Arma R</button>
+        <button class="btn-val-layer active" id="layer-btn-weapon-l" title="Alternar Arma Secundária Esquerda">🗡️ Arma L</button>
+        <div class="val-layer-sep"></div>
+        <button class="btn-val-layer" id="layer-preset-full" title="Ativar Armadura Completa, Asas e Armas">✨ Full</button>
+        <button class="btn-val-layer" id="layer-preset-body" title="Ver Apenas Anatomia Corporal Limpa">👤 Anatomia</button>
+        <button class="btn-val-layer" id="layer-preset-armor" title="Ver Apenas Conjunto de Placas">🛡️ Armadura</button>
+      </div>
+
+      <!-- CANVAS THREE.JS -->
+      <div id="val-canvas-container"></div>
+
+      <!-- BARRA DE DECISÃO (SIM / NÃO) -->
+      <div class="val-decision-bar">
+        <button class="btn-vote-sim" id="btn-vote-sim" title="Aprovar e homologar este modelo [Atalho: S]">
+          <span>✅</span> SIM (Aprovar)
+        </button>
+        <button class="btn-vote-nao" id="btn-vote-nao" title="Reprovar e solicitar ajustes neste modelo [Atalho: N]">
+          <span>❌</span> NÃO (Reprovar)
+        </button>
+        <button class="btn-val-action" id="btn-vote-clear" title="Redefinir para Pendente">
+          ⏳ Pendente
+        </button>
+        <div class="val-nav-arrows">
+          <button class="btn-val-action" id="btn-nav-prev" title="Item Anterior [Seta Esquerda / A]">⬅️ Anterior</button>
+          <button class="btn-val-action" id="btn-nav-next" title="Próximo Item [Seta Direita / D]">Próximo ➡️</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- COLUNA DIREITA: DADOS TÉCNICOS & OBSERVAÇÕES -->
+    <aside class="val-sidebar-right">
+      <div class="val-section-title">
+        <span>FICHA TÉCNICA DO ASSET</span>
+        <span class="val-status-chip val-status-pending" id="val-active-badge">PENDENTE</span>
+      </div>
+
+      <div>
+        <h2 id="val-active-title" style="font-size: 18px; color: #fff;">Dark Knight</h2>
+        <p id="val-active-subtitle" style="font-size: 12px; color: #94a3b8; margin-top: 2px;">Guerreiro de Lorencia</p>
+      </div>
+
+      <!-- GRID DE MÉTRICAS -->
+      <div class="val-tech-grid">
+        <div class="val-tech-tile">
+          <span class="val-tech-lbl">Arquivo GLB</span>
+          <span class="val-tech-val" id="val-metric-glb">hero_dk.glb</span>
+        </div>
+        <div class="val-tech-tile">
+          <span class="val-tech-lbl">BMD Oficial</span>
+          <span class="val-tech-val" id="val-metric-bmd">Monster12.bmd</span>
+        </div>
+        <div class="val-tech-tile">
+          <span class="val-tech-lbl">Cápsula Raio</span>
+          <span class="val-tech-val" id="val-metric-radius">0.45m</span>
+        </div>
+        <div class="val-tech-tile">
+          <span class="val-tech-lbl">Altura / Step</span>
+          <span class="val-tech-val" id="val-metric-height">1.85m / 0.35m</span>
+        </div>
+        <div class="val-tech-tile">
+          <span class="val-tech-lbl">Vértices 3D</span>
+          <span class="val-tech-val" id="val-metric-verts">--</span>
+        </div>
+        <div class="val-tech-tile">
+          <span class="val-tech-lbl">Sub-malhas</span>
+          <span class="val-tech-val" id="val-metric-meshes">--</span>
+        </div>
+      </div>
+
+      <!-- INSPEÇÃO MODULAR DE CAMADAS -->
+      <div id="val-modular-section" style="display: none;">
+        <div class="val-section-title">
+          <span>INSPEÇÃO MODULAR DE CAMADAS</span>
+          <span class="badge" id="val-modular-badge" style="background: rgba(245, 158, 11, 0.2); color: var(--gold-bright); font-size: 11px; padding: 2px 6px; border-radius: 3px;">13 NÓS ATIVOS</span>
+        </div>
+        <div class="val-sidebar-layers-box">
+          <div class="val-layers-grid">
+            <div class="val-layer-tile active" id="tile-layer-body" data-layer="body">
+              <span class="val-layer-tile-lbl">👤 Corpo Base</span>
+              <span class="val-layer-tile-toggle">ON</span>
+            </div>
+            <div class="val-layer-tile active" id="tile-layer-helm" data-layer="helm">
+              <span class="val-layer-tile-lbl">🪖 Elmo</span>
+              <span class="val-layer-tile-toggle">ON</span>
+            </div>
+            <div class="val-layer-tile active" id="tile-layer-chest" data-layer="chest">
+              <span class="val-layer-tile-lbl">🛡️ Peitoral</span>
+              <span class="val-layer-tile-toggle">ON</span>
+            </div>
+            <div class="val-layer-tile active" id="tile-layer-gloves" data-layer="gloves">
+              <span class="val-layer-tile-lbl">🧤 Luvas</span>
+              <span class="val-layer-tile-toggle">ON</span>
+            </div>
+            <div class="val-layer-tile active" id="tile-layer-legs" data-layer="legs">
+              <span class="val-layer-tile-lbl">👖 Calças</span>
+              <span class="val-layer-tile-toggle">ON</span>
+            </div>
+            <div class="val-layer-tile active" id="tile-layer-boots" data-layer="boots">
+              <span class="val-layer-tile-lbl">🥾 Botas</span>
+              <span class="val-layer-tile-toggle">ON</span>
+            </div>
+            <div class="val-layer-tile active" id="tile-layer-wings" data-layer="wings">
+              <span class="val-layer-tile-lbl">🪽 Asas</span>
+              <span class="val-layer-tile-toggle">ON</span>
+            </div>
+            <div class="val-layer-tile active" id="tile-layer-weapon-r" data-layer="weapon_r">
+              <span class="val-layer-tile-lbl">⚔️ Arma R</span>
+              <span class="val-layer-tile-toggle">ON</span>
+            </div>
+            <div class="val-layer-tile active" id="tile-layer-weapon-l" data-layer="weapon_l">
+              <span class="val-layer-tile-lbl">🗡️ Arma L</span>
+              <span class="val-layer-tile-toggle">ON</span>
+            </div>
+          </div>
+          <div class="val-layer-presets">
+            <button class="btn-val-preset" id="tile-preset-full">✨ Full Armor</button>
+            <button class="btn-val-preset" id="tile-preset-body">👤 Só Anatomia</button>
+            <button class="btn-val-preset" id="tile-preset-armor">🛡️ Só Armadura</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MATERIAL DE ESTUDO CANÔNICO -->
+      <div class="val-section-title">
+        <span>MATERIAL DE ESTUDO CANÔNICO (ENGENHARIA REVERSA)</span>
+      </div>
+      <div class="val-concept-box">
+        <img id="val-concept-img" class="val-concept-img" src="" alt="Referência Canônica" style="display: none;">
+        <div id="val-concept-placeholder" class="val-concept-placeholder">Referência Técnica: Modelos BMD e Texturas Canônicas (reference/mu_roxgaming_5.2/)</div>
+      </div>
+
+      <!-- OBSERVAÇÕES E NOTAS DO AUDITOR -->
+      <div class="val-section-title">
+        <span>OBSERVAÇÕES DO AUDITOR</span>
+      </div>
+      <div class="val-notes-box">
+        <textarea id="val-notes-input" class="val-notes-textarea" placeholder="Digite observações sobre o modelo (ex: ajuste de textura, proporção de arma, alinhamento do pé ao solo)..."></textarea>
+      </div>
+
+      <!-- ATALHOS DE TECLADO -->
+      <div class="val-hotkeys-strip">
+        <span><kbd>S</kbd> Aprovar (SIM)</span>
+        <span><kbd>N</kbd> Reprovar (NÃO)</span>
+        <span><kbd>→</kbd> / <kbd>D</kbd> Próximo</span>
+        <span><kbd>←</kbd> / <kbd>A</kbd> Anterior</span>
+        <span><kbd>C</kbd> Colisor</span>
+        <span><kbd>X</kbd> Asas</span>
+        <span><kbd>W</kbd> Wireframe</span>
+        <span><kbd>Espaço</kbd> Câmera</span>
+      </div>
+    </aside>
+
+  </main>
+
+  <div class="val-toast" id="val-toast">Mensagem do Sistema</div>
+
+  <!-- SCRIPT DE ENGINE E LÓGICA DO VALIDADOR -->
+  <script type="module" src="validator.js"></script>
+</body>
+</html>

@@ -639,6 +639,149 @@ export class HarmonicAudioSynthesizer {
     osc.start(now);
     osc.stop(now + 0.13);
   }
+
+  // 1.9 SOM DE IMPACTO / DANO NO MONSTRO (GOLPE FÍSICO / HIT REACTION)
+  playMonsterHitSound(monsterType = 'spider') {
+    if (this.isMuted || !this.init() || !this.ctx || !this.masterGain) return;
+    const now = this.ctx.currentTime;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+
+    osc.type = 'sawtooth';
+    let baseFreq = 160;
+    const m = String(monsterType || '').toLowerCase();
+    if (m.includes('bull') || m.includes('yeti')) baseFreq = 95;
+    else if (m.includes('hound')) baseFreq = 180;
+    else if (m.includes('skeleton') || m.includes('lich')) baseFreq = 220;
+
+    osc.frequency.setValueAtTime(baseFreq, now);
+    osc.frequency.exponentialRampToValueAtTime(40, now + 0.12);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(800, now);
+    filter.frequency.exponentialRampToValueAtTime(150, now + 0.12);
+
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now);
+    osc.stop(now + 0.15);
+  }
+
+  // 1.10 SOM DE MORTE / COLAPSO DO MONSTRO (RUGIDO DESCENDENTE AGONIZANTE)
+  playMonsterDeathSound(monsterType = 'spider') {
+    if (this.isMuted || !this.init() || !this.ctx || !this.masterGain) return;
+    const now = this.ctx.currentTime;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+
+    osc.type = 'sawtooth';
+    let startFreq = 220;
+    let endFreq = 45;
+    let duration = 0.45;
+    const m = String(monsterType || '').toLowerCase();
+
+    if (m.includes('bull') || m.includes('yeti')) {
+      startFreq = 140; endFreq = 30; duration = 0.65;
+    } else if (m.includes('demon') || m.includes('dragon')) {
+      startFreq = 280; endFreq = 50; duration = 0.75;
+    } else if (m.includes('skeleton')) {
+      startFreq = 440; endFreq = 110; duration = 0.28;
+    }
+
+    osc.frequency.setValueAtTime(startFreq, now);
+    osc.frequency.exponentialRampToValueAtTime(endFreq, now + duration);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1200, now);
+    filter.frequency.exponentialRampToValueAtTime(200, now + duration);
+
+    gain.gain.setValueAtTime(0.35, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + duration + 0.05);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now);
+    osc.stop(now + duration + 0.06);
+  }
+
+  // 1.11 SOM DE AGGRO / ALERTA DO MONSTRO (ROSNADO SUTIL)
+  playMonsterAggroSound(monsterType = 'spider') {
+    if (this.isMuted || !this.init() || !this.ctx || !this.masterGain) return;
+    const now = this.ctx.currentTime;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'triangle';
+    let freq = 120;
+    const m = String(monsterType || '').toLowerCase();
+    if (m.includes('hound')) freq = 180;
+    else if (m.includes('demon') || m.includes('dragon')) freq = 85;
+
+    osc.frequency.setValueAtTime(freq, now);
+    osc.frequency.linearRampToValueAtTime(freq * 1.35, now + 0.15);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.7, now + 0.35);
+
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now);
+    osc.stop(now + 0.4);
+  }
+
+  // 1.12 SONS DA FAUNA AMBIENTAL (REVOADA DE ASAS, MORCEGOS, ÁGUA)
+  playWildlifeSound(kind = 'wings') {
+    if (this.isMuted || !this.init() || !this.ctx || !this.masterGain) return;
+    const now = this.ctx.currentTime;
+
+    if (kind === 'wings') {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const filter = this.ctx.createBiquadFilter();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(140, now);
+      osc.frequency.linearRampToValueAtTime(280, now + 0.25);
+
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(350, now);
+      filter.Q.value = 3.0;
+
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(now);
+      osc.stop(now + 0.36);
+    } else if (kind === 'bat') {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(3200, now);
+      osc.frequency.exponentialRampToValueAtTime(4500, now + 0.08);
+
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(now);
+      osc.stop(now + 0.13);
+    }
+  }
 }
 
 // ============================================================================
@@ -1033,7 +1176,7 @@ export class PortalSystem {
       fogColor: 0x07090d,
       fogDensity: 0.028,
       groundColor: 0x1f242d,
-      spawnPoint: { x: 0, z: -2.0 },
+      spawnPoint: { x: 0, z: -5.0 },
     },
     NORIA: {
       id: 'NORIA',

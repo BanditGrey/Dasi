@@ -4,6 +4,10 @@
  * materiais PBR físicos, asas translúcidas e animação cinemática viva em tempo real.
  */
 
+if (typeof globalThis !== 'undefined' && typeof self === 'undefined') {
+  globalThis.self = globalThis;
+}
+
 export const HERO_CLASSES = Object.freeze({
   DK: { color: 0x792328, trim: 0xd4af37, accent: 0xef4444, secondary: 0x331014, label: 'Cavaleiro' },
   DW: { color: 0x1e3a8a, trim: 0xe0b84c, accent: 0x38bdf8, secondary: 0x0f172a, label: 'Mago' },

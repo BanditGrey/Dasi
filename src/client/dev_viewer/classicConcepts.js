@@ -1,18 +1,22 @@
-/** Referências visuais de bioma, não reconstruções exatas dos mapas 3D. */
+/**
+ * Dossiê de Estudo Canônico dos Cenários e Biomas — Base de Engenharia Reversa
+ * Fonte Autoritativa: reference/mu_roxgaming_5.2/client/Data/World* e CollisionSystem.ts
+ */
+
 export const CLASSIC_CONCEPTS = {
-  LORENCIA: { file: 'lorencia', description: 'Cidadela medieval de pedra, fonte com estátua alada, mercado e luz quente em meio à chuva.' },
-  NORIA: { file: 'noria', description: 'Refúgio élfico entre árvores antigas, passarelas de madeira, musgo e névoa verde.' },
-  DEVIAS: { file: 'devias', description: 'Fortaleza distante entre pinheiros nevados, muralhas geladas e pontos de luz quente.' },
-  DUNGEON: { file: 'dungeon', description: 'Catacumbas de pedra, arcos escuros, grades e velas, com um caminho legível até as profundezas.' },
-  LOST_TOWER: { file: 'lost_tower', description: 'Torre gótica de basalto, escadarias antigas e luz infernal entre sombras violetas.' },
-  ATLANS: { file: 'atlans', description: 'Cidade submersa em ruínas, colunas antigas, corais luminosos e águas azul-esverdeadas.' },
-  TARKAN: { file: 'tarkan', description: 'Deserto de cânions e templos desgastados, ossadas e uma trilha sob o céu empoeirado.' },
-  ICARUS: { file: 'icarus', description: 'Ruínas celestes em ilhas flutuantes, pontes de pedra e estátuas acima das nuvens.' },
-  VALLEY_OF_LOREN: { file: 'valley_of_loren', description: 'Fortaleza de cerco com portão de ferro, torres, barricadas e tochas no campo enlameado.' },
-  BLOOD_CASTLE: { file: 'blood_castle', description: 'Ponte gótica sobre um abismo carmesim, estátuas aladas e um altar além do portão.' },
-  DEVIL_SQUARE: { file: 'devil_square', description: 'Arena circular de pedra negra, pentagrama gasto, totens de crânio e brasas no nevoeiro.' },
-  CHAOS_CASTLE: { file: 'chaos_castle', description: 'Coliseu suspenso sobre um abismo, lajes rachadas, ruínas góticas e luz violeta discreta.' },
-  DUEL_COLISEUM: { file: 'duel_coliseum', description: 'Arena octogonal de pedra envelhecida, arquibancadas em ruínas e tochas douradas.' },
+  LORENCIA: { file: 'lor_01', world: 'World1', description: 'Cidadela medieval de pedra, fonte com estátua alada, mercado e luz quente em meio à chuva.' },
+  NORIA: { file: 'nor_01', world: 'World4', description: 'Refúgio élfico entre árvores antigas, passarelas de madeira, musgo e névoa verde.' },
+  DEVIAS: { file: 'dev_01', world: 'World3', description: 'Fortaleza distante entre pinheiros nevados, muralhas geladas e pontos de luz quente.' },
+  DUNGEON: { file: 'dng_01', world: 'World2', description: 'Catacumbas de pedra, arcos escuros, grades e velas, com um caminho legível até as profundezas.' },
+  LOST_TOWER: { file: 'lt_01', world: 'World5', description: 'Torre gótica de basalto, escadarias antigas e luz infernal entre sombras violetas.' },
+  ATLANS: { file: 'atl_01', world: 'World8', description: 'Cidade submersa em ruínas, colunas antigas, corais luminosos e águas azul-esverdeadas.' },
+  TARKAN: { file: 'tar_01', world: 'World9', description: 'Deserto de cânions e templos desgastados, ossadas e uma trilha sob o céu empoeirado.' },
+  ICARUS: { file: 'ica_01', world: 'World11', description: 'Ruínas celestes em ilhas flutuantes, pontes de pedra e estátuas acima das nuvens.' },
+  VALLEY_OF_LOREN: { file: 'vol_01', world: 'World31', description: 'Fortaleza de cerco com portão de ferro, torres, barricadas e tochas no campo enlameado.' },
+  BLOOD_CASTLE: { file: 'evt_01', world: 'World12', description: 'Ponte gótica sobre um abismo carmesim, estátuas aladas e um altar além do portão.' },
+  DEVIL_SQUARE: { file: 'evt_02', world: 'World10', description: 'Arena circular de pedra negra, pentagrama gasto, totens de crânio e brasas no nevoeiro.' },
+  CHAOS_CASTLE: { file: 'evt_03', world: 'World19', description: 'Coliseu suspenso sobre um abismo, lajes rachadas, ruínas góticas e luz violeta discreta.' },
+  DUEL_COLISEUM: { file: 'evt_04', world: 'World6', description: 'Arena octogonal de pedra envelhecida, arquibancadas em ruínas e tochas douradas.' },
 };
 
 const PREFIXES = { LOR: 'LORENCIA', NOR: 'NORIA', DEV: 'DEVIAS', DNG: 'DUNGEON', LT: 'LOST_TOWER', ATL: 'ATLANS', TAR: 'TARKAN', ICA: 'ICARUS', VOL: 'VALLEY_OF_LOREN' };
@@ -26,7 +30,7 @@ export function conceptKeyForScenario(id) {
   return PREFIXES[id.split('_')[0]] || id;
 }
 
-/** Concepts específicos concluídos. Os demais cenários usam referência de família identificada como tal. */
+/** Dossiê descritivo e modelos 3D dos 56 cenários canônicos. */
 export const SCENARIO_CONCEPTS = {
   LOR_01: { title: 'Lorencia — Praça Central', description: 'Fonte de pedra, estátua alada, mercado e taverna sob a chuva.' },
   LOR_02: { title: 'Lorencia — Portão Leste', description: 'Muralhas e torres dão acesso às planícies das bestas.' },
@@ -88,10 +92,16 @@ export const SCENARIO_CONCEPTS = {
 
 export function getScenarioConcept(id) {
   const data = SCENARIO_CONCEPTS[id];
-  return data ? { ...data, src: `art/classic/scenarios/${id.toLowerCase()}.jpg` } : null;
+  return data
+    ? {
+        ...data,
+        src: `models/scenarios/${id.toLowerCase()}.glb`,
+        modelGlb: `models/scenarios/${id.toLowerCase()}.glb`,
+      }
+    : null;
 }
 
-/** Blockouts exportados a partir de geometria procedural, não modelos finais. */
+/** Blockouts 3D de todos os 56 cenários canônicos. */
 export const SCENARIO_BLOCKOUTS = Object.keys(SCENARIO_CONCEPTS);
 export function getScenarioBlockout(id) {
   const aliases = {

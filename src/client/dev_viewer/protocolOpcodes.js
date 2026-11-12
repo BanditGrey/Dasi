@@ -82,5 +82,74 @@ export const OPCODES = Object.freeze({
   SIEGE_PEDESTAL_RES: { opcode: 0xb1, subcode: 0x08 },
   SIEGE_CROWN_SEAL_REQ: { opcode: 0xb1, subcode: 0x09 },
   SIEGE_CROWN_SEAL_RES: { opcode: 0xb1, subcode: 0x0a },
+
+  // Navegação e Teleportes (0x30)
+  TELEPORT_REQ: { opcode: 0x30, subcode: 0x01 },
+  TELEPORT_RES: { opcode: 0x30, subcode: 0x02 },
+  GATE_TRIGGER_REQ: { opcode: 0x30, subcode: 0x03 },
+  GATE_TRIGGER_RES: { opcode: 0x30, subcode: 0x04 },
+
+  // Sistema de Troca Atômica / Trade (0x76)
+  TRADE_REQUEST_REQ: { opcode: 0x76, subcode: 0x01 },
+  TRADE_REQUEST_RES: { opcode: 0x76, subcode: 0x02 },
+  TRADE_RESPOND_REQ: { opcode: 0x76, subcode: 0x03 },
+  TRADE_RESPOND_RES: { opcode: 0x76, subcode: 0x04 },
+  TRADE_ITEM_ADD_REQ: { opcode: 0x76, subcode: 0x05 },
+  TRADE_ITEM_ADD_RES: { opcode: 0x76, subcode: 0x06 },
+  TRADE_ZEN_ADD_REQ: { opcode: 0x76, subcode: 0x07 },
+  TRADE_ZEN_ADD_RES: { opcode: 0x76, subcode: 0x08 },
+  TRADE_CONFIRM_REQ: { opcode: 0x76, subcode: 0x09 },
+  TRADE_CONFIRM_RES: { opcode: 0x76, subcode: 0x0a },
+  TRADE_CANCEL_REQ: { opcode: 0x76, subcode: 0x0b },
+  TRADE_CANCEL_RES: { opcode: 0x76, subcode: 0x0c },
+
+  // Loja Pessoal / Personal Shop (0x77)
+  PSHOP_OPEN_REQ: { opcode: 0x77, subcode: 0x01 },
+  PSHOP_OPEN_RES: { opcode: 0x77, subcode: 0x02 },
+  PSHOP_CLOSE_REQ: { opcode: 0x77, subcode: 0x03 },
+  PSHOP_CLOSE_RES: { opcode: 0x77, subcode: 0x04 },
+  PSHOP_BUY_REQ: { opcode: 0x77, subcode: 0x05 },
+  PSHOP_BUY_RES: { opcode: 0x77, subcode: 0x06 },
+  PSHOP_INSPECT_REQ: { opcode: 0x77, subcode: 0x07 },
+  PSHOP_INSPECT_RES: { opcode: 0x77, subcode: 0x08 },
+
+  // Progressão: Resets, Master Resets, Quests e Master Skill Tree (0x83)
+  RESET_REQ: { opcode: 0x83, subcode: 0x01 },
+  RESET_RES: { opcode: 0x83, subcode: 0x02 },
+  MASTER_RESET_REQ: { opcode: 0x83, subcode: 0x03 },
+  MASTER_RESET_RES: { opcode: 0x83, subcode: 0x04 },
+  QUEST_INFO_REQ: { opcode: 0x83, subcode: 0x05 },
+  QUEST_INFO_RES: { opcode: 0x83, subcode: 0x06 },
+  QUEST_ACTION_REQ: { opcode: 0x83, subcode: 0x07 },
+  QUEST_ACTION_RES: { opcode: 0x83, subcode: 0x08 },
+  MASTER_SKILL_ALLOC_REQ: { opcode: 0x83, subcode: 0x09 },
+  MASTER_SKILL_ALLOC_RES: { opcode: 0x83, subcode: 0x0a },
+
+  // Famílias Gens (0x84)
+  GENS_JOIN_REQ: { opcode: 0x84, subcode: 0x01 },
+  GENS_JOIN_RES: { opcode: 0x84, subcode: 0x02 },
+  GENS_STATUS_REQ: { opcode: 0x84, subcode: 0x03 },
+  GENS_STATUS_RES: { opcode: 0x84, subcode: 0x04 },
+  GENS_LEAVE_REQ: { opcode: 0x84, subcode: 0x05 },
+  GENS_LEAVE_RES: { opcode: 0x84, subcode: 0x06 },
+
+  // Refinamentos Harmony e Socket (0x85)
+  HARMONY_SMELT_REQ: { opcode: 0x85, subcode: 0x01 },
+  HARMONY_SMELT_RES: { opcode: 0x85, subcode: 0x02 },
+  HARMONY_RESTORE_REQ: { opcode: 0x85, subcode: 0x03 },
+  HARMONY_RESTORE_RES: { opcode: 0x85, subcode: 0x04 },
+  SOCKET_MOUNT_REQ: { opcode: 0x85, subcode: 0x05 },
+  SOCKET_MOUNT_RES: { opcode: 0x85, subcode: 0x06 },
+  SOCKET_UNMOUNT_REQ: { opcode: 0x85, subcode: 0x07 },
+  SOCKET_UNMOUNT_RES: { opcode: 0x85, subcode: 0x08 },
+
+  // Sistema de Grupo / Social Party (0xB2)
+  PARTY_INVITE_REQ: { opcode: 0xb2, subcode: 0x01 },
+  PARTY_INVITE_RES: { opcode: 0xb2, subcode: 0x02 },
+  PARTY_RESPOND_INVITE_REQ: { opcode: 0xb2, subcode: 0x03 },
+  PARTY_RESPOND_INVITE_RES: { opcode: 0xb2, subcode: 0x04 },
+  PARTY_LEAVE_REQ: { opcode: 0xb2, subcode: 0x05 },
+  PARTY_LEAVE_RES: { opcode: 0xb2, subcode: 0x06 },
+  PARTY_INFO_RES: { opcode: 0xb2, subcode: 0x07 },
 });
 

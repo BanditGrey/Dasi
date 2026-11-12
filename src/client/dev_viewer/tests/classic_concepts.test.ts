@@ -9,9 +9,9 @@ test('cada cenário resolve para sua família visual sem confundir as arenas', (
   for (const scenario of SCENARIO_CATALOG) {
     const key = conceptKeyForScenario(scenario.id);
     assert.equal(key, scenario.biome, scenario.id);
-    const concept = (CLASSIC_CONCEPTS as Record<string, { file: string }>)[key];
+    const concept = (CLASSIC_CONCEPTS as Record<string, { file: string; world: string }>)[key];
     assert.ok(concept, `Concept ausente: ${scenario.id}`);
-    assert.ok(existsSync(`src/client/dev_viewer/art/classic/${concept.file}.jpg`));
+    assert.ok(existsSync(`src/client/dev_viewer/models/scenarios/${concept.file.toLowerCase()}.glb`));
   }
 });
 

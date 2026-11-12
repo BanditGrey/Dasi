@@ -820,6 +820,213 @@ class DevClientApp {
       if (payload.siege) this.updateSiegeUI(payload.siege);
       return;
     }
+
+    // 30. Navegação e Teleportes (0x30:0x02 e 0x30:0x04)
+    if (opcode === OPCODES.TELEPORT_RES.opcode && subcode === OPCODES.TELEPORT_RES.subcode) {
+      if (payload.success) {
+        if (this.sfx) this.sfx.playPortalWarpSound();
+        this.log(`🌌 [Teleporte /move] Sucesso! Mapa: ${payload.map} (${payload.x}, ${payload.y}). Zen restante: ${payload.zenRemaining}`, 'success');
+        if (this.character && payload.zenRemaining !== undefined) {
+          this.character.zen = payload.zenRemaining;
+          this.updateCharacterUI(this.character);
+        }
+      } else {
+        if (this.sfx) this.sfx.playFailureSound();
+        this.log(`❌ [Teleporte] Falha: ${payload.error}`, 'warning');
+      }
+      return;
+    }
+    if (opcode === OPCODES.GATE_TRIGGER_RES.opcode && subcode === OPCODES.GATE_TRIGGER_RES.subcode) {
+      if (payload.success) {
+        if (this.sfx) this.sfx.playPortalWarpSound();
+        this.log(`🚪 [Portal Físico] Atravessou portal! Destino: Mapa ${payload.targetMap} (${payload.targetX}, ${payload.targetY}).`, 'info');
+      } else {
+        this.log(`🚪 [Portal Físico] Rejeitado: ${payload.error}`, 'warning');
+      }
+      return;
+    }
+
+    // 31. Social Party (0xB2)
+    if (opcode === OPCODES.PARTY_INVITE_RES.opcode && subcode === OPCODES.PARTY_INVITE_RES.subcode) {
+      this.log(payload.success ? `🤝 [Party] Convite enviado para sessão ${payload.targetSessionId}!` : `❌ [Party] Convite falhou: ${payload.error}`, payload.success ? 'info' : 'warning');
+      return;
+    }
+    if (opcode === OPCODES.PARTY_RESPOND_INVITE_RES.opcode && subcode === OPCODES.PARTY_RESPOND_INVITE_RES.subcode) {
+      this.log(payload.success ? `🤝 [Party] Você ingressou no grupo com sucesso!` : `❌ [Party] Resposta ao convite falhou: ${payload.error}`, payload.success ? 'success' : 'warning');
+      return;
+    }
+    if (opcode === OPCODES.PARTY_LEAVE_RES.opcode && subcode === OPCODES.PARTY_LEAVE_RES.subcode) {
+      this.log(`🤝 [Party] ${payload.message || 'Você saiu do grupo.'}`, 'info');
+      return;
+    }
+    if (opcode === OPCODES.PARTY_INFO_RES.opcode && subcode === OPCODES.PARTY_INFO_RES.subcode) {
+      this.log(`🤝 [Party] Grupo Atualizado: ${payload.members?.length || 0} membros. Bônus EXP: ${payload.expBonusPct}% (${payload.partyType})`, 'info');
+      return;
+    }
+
+    // 32. Troca Atômica / Trade (0x76)
+    if (opcode === OPCODES.TRADE_REQUEST_RES.opcode && subcode === OPCODES.TRADE_REQUEST_RES.subcode) {
+      this.log(payload.success ? `⚖️ [Trade] Solicitação de troca enviada para ${payload.targetSessionId}!` : `❌ [Trade] Falha ao solicitar: ${payload.error}`, payload.success ? 'info' : 'warning');
+      return;
+    }
+    if (opcode === OPCODES.TRADE_RESPOND_RES.opcode && subcode === OPCODES.TRADE_RESPOND_RES.subcode) {
+      this.log(payload.success ? `⚖️ [Trade] Sessão de troca aberta com sucesso!` : `❌ [Trade] Resposta de troca rejeitada: ${payload.error}`, payload.success ? 'success' : 'warning');
+      return;
+    }
+    if (opcode === OPCODES.TRADE_ITEM_ADD_RES.opcode && subcode === OPCODES.TRADE_ITEM_ADD_RES.subcode) {
+      this.log(payload.success ? `⚖️ [Trade] Item adicionado à negociação.` : `❌ [Trade] Item rejeitado: ${payload.error}`, payload.success ? 'info' : 'warning');
+      return;
+    }
+    if (opcode === OPCODES.TRADE_ZEN_ADD_RES.opcode && subcode === OPCODES.TRADE_ZEN_ADD_RES.subcode) {
+      this.log(payload.success ? `⚖️ [Trade] Oferta de Zen atualizada: ${payload.zen} Zen.` : `❌ [Trade] Oferta de Zen falhou: ${payload.error}`, payload.success ? 'info' : 'warning');
+      return;
+    }
+    if (opcode === OPCODES.TRADE_CONFIRM_RES.opcode && subcode === OPCODES.TRADE_CONFIRM_RES.subcode) {
+      if (payload.success) {
+        if (this.sfx) this.sfx.playSuccessSound();
+        this.log(`⚖️ [Trade Concluído] Troca atômica finalizada com sucesso!`, 'success');
+      } else {
+        if (this.sfx) this.sfx.playFailureSound();
+        this.log(`❌ [Trade] Falha na confirmação: ${payload.error}`, 'warning');
+      }
+      return;
+    }
+    if (opcode === OPCODES.TRADE_CANCEL_RES.opcode && subcode === OPCODES.TRADE_CANCEL_RES.subcode) {
+      this.log(`⚖️ [Trade Cancelado] A negociação foi cancelada. Itens devolvidos com segurança.`, 'info');
+      return;
+    }
+
+    // 33. Loja Pessoal / Personal Shop (0x77)
+    if (opcode === OPCODES.PSHOP_OPEN_RES.opcode && subcode === OPCODES.PSHOP_OPEN_RES.subcode) {
+      this.log(payload.success ? `🏪 [PShop] Loja Pessoal aberta com sucesso: "${payload.title}"!` : `❌ [PShop] Falha ao abrir loja: ${payload.error}`, payload.success ? 'success' : 'warning');
+      return;
+    }
+    if (opcode === OPCODES.PSHOP_CLOSE_RES.opcode && subcode === OPCODES.PSHOP_CLOSE_RES.subcode) {
+      this.log(`🏪 [PShop] Loja Pessoal encerrada.`, 'info');
+      return;
+    }
+    if (opcode === OPCODES.PSHOP_BUY_RES.opcode && subcode === OPCODES.PSHOP_BUY_RES.subcode) {
+      if (payload.success) {
+        if (this.sfx) this.sfx.playSuccessSound();
+        this.log(`🏪 [PShop Compra] Item adquirido com sucesso por ${payload.price} Zen!`, 'success');
+      } else {
+        if (this.sfx) this.sfx.playFailureSound();
+        this.log(`❌ [PShop] Falha na compra: ${payload.error}`, 'warning');
+      }
+      return;
+    }
+    if (opcode === OPCODES.PSHOP_INSPECT_RES.opcode && subcode === OPCODES.PSHOP_INSPECT_RES.subcode) {
+      this.log(`🏪 [PShop] Loja de [${payload.sellerName}]: "${payload.title}" (${payload.items?.length || 0} itens à venda).`, 'info');
+      return;
+    }
+
+    // 34. Progressão: Resets, Quests e Master Skill Tree (0x83)
+    if (opcode === OPCODES.RESET_RES.opcode && subcode === OPCODES.RESET_RES.subcode) {
+      if (payload.success) {
+        if (this.sfx) this.sfx.playSuccessSound();
+        this.log(`🌟 [RESET CONCLUÍDO] Reset #${payload.resets}! Nível reiniciado para 1, +${payload.pointsBonus} pontos bônus recebidos!`, 'success');
+        if (this.character) {
+          this.character.level = 1;
+          this.character.resets = payload.resets;
+          this.character.statPoints = (this.character.statPoints || 0) + payload.pointsBonus;
+          this.updateCharacterUI(this.character);
+        }
+      } else {
+        if (this.sfx) this.sfx.playFailureSound();
+        this.log(`❌ [Reset] Falha: ${payload.error}`, 'warning');
+      }
+      return;
+    }
+    if (opcode === OPCODES.MASTER_RESET_RES.opcode && subcode === OPCODES.MASTER_RESET_RES.subcode) {
+      if (payload.success) {
+        if (this.sfx) this.sfx.playSuccessSound();
+        this.log(`👑 [MASTER RESET CONCLUÍDO] Master Reset #${payload.masterResets}! +${payload.wCoinsBonus} WCoins concedidos!`, 'success');
+        if (this.character) {
+          this.character.level = 1;
+          this.character.resets = 0;
+          this.character.masterResets = payload.masterResets;
+          this.updateCharacterUI(this.character);
+        }
+      } else {
+        if (this.sfx) this.sfx.playFailureSound();
+        this.log(`❌ [Master Reset] Falha: ${payload.error}`, 'warning');
+      }
+      return;
+    }
+    if (opcode === OPCODES.QUEST_INFO_RES.opcode && subcode === OPCODES.QUEST_INFO_RES.subcode) {
+      this.log(`📜 [Quests de Evolução] Sebina 2nd: ${payload.progression?.sebinaChangeCompleted ? 'Completa' : 'Pendente'} | Marlon Combo: ${payload.progression?.marlonComboCompleted ? 'Completa' : 'Pendente'} | Devin 3rd: ${payload.progression?.thirdClassChangeCompleted ? 'Completa' : 'Pendente'}`, 'info');
+      return;
+    }
+    if (opcode === OPCODES.QUEST_ACTION_RES.opcode && subcode === OPCODES.QUEST_ACTION_RES.subcode) {
+      if (payload.success) {
+        if (this.sfx) this.sfx.playSuccessSound();
+        this.log(`📜 [Quest Concluída] ${payload.message || 'Evolução de classe realizada com glória!'}`, 'success');
+      } else {
+        if (this.sfx) this.sfx.playFailureSound();
+        this.log(`❌ [Quest] Falha: ${payload.error}`, 'warning');
+      }
+      return;
+    }
+    if (opcode === OPCODES.MASTER_SKILL_ALLOC_RES.opcode && subcode === OPCODES.MASTER_SKILL_ALLOC_RES.subcode) {
+      if (payload.success) {
+        if (this.sfx) this.sfx.playSuccessSound();
+        this.log(`✨ [Master Skill] Ponto alocado com sucesso na habilidade [${payload.skillId}]! Pontos restantes: ${payload.remainingPoints}`, 'success');
+      } else {
+        if (this.sfx) this.sfx.playFailureSound();
+        this.log(`❌ [Master Skill] Falha: ${payload.error}`, 'warning');
+      }
+      return;
+    }
+
+    // 35. Famílias Gens (0x84)
+    if (opcode === OPCODES.GENS_JOIN_RES.opcode && subcode === OPCODES.GENS_JOIN_RES.subcode) {
+      if (payload.success) {
+        if (this.sfx) this.sfx.playSuccessSound();
+        this.log(`⚔️ [Gens] Você jurou lealdade à Família ${payload.family}! Glória ao seu clã!`, 'success');
+      } else {
+        if (this.sfx) this.sfx.playFailureSound();
+        this.log(`❌ [Gens] Falha ao ingressar: ${payload.error}`, 'warning');
+      }
+      return;
+    }
+    if (opcode === OPCODES.GENS_STATUS_RES.opcode && subcode === OPCODES.GENS_STATUS_RES.subcode) {
+      this.log(`⚔️ [Gens] Família: ${payload.family || 'Nenhuma'} | Patente: ${payload.rankName || 'Nenhuma'} | Contribuição: ${payload.contribution || 0} pts`, 'info');
+      return;
+    }
+    if (opcode === OPCODES.GENS_LEAVE_RES.opcode && subcode === OPCODES.GENS_LEAVE_RES.subcode) {
+      this.log(`⚔️ [Gens] Você abandonou sua Família Gens.`, 'info');
+      return;
+    }
+
+    // 36. Refinamentos Harmony e Socket (0x85)
+    if (opcode === OPCODES.HARMONY_SMELT_RES.opcode && subcode === OPCODES.HARMONY_SMELT_RES.subcode) {
+      if (payload.success) {
+        if (this.sfx) this.sfx.playSuccessSound();
+        this.log(`💎 [Harmony Smelt] Sucesso! Opção de Harmonia despertada no item (+${payload.harmonyOption}).`, 'success');
+      } else {
+        if (this.sfx) this.sfx.playFailureSound();
+        this.log(`❌ [Harmony] Falha no refino: ${payload.error}`, 'warning');
+      }
+      return;
+    }
+    if (opcode === OPCODES.HARMONY_RESTORE_RES.opcode && subcode === OPCODES.HARMONY_RESTORE_RES.subcode) {
+      this.log(payload.success ? `💎 [Harmony Restore] Opção de Harmonia purificada do item.` : `❌ [Harmony] Restauração falhou: ${payload.error}`, payload.success ? 'info' : 'warning');
+      return;
+    }
+    if (opcode === OPCODES.SOCKET_MOUNT_RES.opcode && subcode === OPCODES.SOCKET_MOUNT_RES.subcode) {
+      if (payload.success) {
+        if (this.sfx) this.sfx.playSuccessSound();
+        this.log(`🔮 [Socket System] Seed Sphere acoplada com perfeição no slot ${payload.slotIndex}!`, 'success');
+      } else {
+        if (this.sfx) this.sfx.playFailureSound();
+        this.log(`❌ [Socket System] Falha ao acoplar: ${payload.error}`, 'warning');
+      }
+      return;
+    }
+    if (opcode === OPCODES.SOCKET_UNMOUNT_RES.opcode && subcode === OPCODES.SOCKET_UNMOUNT_RES.subcode) {
+      this.log(payload.success ? `🔮 [Socket System] Seed Sphere desencaixada do slot ${payload.slotIndex}.` : `❌ [Socket System] Falha: ${payload.error}`, payload.success ? 'info' : 'warning');
+      return;
+    }
   }
 
   // Inicia ping periódico a cada 5s
@@ -2075,7 +2282,7 @@ class DevClientApp {
 
     // Artes de referência por família; os conceitos não são plantas exatas dos mapas.
     for (const [key, concept] of Object.entries(CLASSIC_CONCEPTS)) {
-      artData[key].src = `art/classic/${concept.file}.jpg`;
+      artData[key].src = concept.file ? models/scenarios/.glb : `;
       artData[key].desc = `Referência visual do bioma: ${concept.description}`;
     }
     const pendingConcept = {
@@ -2115,7 +2322,7 @@ class DevClientApp {
     const updateArtDisplay = (biome) => {
       const canonicalBiome = conceptKeyForScenario(biome);
       const data = resolveArtDisplay(biome);
-      if (conceptImg) { conceptImg.style.display = data.src ? 'block' : 'none'; if (data.src) conceptImg.src = data.src; }
+      if (conceptImg) { const isImg = data.src && !data.src.endsWith('.glb'); conceptImg.style.display = isImg ? 'block' : 'none'; if (isImg) conceptImg.src = data.src; }
       if (conceptTitle) {
         conceptTitle.textContent = data.title;
         conceptTitle.style.color = data.color;
@@ -2149,7 +2356,7 @@ class DevClientApp {
         blockoutLink.style.display = blockoutPath ? 'block' : 'none';
         if (blockoutPath) blockoutLink.href = blockoutPath;
       }
-      if (splitImg) { splitImg.style.display = data.src ? 'block' : 'none'; if (data.src) splitImg.src = data.src; }
+      if (splitImg) { const isImg = data.src && !data.src.endsWith('.glb'); splitImg.style.display = isImg ? 'block' : 'none'; if (isImg) splitImg.src = data.src; }
       if (splitTitle) {
         splitTitle.textContent = data.title;
         splitTitle.style.color = data.color;
@@ -5021,6 +5228,117 @@ class DevClientApp {
       const secs = Math.floor((dng.elapsedMs % 60000) / 1000);
       timeVal.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')} (Ranque S < 5m)`;
     }
+  }
+
+  // ==========================================================================
+  // ORQUESTRAÇÃO MESTRE: HELPERS DE COMUNICAÇÃO DE REDE DO CLIENTE
+  // ==========================================================================
+  sendTeleport(gateId, targetMap) {
+    this.sendPacket(OPCODES.TELEPORT_REQ, { gateId, targetMap });
+  }
+
+  sendGateTrigger(gateId) {
+    this.sendPacket(OPCODES.GATE_TRIGGER_REQ, { gateId });
+  }
+
+  sendPartyInvite(targetSessionId) {
+    this.sendPacket(OPCODES.PARTY_INVITE_REQ, { targetSessionId });
+  }
+
+  sendPartyRespondInvite(inviterSessionId, accept) {
+    this.sendPacket(OPCODES.PARTY_RESPOND_INVITE_REQ, { inviterSessionId, accept });
+  }
+
+  sendPartyLeave() {
+    this.sendPacket(OPCODES.PARTY_LEAVE_REQ, {});
+  }
+
+  sendTradeRequest(targetSessionId) {
+    this.sendPacket(OPCODES.TRADE_REQUEST_REQ, { targetSessionId });
+  }
+
+  sendTradeRespond(requesterSessionId, accept) {
+    this.sendPacket(OPCODES.TRADE_RESPOND_REQ, { requesterSessionId, accept });
+  }
+
+  sendTradeAddItem(itemUuid, tradeSlot) {
+    this.sendPacket(OPCODES.TRADE_ITEM_ADD_REQ, { itemUuid, tradeSlot });
+  }
+
+  sendTradeAddZen(zen) {
+    this.sendPacket(OPCODES.TRADE_ZEN_ADD_REQ, { zen });
+  }
+
+  sendTradeConfirm() {
+    this.sendPacket(OPCODES.TRADE_CONFIRM_REQ, {});
+  }
+
+  sendTradeCancel() {
+    this.sendPacket(OPCODES.TRADE_CANCEL_REQ, {});
+  }
+
+  sendPShopOpen(title, items) {
+    this.sendPacket(OPCODES.PSHOP_OPEN_REQ, { title, items });
+  }
+
+  sendPShopClose() {
+    this.sendPacket(OPCODES.PSHOP_CLOSE_REQ, {});
+  }
+
+  sendPShopInspect(sellerSessionId) {
+    this.sendPacket(OPCODES.PSHOP_INSPECT_REQ, { sellerSessionId });
+  }
+
+  sendPShopBuy(sellerSessionId, itemUuid) {
+    this.sendPacket(OPCODES.PSHOP_BUY_REQ, { sellerSessionId, itemUuid });
+  }
+
+  sendReset() {
+    this.sendPacket(OPCODES.RESET_REQ, {});
+  }
+
+  sendMasterReset() {
+    this.sendPacket(OPCODES.MASTER_RESET_REQ, {});
+  }
+
+  sendQuestInfo() {
+    this.sendPacket(OPCODES.QUEST_INFO_REQ, {});
+  }
+
+  sendQuestAction(questId, action) {
+    this.sendPacket(OPCODES.QUEST_ACTION_REQ, { questId, action });
+  }
+
+  sendMasterSkillAlloc(skillId) {
+    this.sendPacket(OPCODES.MASTER_SKILL_ALLOC_REQ, { skillId });
+  }
+
+  sendGensJoin(family) {
+    this.sendPacket(OPCODES.GENS_JOIN_REQ, { family });
+  }
+
+  sendGensStatus() {
+    this.sendPacket(OPCODES.GENS_STATUS_REQ, {});
+  }
+
+  sendGensLeave() {
+    this.sendPacket(OPCODES.GENS_LEAVE_REQ, {});
+  }
+
+  sendHarmonySmelt(itemUuid) {
+    this.sendPacket(OPCODES.HARMONY_SMELT_REQ, { itemUuid });
+  }
+
+  sendHarmonyRestore(itemUuid) {
+    this.sendPacket(OPCODES.HARMONY_RESTORE_REQ, { itemUuid });
+  }
+
+  sendSocketMount(targetUuid, seedDefId, slotIndex) {
+    this.sendPacket(OPCODES.SOCKET_MOUNT_REQ, { targetUuid, seedDefId, slotIndex });
+  }
+
+  sendSocketUnmount(targetUuid, slotIndex) {
+    this.sendPacket(OPCODES.SOCKET_UNMOUNT_REQ, { targetUuid, slotIndex });
   }
 
   log(msg, type = 'info') {

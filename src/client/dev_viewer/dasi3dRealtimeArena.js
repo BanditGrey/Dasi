@@ -24,6 +24,7 @@ import {
   createEnvironment,
   createProceduralCanvasTexture,
   loadBestiaryCreatureGLB,
+  loadAnimatedCreatureGLB,
 } from './dasi3dContent.js';
 import { resolveBestiaryRuntimeModel } from './bestiaryRuntimeMap.js';
 import { DasiCollisionEngine } from './dasiCollisionEngine.js';
@@ -33,6 +34,7 @@ import {
   PortalSystem,
   KeyboardController,
 } from './dasiActionGameplay.js';
+import { AmbientLifeEngine } from './ambientLifeEngine.js';
 
 export class Dasi3DRealtimeArena {
   constructor(containerId, appReference) {
@@ -55,6 +57,7 @@ export class Dasi3DRealtimeArena {
     this.currentScenarioId = 'LOR_01';
     this.showCollisionDebug = false;
     this.debugCollidersMesh = null;
+    this.playerColliderMesh = null;
     this.harmonicAudio = new HarmonicAudioSynthesizer();
     this.monsters3D = new Map();   // id -> entidade 3D sincronizada com MobSpawner
     this.bosses3D = new Map();     // id -> entidade 3D sincronizada separadamente com BossManager
@@ -103,6 +106,7 @@ export class Dasi3DRealtimeArena {
     this.initScene();
     this.initEnvironment();
     this.initPlayer();
+    this.ambientLife = new AmbientLifeEngine(this.scene, this.currentScenarioId);
     this.buildPortals(this.currentMap);
     this.initInteractionEvents();
 
@@ -301,6 +305,9 @@ export class Dasi3DRealtimeArena {
     // 2. Reconstrução dos Elementos 3D de Cenário e Portais
     this.rebuildEnvironmentProps(newMapId);
     this.buildPortals(newMapId);
+    if (this.ambientLife) {
+      this.ambientLife.initBiomeFauna(this.currentScenarioId);
+    }
 
     // Recompõe Wireframes de Debug de Colisão se estiver ativo
     if (this.showCollisionDebug) {
@@ -310,6 +317,10 @@ export class Dasi3DRealtimeArena {
       }
       this.debugCollidersMesh = DasiCollisionEngine.createDebugCollidersMesh(this.currentScenarioId, THREE);
       this.scene.add(this.debugCollidersMesh);
+      if (!this.playerColliderMesh && this.playerGroup) {
+        this.playerColliderMesh = DasiCollisionEngine.createPlayerColliderMesh(THREE);
+        this.playerGroup.add(this.playerColliderMesh);
+      }
     }
 
     // 3. Posiciona o Jogador no Ponto de Spawn do Cenário / Mapa
@@ -358,9 +369,19 @@ export class Dasi3DRealtimeArena {
       this.scene.remove(this.debugCollidersMesh);
       this.debugCollidersMesh = null;
     }
+    if (this.playerColliderMesh) {
+      if (this.playerColliderMesh.parent) {
+        this.playerColliderMesh.parent.remove(this.playerColliderMesh);
+      }
+      this.playerColliderMesh = null;
+    }
     if (this.showCollisionDebug) {
       this.debugCollidersMesh = DasiCollisionEngine.createDebugCollidersMesh(this.currentScenarioId, THREE);
       this.scene.add(this.debugCollidersMesh);
+      if (this.playerGroup) {
+        this.playerColliderMesh = DasiCollisionEngine.createPlayerColliderMesh(THREE);
+        this.playerGroup.add(this.playerColliderMesh);
+      }
     }
     return this.showCollisionDebug;
   }
@@ -371,10 +392,13 @@ export class Dasi3DRealtimeArena {
   initPlayer() {
     this.playerGroup = new THREE.Group();
     const heroClass = (this.app && this.app.charClass) || 'DK';
-    this.playerHero = createHero(heroClass, { setTier: 'DRAGON' }, THREE);
+    this.playerHero = createHero(heroClass, { setTier: 'DRAGON', useRealGLB: true }, THREE);
 
     // Posicionamento Inicial
-    const start3D = this.to3DCoords(this.app.playerX || 380, this.app.playerY || 240);
+    const sc = DasiCollisionEngine.getScenario(this.currentScenarioId);
+    const startX = sc ? sc.spawnPoint.x : 0;
+    const startZ = sc ? sc.spawnPoint.z : -5.0;
+    const start3D = { x: startX, z: startZ };
     this.playerGroup.position.set(start3D.x, 0, start3D.z);
     this.playerTargetPos.set(start3D.x, 0, start3D.z);
     this.keyboardController.teleportTo(start3D.x, start3D.z);
@@ -394,6 +418,12 @@ export class Dasi3DRealtimeArena {
     heroRing.position.y = 0.04;
     this.playerGroup.add(heroRing);
 
+    // Cápsula wireframe de colisão física oficial (raio 0.45m, altura 1.85m)
+    if (this.showCollisionDebug) {
+      this.playerColliderMesh = DasiCollisionEngine.createPlayerColliderMesh(THREE);
+      this.playerGroup.add(this.playerColliderMesh);
+    }
+
     this.scene.add(this.playerGroup);
   }
 
@@ -412,9 +442,13 @@ export class Dasi3DRealtimeArena {
       MG: 'HURRICANE',
       DL: 'DARK_MASTER'
     };
-    this.playerHero = createHero(newClass, { setTier: setTierMap[newClass] || 'DRAGON' }, THREE);
+    this.playerHero = createHero(newClass, { setTier: setTierMap[newClass] || 'DRAGON', useRealGLB: true }, THREE);
     this.playerGroup.add(this.playerHero.group);
-    console.log(`[Dasi3DArena] Malha do jogador 3D atualizada para: ${newClass}`);
+    if (this.showCollisionDebug && !this.playerColliderMesh) {
+      this.playerColliderMesh = DasiCollisionEngine.createPlayerColliderMesh(THREE);
+      this.playerGroup.add(this.playerColliderMesh);
+    }
+    console.log(`[Dasi3DArena] Malha do jogador 3D atualizada para modelo oficial: ${newClass}`);
   }
 
   // ==========================================================================
@@ -689,13 +723,26 @@ export class Dasi3DRealtimeArena {
       isBoss,
       isGolden,
       targetPos: new THREE.Vector3(coords3D.x, 0, coords3D.z),
+      state: entityData.state || 'IDLE',
       isDead: false,
+      glbModel: null,
+      animController: null,
+      playAction(actionName) {
+        if (this.animController) this.animController.playAction(actionName);
+      },
     };
 
-    if (visual?.modelId) {
-      const preserved = [entity.parts?.groundRing, bossRing, goldRing, hpSprite];
-      loadBestiaryCreatureGLB(visual.modelId, entity.group, THREE, (model) => {
-        synchronizedEntity.glbModel = model;
+    const preserved = [entity.parts?.groundRing, bossRing, goldRing, hpSprite];
+    if (visual?.animatedPath) {
+      loadAnimatedCreatureGLB(visual.animatedPath, entity.group, THREE, (glbModel, animController) => {
+        synchronizedEntity.glbModel = glbModel;
+        synchronizedEntity.animController = animController;
+        entity.parts.realGLB = glbModel;
+      }, preserved);
+    } else if (visual?.modelId) {
+      loadBestiaryCreatureGLB(visual.modelId, entity.group, THREE, (glbModel) => {
+        synchronizedEntity.glbModel = glbModel;
+        entity.parts.realGLB = glbModel;
       }, preserved);
     }
 
@@ -705,6 +752,7 @@ export class Dasi3DRealtimeArena {
   updateSynchronizedEntity(synchronizedEntity, entityData) {
     const coords3D = this.to3DCoords(entityData.x, entityData.y);
     synchronizedEntity.targetPos.set(coords3D.x, 0, coords3D.z);
+    synchronizedEntity.state = entityData.state || 'IDLE';
 
     const maxHp = Math.max(1, Number(entityData.maxHp) || 1);
     const currentHp = Math.max(0, Number(entityData.currentHp) || 0);
@@ -729,6 +777,12 @@ export class Dasi3DRealtimeArena {
     if (entityData.isDead && !synchronizedEntity.isDead) {
       synchronizedEntity.isDead = true;
       this.animateMonsterDeath(synchronizedEntity);
+    } else if (!synchronizedEntity.isDead && synchronizedEntity.animController) {
+      if (entityData.state === 'ATTACKING') {
+        synchronizedEntity.animController.playAction('attack');
+      } else if (entityData.state === 'STAGGERED') {
+        synchronizedEntity.animController.playAction('hit');
+      }
     }
   }
 
@@ -768,17 +822,67 @@ export class Dasi3DRealtimeArena {
   }
 
   animateMonsterDeath(mob3D) {
-    let fade = 1.0;
-    const sink = () => {
-      fade -= 0.05;
-      mob3D.group.position.y -= 0.04;
-      if (fade > 0) {
-        requestAnimationFrame(sink);
-      } else {
-        this.scene.remove(mob3D.group);
+    if (mob3D.animController) {
+      mob3D.animController.playAction('death');
+    }
+    const delayBeforeSink = mob3D.animController ? 900 : 80;
+    setTimeout(() => {
+      let fade = 1.0;
+      const sink = () => {
+        fade -= 0.04;
+        mob3D.group.position.y -= 0.03;
+        mob3D.group.traverse((child) => {
+          if (child.isMesh && child.material) {
+            child.material.transparent = true;
+            child.material.opacity = Math.max(0, fade);
+          }
+        });
+        if (fade > 0) {
+          requestAnimationFrame(sink);
+        } else {
+          this.scene.remove(mob3D.group);
+        }
+      };
+      sink();
+    }, delayBeforeSink);
+  }
+
+  onEntityDamaged(entityId, isDead, staggered, monsterType = 'spider') {
+    const entity3D = this.monsters3D.get(entityId) || this.bosses3D.get(entityId);
+    if (!entity3D) return;
+
+    if (isDead) {
+      this.harmonicAudio?.playMonsterDeathSound(monsterType);
+      if (!entity3D.isDead) {
+        entity3D.isDead = true;
+        this.animateMonsterDeath(entity3D);
       }
-    };
-    sink();
+    } else {
+      this.harmonicAudio?.playMonsterHitSound(monsterType);
+      if (entity3D.animController) {
+        entity3D.animController.playAction('hit', 0.1);
+        setTimeout(() => {
+          if (!entity3D.isDead && entity3D.animController) {
+            const moveDist = entity3D.group.position.distanceTo(entity3D.targetPos);
+            entity3D.animController.playAction(moveDist > 0.08 ? 'walk' : 'idle', 0.2);
+          }
+        }, 300);
+      }
+
+      // Flash vermelho/alaranjado na malha 3D
+      entity3D.group.traverse((child) => {
+        if (child.isMesh && child.material) {
+          const mat = Array.isArray(child.material) ? child.material[0] : child.material;
+          if (mat && mat.emissive) {
+            const origColor = mat.emissive.getHex();
+            mat.emissive.setHex(0xef4444);
+            setTimeout(() => {
+              if (mat && mat.emissive) mat.emissive.setHex(origColor);
+            }, 120);
+          }
+        }
+      });
+    }
   }
 
   // ==========================================================================
@@ -994,9 +1098,24 @@ export class Dasi3DRealtimeArena {
       this.spinTimer -= delta;
       if (this.spinTimer <= 0) this.isSpinning = false;
       this.playerGroup.rotation.y += delta * 18.0;
+      if (this.playerHero && this.playerHero.triggerAnimation) {
+        this.playerHero.triggerAnimation('TWISTING_SLASH');
+      }
+      if (this.playerHero && this.playerHero.updateAnim) {
+        this.playerHero.updateAnim('TWISTING_SLASH', elapsed, delta);
+      }
+    } else if (this.isStabbing) {
+      this.stabTimer -= delta;
+      if (this.stabTimer <= 0) this.isStabbing = false;
+      if (this.playerHero && this.playerHero.triggerAnimation) {
+        this.playerHero.triggerAnimation('DEATH_STAB');
+      }
+      if (this.playerHero && this.playerHero.updateAnim) {
+        this.playerHero.updateAnim('DEATH_STAB', elapsed, delta);
+      }
     } else if (this.playerHero && this.playerHero.updateAnim) {
       const isHeroWalking = kbResult.isMoving || Math.hypot(this.playerTargetPos.x - this.playerGroup.position.x, this.playerTargetPos.z - this.playerGroup.position.z) > 0.2;
-      this.playerHero.updateAnim(isHeroWalking ? 'WALK' : 'IDLE', elapsed, delta);
+      this.playerHero.updateAnim(isHeroWalking ? 'Walking_A' : 'Idle', elapsed, delta);
     }
 
     // 6. SUAVE CAMERA FOLLOW ISOMÉTRICO
@@ -1008,14 +1127,41 @@ export class Dasi3DRealtimeArena {
     );
     this.camera.lookAt(this.cameraLookTarget.x, this.cameraLookTarget.y + 0.6, this.cameraLookTarget.z);
 
-    // 7. ATUALIZAÇÃO DE MONSTROS E CHEFES 3D
+    // 7. ATUALIZAÇÃO DE MONSTROS E CHEFES 3D (COM ANIMATION MIXER & ROTAÇÃO)
     for (const entityMap of [this.monsters3D, this.bosses3D]) {
       for (const entity3D of entityMap.values()) {
         if (!entity3D.isDead) {
+          const moveDist = entity3D.group.position.distanceTo(entity3D.targetPos);
           entity3D.group.position.lerp(entity3D.targetPos, 0.15);
-          if (entity3D.entity && entity3D.entity.updateAnim) {
+
+          // Rotação suave em direção ao destino de movimento
+          if (moveDist > 0.05) {
+            const dx = entity3D.targetPos.x - entity3D.group.position.x;
+            const dz = entity3D.targetPos.z - entity3D.group.position.z;
+            const targetRot = Math.atan2(dx, dz);
+            let diff = targetRot - entity3D.group.rotation.y;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            entity3D.group.rotation.y += diff * Math.min(1.0, 10.0 * delta);
+          }
+
+          // Atualização de animação esquelética PBR ou procedural
+          if (entity3D.animController) {
+            if (entity3D.state === 'ATTACKING') {
+              entity3D.animController.playAction('attack');
+            } else if (entity3D.state === 'STAGGERED') {
+              entity3D.animController.playAction('hit');
+            } else if (moveDist > 0.08) {
+              entity3D.animController.playAction('walk');
+            } else {
+              entity3D.animController.playAction('idle');
+            }
+            entity3D.animController.update(delta);
+          } else if (entity3D.entity && entity3D.entity.updateAnim) {
             entity3D.entity.updateAnim('WALK', elapsed, delta);
           }
+        } else if (entity3D.animController) {
+          entity3D.animController.update(delta);
         }
       }
     }
@@ -1054,6 +1200,11 @@ export class Dasi3DRealtimeArena {
         this.scene.remove(d.mesh);
         this.clickDecals.splice(i, 1);
       }
+    }
+
+    // 12. VIDA AMBIENTAL & FAUNA REATIVA (AVES, MORCEGOS, PEIXES, TOCHAS)
+    if (this.ambientLife) {
+      this.ambientLife.update(delta, this.playerGroup.position);
     }
 
     this.renderer.render(this.scene, this.camera);
