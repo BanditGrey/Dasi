@@ -93,6 +93,7 @@ export class CombatEngine {
    */
   public processPlayerAttack(session: ClientSession, req: AttackRequest): AttackResult {
     const { targetMobId, skillId, playerX, playerY } = req;
+    const sId = String(skillId || '').toLowerCase();
 
     // Se for um Chefe Mundial (Boss)
     if (this.bossManager && targetMobId.startsWith('boss-')) {
@@ -273,7 +274,6 @@ export class CombatEngine {
       damageType = 'SKILL';
       const baseDmg = Math.floor(minAttack + Math.random() * (maxAttack - minAttack + 1));
       
-      const sId = String(skillId || '').toLowerCase();
       let skillMultiplier = 1.8;
       if (sId.includes('death') || sId.includes('stab')) {
         // Death Stab do Blade Knight: Fator 250% + (Energy / 10)%
@@ -348,7 +348,7 @@ export class CombatEngine {
     const isTwisting = sId.includes('twist') || sId.includes('cyclone') || sId.includes('spin');
     if (isTwisting) {
       const aoeRadius = 180;
-      for (const otherMob of this.spawner.getMonsters()) {
+      for (const otherMob of this.spawner.getAllMonsters()) {
         if (otherMob.id !== mob.id && !otherMob.isDead) {
           const dist = Math.hypot(otherMob.x - playerX, otherMob.y - playerY);
           if (dist <= aoeRadius) {
