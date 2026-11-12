@@ -5461,6 +5461,14 @@ class DevClientApp {
     this.sendPacket(OPCODES.SOCKET_UNMOUNT_REQ, { targetUuid, slotIndex });
   }
 
+  sendKalimaSpawn(lostMapDefId, x, y) {
+    this.sendPacket(OPCODES.KALIMA_PORTAL_SPAWN_REQ, { lostMapDefId, x, y });
+  }
+
+  sendKalimaEnter(portalId) {
+    this.sendPacket(OPCODES.KALIMA_ENTER_REQ, { portalId });
+  }
+
   log(msg, type = 'info') {
     const row = document.createElement('div');
     row.className = `log-row ${type}`;

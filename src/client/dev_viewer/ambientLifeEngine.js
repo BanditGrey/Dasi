@@ -881,5 +881,62 @@ export class AmbientLifeEngine {
         critter.animController.update(delta);
       }
     }
+
+    // 6. Atualiza Cidadãos e Habitantes (NPCs 3D)
+    for (const npc of this.npcs) {
+      if (npc.npcId === 'han_blacksmith') {
+        const swing = Math.sin(elapsed * 3.8);
+        npc.hammerArmPivot.rotation.z = swing * 0.45 - 0.2;
+        if (swing > 0.88) {
+          npc.sparkPoints.material.opacity = 1.0;
+        } else {
+          npc.sparkPoints.material.opacity = Math.max(0, npc.sparkPoints.material.opacity - delta * 4.0);
+        }
+      } else if (npc.npcId === 'pupa_potion_girl') {
+        const arr = npc.bubblePoints.geometry.attributes.position.array;
+        for (let i = 0; i < arr.length / 3; i++) {
+          arr[i * 3 + 1] += delta * 0.35;
+          if (arr[i * 3 + 1] > 1.1) {
+            arr[i * 3 + 1] = 0.45;
+            arr[i * 3 + 0] = 0.65 + (Math.random() - 0.5) * 0.22;
+          }
+        }
+        npc.bubblePoints.geometry.attributes.position.needsUpdate = true;
+      } else if (npc.npcId === 'sentinel_guard') {
+        const dist = playerPos ? npc.group.position.distanceTo(playerPos) : 999;
+        if (dist < 3.8) {
+          npc.spearPivot.rotation.x = THREE.MathUtils.lerp(npc.spearPivot.rotation.x, -0.3, 6 * delta);
+        } else {
+          npc.spearPivot.rotation.x = THREE.MathUtils.lerp(npc.spearPivot.rotation.x, 0, 4 * delta);
+        }
+      } else if (npc.npcId === 'chaos_goblin') {
+        npc.group.position.y = Math.abs(Math.sin(elapsed * 4.5)) * 0.12;
+      }
+    }
+
+    // 7. Atualiza Partículas Climáticas Atmosféricas (Chuva, Neve, Esporos, Bolhas, Fagulhas)
+    if (this.weatherParticles) {
+      const wp = this.weatherParticles;
+      const arr = wp.positions;
+      for (let i = 0; i < arr.length / 3; i++) {
+        arr[i * 3 + 1] -= wp.fallSpeed * delta;
+        arr[i * 3 + 0] += Math.sin(elapsed * 1.5 + i) * 0.02 + wp.windSpeed * delta;
+
+        if (wp.fallSpeed > 0 && arr[i * 3 + 1] < 0.05) {
+          arr[i * 3 + 1] = wp.spreadY;
+          arr[i * 3 + 0] = (Math.random() - 0.5) * wp.spreadX;
+          arr[i * 3 + 2] = (Math.random() - 0.5) * wp.spreadZ;
+        } else if (wp.fallSpeed < 0 && arr[i * 3 + 1] > wp.spreadY) {
+          arr[i * 3 + 1] = 0.1;
+          arr[i * 3 + 0] = (Math.random() - 0.5) * wp.spreadX;
+          arr[i * 3 + 2] = (Math.random() - 0.5) * wp.spreadZ;
+        }
+
+        if (Math.abs(arr[i * 3 + 0]) > wp.spreadX / 2) {
+          arr[i * 3 + 0] = -Math.sign(arr[i * 3 + 0]) * (wp.spreadX / 2);
+        }
+      }
+      wp.points.geometry.attributes.position.needsUpdate = true;
+    }
   }
 }
