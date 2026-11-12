@@ -94,6 +94,46 @@ describe('2. Sistema de Vida Ambiental & Fauna Dinâmica (AmbientLifeEngine)', (
     assert.strictEqual(engine.birds.length, 0);
     assert.strictEqual(engine.torches.length, 0);
     assert.strictEqual(engine.critters.length, 0);
+    assert.strictEqual(engine.npcs.length, 0);
+    assert.strictEqual(engine.weatherParticles, null);
+  });
+
+  it('inicializa cidadãos e habitantes (NPCs 3D) em Lorencia e Duende da Chaos Machine em Noria', () => {
+    const scene = new THREE.Scene();
+    const engine = new AmbientLifeEngine(scene, 'lorencia_citadel');
+
+    assert.strictEqual(engine.npcs.length, 3, 'Lorencia deve conter 3 NPCs cidadãos (Han, Pupa, Sentinela)');
+    const npcIds = engine.npcs.map((n: any) => n.npcId);
+    assert.ok(npcIds.includes('han_blacksmith'), 'Deve conter Ferreiro Han');
+    assert.ok(npcIds.includes('pupa_potion_girl'), 'Deve conter Pupa Alquimista');
+    assert.ok(npcIds.includes('sentinel_guard'), 'Deve conter Sentinela');
+
+    for (const npc of engine.npcs) {
+      assert.strictEqual(npc.group.userData.isNpc, true, 'Grupo do NPC deve possuir flag isNpc');
+      assert.ok(npc.group.userData.npcId, 'Grupo do NPC deve possuir npcId');
+    }
+
+    // Testa Noria
+    const noriaEngine = new AmbientLifeEngine(scene, 'noria_feywood');
+    const noriaNpcIds = noriaEngine.npcs.map((n: any) => n.npcId);
+    assert.ok(noriaNpcIds.includes('chaos_goblin'), 'Noria deve conter o Duende da Chaos Machine');
+  });
+
+  it('inicializa clima atmosférico dinâmico com atualização contínua de partículas', () => {
+    const scene = new THREE.Scene();
+    const engineLorencia = new AmbientLifeEngine(scene, 'lorencia_citadel');
+    assert.ok(engineLorencia.weatherParticles, 'Lorencia deve conter sistema de partículas climáticas');
+    assert.strictEqual(engineLorencia.weatherParticles.kind, 'rain');
+
+    const engineDevias = new AmbientLifeEngine(scene, 'devias_boreal');
+    assert.ok(engineDevias.weatherParticles, 'Devias deve conter sistema de nevasca');
+    assert.strictEqual(engineDevias.weatherParticles.kind, 'snow');
+
+    // Executa atualização do clima
+    const yBefore = engineDevias.weatherParticles.positions[1];
+    engineDevias.update(0.1, new THREE.Vector3(0, 0, 0));
+    const yAfter = engineDevias.weatherParticles.positions[1];
+    assert.notStrictEqual(yAfter, yBefore, 'Posição Y dos flocos de neve deve se deslocar com o tempo');
   });
 
   it('inicializa fauna terrestre (raposas) em Lorencia e reage com fuga rápida ao herói', () => {

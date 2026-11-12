@@ -6,8 +6,8 @@
 
 import type { ClientSession } from '../network/SessionManager.ts';
 import { BinaryItemSerializer } from './BinaryItemSerializer.ts';
-import type { ProgressionState } from '../progression/QuestManager.ts';
-import type { MasterTreeState } from '../progression/MasterSkillTree.ts';
+import type { CharacterProgressionState } from '../progression/QuestManager.ts';
+import type { MasterSkillTreeState } from '../progression/MasterSkillTree.ts';
 import type { PlacedItem } from '../inventory/types.ts';
 
 export interface CharacterRecord {
@@ -25,16 +25,16 @@ export interface CharacterRecord {
   energy: number;
   command: number;
   statPoints: number;
-  currentMap: string;
+  currentMap: number;
   x: number;
   y: number;
   pkLevel: number;
   pkCount: number;
   inventoryBinary: Buffer; // 1.728 bytes (108 slots * 16 bytes)
   warehouseBinary: Buffer; // 3.840 bytes (240 slots * 16 bytes)
-  progression: ProgressionState;
-  masterTree: MasterTreeState;
-  gensFamily: 'DUPRIAN' | 'VANERT' | null;
+  progression: CharacterProgressionState;
+  masterTree: MasterSkillTreeState;
+  gensFamily: string | null;
   gensContribution: number;
   gensRank: number;
   updatedAt: number;
@@ -63,37 +63,47 @@ export class CharacterRepository {
    */
   public async saveFromSession(session: ClientSession): Promise<CharacterRecord> {
     const char = session.character;
-    const inventoryItems = session.inventory.getAllItems();
+    const inventoryItems = session.inventory.getAllGridItems();
     const inventoryBinary = BinaryItemSerializer.serializeInventory(inventoryItems);
     const warehouseBinary = BinaryItemSerializer.serializeWarehouse([]);
 
     const record: CharacterRecord = {
       name: char.name,
       account: session.sessionId,
-      class: char.class,
+      class: char.characterClass,
       level: char.level,
-      resets: session.resets,
-      masterResets: session.masterResets,
+      resets: session.resets ?? 0,
+      masterResets: session.masterResets ?? 0,
       zen: char.zen,
-      wCoins: session.wCoins,
+      wCoins: session.wCoins ?? 0,
       strength: char.strength,
       agility: char.agility,
       vitality: char.vitality,
       energy: char.energy,
       command: char.command,
       statPoints: char.statPoints,
-      currentMap: session.currentMap,
-      x: char.x,
-      y: char.y,
-      pkLevel: char.pkLevel,
-      pkCount: char.pkCount,
+      currentMap: session.currentMap ?? 0,
+      x: session.x ?? 125,
+      y: session.y ?? 125,
+      pkLevel: char.pkLevel ?? 3,
+      pkCount: char.pkCount ?? 0,
       inventoryBinary,
       warehouseBinary,
-      progression: { ...session.progressionState },
-      masterTree: { ...session.masterTreeState },
-      gensFamily: session.gensFamily,
-      gensContribution: session.gensContribution,
-      gensRank: session.gensRank,
+      progression: session.progressionState ? { ...session.progressionState } : {
+        sebinaPart1Completed: false,
+        sebinaChangeCompleted: false,
+        marlonHeroCompleted: false,
+        marlonComboCompleted: false,
+        thirdClassChangeCompleted: false,
+      },
+      masterTree: session.masterTreeState ? { ...session.masterTreeState } : {
+        masterLevel: 1,
+        masterPoints: 0,
+        allocatedSkills: {},
+      },
+      gensFamily: session.gensFamily ?? null,
+      gensContribution: session.gensContribution ?? 0,
+      gensRank: session.gensRank ?? 0,
       updatedAt: Date.now(),
     };
 
@@ -110,7 +120,7 @@ export class CharacterRepository {
 
     // Atualiza dados vitais e atributos
     session.character.name = record.name;
-    session.character.class = record.class;
+    session.character.characterClass = record.class;
     session.character.level = record.level;
     session.character.zen = record.zen;
     session.character.strength = record.strength;
@@ -119,17 +129,16 @@ export class CharacterRepository {
     session.character.energy = record.energy;
     session.character.command = record.command;
     session.character.statPoints = record.statPoints;
-    session.character.x = record.x;
-    session.character.y = record.y;
     session.character.pkLevel = record.pkLevel;
     session.character.pkCount = record.pkCount;
 
-    // Atualiza estados de evolução
+    session.x = record.x;
+    session.y = record.y;
     session.resets = record.resets;
     session.masterResets = record.masterResets;
     session.wCoins = record.wCoins;
     session.currentMap = record.currentMap;
-    session.gensFamily = record.gensFamily;
+    session.gensFamily = record.gensFamily as any;
     session.gensContribution = record.gensContribution;
     session.gensRank = record.gensRank;
     session.progressionState = { ...record.progression };
