@@ -1371,9 +1371,13 @@ class DevClientApp {
       lifetime: 250,
     });
 
-    // Projeta número flutuante de dano na Arena 3D
+    // Projeta número flutuante de dano na Arena 3D e dispara reação física/visual no monstro
     if (this.arena3D && !isMiss) {
       this.arena3D.spawnDamageText(posX, posY, damage, colorHex);
+      if (typeof this.arena3D.onEntityDamaged === 'function') {
+        const targetType = target ? (target.type || target.name || target.kind || 'spider') : 'spider';
+        this.arena3D.onEntityDamaged(targetId, isDead, staggered, targetType);
+      }
     }
 
     // Gatilho de animação do atacante
@@ -2057,6 +2061,67 @@ class DevClientApp {
           tab.classList.add('active');
           this.renderNpcShopCatalog(tab.getAttribute('data-shop'));
         });
+      });
+    }
+
+    // Modal da Orquestração Mestre do Servidor
+    const btnOpenOrch = document.getElementById('btn-open-server-orchestration-modal');
+    const modalOrch = document.getElementById('modal-server-orchestration');
+    if (btnOpenOrch && modalOrch) {
+      btnOpenOrch.addEventListener('click', () => {
+        modalOrch.style.display = 'flex';
+      });
+
+      document.getElementById('btn-orch-reset')?.addEventListener('click', () => {
+        this.sendReset();
+      });
+
+      document.getElementById('btn-orch-mreset')?.addEventListener('click', () => {
+        this.sendMasterReset();
+      });
+
+      document.getElementById('btn-orch-quest-info')?.addEventListener('click', () => {
+        this.sendQuestInfo();
+      });
+
+      document.getElementById('btn-orch-quest-sebina')?.addEventListener('click', () => {
+        this.sendQuestAction('sebina', 'COMPLETE');
+      });
+
+      document.getElementById('btn-orch-quest-marlon')?.addEventListener('click', () => {
+        this.sendQuestAction('marlon', 'COMPLETE');
+      });
+
+      document.getElementById('btn-orch-quest-devin')?.addEventListener('click', () => {
+        this.sendQuestAction('devin', 'COMPLETE');
+      });
+
+      document.getElementById('btn-orch-gens-duprian')?.addEventListener('click', () => {
+        this.sendGensJoin('DUPRIAN');
+      });
+
+      document.getElementById('btn-orch-gens-vanert')?.addEventListener('click', () => {
+        this.sendGensJoin('VANERT');
+      });
+
+      document.getElementById('btn-orch-gens-status')?.addEventListener('click', () => {
+        this.sendGensStatus();
+      });
+
+      document.getElementById('btn-orch-party-leave')?.addEventListener('click', () => {
+        this.sendPartyLeave();
+      });
+
+      document.getElementById('btn-orch-pshop-open')?.addEventListener('click', () => {
+        this.sendPShopOpen('Loja Rara do Herói', []);
+      });
+
+      document.getElementById('btn-orch-pshop-close')?.addEventListener('click', () => {
+        this.sendPShopClose();
+      });
+
+      document.getElementById('btn-orch-trade-cancel')?.addEventListener('click', () => {
+        this.sendTradeCancel();
       });
     }
 
@@ -3058,6 +3123,22 @@ class DevClientApp {
         btnToggleCollision.style.borderColor = active ? '#22c55e' : '#f43f5e';
         btnToggleCollision.style.color = active ? '#86efac' : '#fda4af';
         this.log(`🛡️ [COLISÃO FÍSICA] Wireframes de Colisão 3D ${active ? 'ATIVADOS (Visíveis)' : 'DESATIVADOS'}.`, 'info');
+      });
+    }
+
+    // 2.3b Botão de Alternância de Vida Ambiental & Fauna Dinâmica
+    const btnToggleAmbient = document.getElementById('btn-toggle-ambient-life');
+    if (btnToggleAmbient) {
+      btnToggleAmbient.addEventListener('click', () => {
+        let active = true;
+        if (this.arena3D && typeof this.arena3D.toggleAmbientLife === 'function') {
+          active = this.arena3D.toggleAmbientLife();
+        }
+        btnToggleAmbient.textContent = active ? '🕊️ Fauna: ON' : '🕊️ Fauna: OFF';
+        btnToggleAmbient.style.background = active ? 'rgba(16, 185, 129, 0.25)' : 'rgba(100, 116, 139, 0.20)';
+        btnToggleAmbient.style.borderColor = active ? '#10b981' : '#64748b';
+        btnToggleAmbient.style.color = active ? '#6ee7b7' : '#94a3b8';
+        this.log(`🕊️ [VITALIDADE AMBIENTAL] Fauna, bandos e tochas ${active ? 'ATIVADOS' : 'DESATIVADOS'}.`, 'info');
       });
     }
 
