@@ -213,6 +213,14 @@ export class GameServer {
       this.gameLoopTimer = null;
     }
 
+    // Salva todas as sessões autenticadas antes de encerrar
+    for (const session of this.sessionManager.getAllSessions()) {
+      if (session.state === 'AUTHENTICATED') {
+        this.characterRepository.saveFromSession(session).catch(() => {});
+      }
+    }
+    this.characterRepository.close();
+
     return new Promise((resolve) => {
       // Notifica e desconecta todas as sessões
       for (const session of this.sessionManager.getAllSessions()) {
@@ -1124,12 +1132,20 @@ export class GameServer {
     );
   }
 
-  private handleAuthLoginReq(session: ClientSession, payload: AuthLoginReqPayload): void {
-    const username = payload?.username || 'HeroOfDasi';
+  private async handleAuthLoginReq(session: ClientSession, payload: AuthLoginReqPayload): Promise<void> {
+    const username = (payload?.username || 'HeroOfDasi').trim();
     const charClass = payload?.characterClass || 'DK';
 
-    this.sessionManager.authenticateSession(session.sessionId, username, charClass);
-    console.log(`[GameServer] Sessão autenticada: [${session.character.name}] Classe: ${session.character.characterClass}`);
+    // 1. Tenta carregar dados persistidos do personagem no SQLite
+    const loaded = await this.characterRepository.loadIntoSession(username, session);
+    if (loaded) {
+      this.sessionManager.authenticateSession(session.sessionId, session.character.name, session.character.characterClass);
+      console.log(`[GameServer] Personagem persistido recuperado: [${session.character.name}] Nível ${session.character.level} Classe: ${session.character.characterClass}`);
+    } else {
+      this.sessionManager.authenticateSession(session.sessionId, username, charClass);
+      await this.characterRepository.saveFromSession(session).catch(() => {});
+      console.log(`[GameServer] Novo personagem registrado e salvo: [${session.character.name}] Classe: ${session.character.characterClass}`);
+    }
 
     const res = {
       success: true,

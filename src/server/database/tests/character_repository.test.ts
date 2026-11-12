@@ -14,7 +14,7 @@ import { Opcodes } from '../../network/protocol.ts';
 
 describe('1. Repositório de Personagens & Persistência Binária (CharacterRepository)', () => {
   it('salva e recupera uma sessão de jogo preservando atributos, resets e inventário binário', async () => {
-    const repo = new CharacterRepository();
+    const repo = new CharacterRepository(':memory:');
     const sessionManager = new SessionManager();
 
     const dummyWs = { readyState: 1, send: () => {} };

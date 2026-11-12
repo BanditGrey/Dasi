@@ -6,6 +6,8 @@ import { CharacterRepository, type CharacterRecord } from '../CharacterRepositor
 import { SessionManager } from '../../network/SessionManager.ts';
 import { Item } from '../../inventory/Item.ts';
 import { EquipmentSlot, WeaponExcellentOption } from '../../inventory/types.ts';
+import { QuestManager } from '../../progression/QuestManager.ts';
+import { MasterSkillTree } from '../../progression/MasterSkillTree.ts';
 
 describe('CharacterRepository - SQLite Persistence & Session Recovery', () => {
   const testDbDir = path.resolve(process.cwd(), 'data/test_db');
@@ -21,6 +23,10 @@ describe('CharacterRepository - SQLite Persistence & Session Recovery', () => {
 
     const initialCount = repo.count();
     assert.equal(initialCount, 0);
+
+    const progression = QuestManager.createDefaultState('acc-001', 'BladeHero', 0, 300);
+    progression.hasComboUnlocked = true;
+    const masterTree = MasterSkillTree.createDefaultTree('BladeHero');
 
     const dummyRecord: CharacterRecord = {
       name: 'BladeHero',
@@ -44,27 +50,8 @@ describe('CharacterRepository - SQLite Persistence & Session Recovery', () => {
       pkCount: 0,
       inventoryBinary: Buffer.alloc(1728, 0xFF),
       warehouseBinary: Buffer.alloc(3840, 0xFF),
-      progression: {
-        characterName: 'BladeHero',
-        accountName: 'acc-001',
-        generation: 1,
-        activeClassId: 0,
-        questClassStep: 2,
-        unlockedSkills: ['TWISTING_SLASH', 'DEATH_STAB'],
-        unlockedWingsTier: 2,
-        completedDungeonFloors: [1, 2],
-        dailyDungeonCompletions: 3,
-        lastDungeonReset: Date.now(),
-        achievements: [],
-        completedQuestIds: ['q_ring_of_honor'],
-      },
-      masterTree: {
-        characterName: 'BladeHero',
-        masterLevel: 10,
-        masterPoints: 5,
-        totalPointsEarned: 10,
-        unlockedNodes: {},
-      },
+      progression,
+      masterTree,
       gensFamily: 1, // DUPRIAN
       gensContribution: 1250,
       gensRank: 2,
@@ -99,7 +86,7 @@ describe('CharacterRepository - SQLite Persistence & Session Recovery', () => {
     assert.equal(loaded.level, 300);
     assert.equal(loaded.strength, 650);
     assert.equal(loaded.resets, 2);
-    assert.deepEqual(loaded.progression.unlockedSkills, ['TWISTING_SLASH', 'DEATH_STAB']);
+    assert.equal(loaded.progression.hasComboUnlocked, true);
 
     // Atualiza status (sobe de nível e ganha zen)
     loaded.level = 301;
@@ -132,14 +119,19 @@ describe('CharacterRepository - SQLite Persistence & Session Recovery', () => {
     session.character.strength = 500;
     session.character.agility = 160;
 
-    // Equipa uma arma lendária no slot de mão direita
+    session.inventory.clear();
+
+    // Adiciona e equipa uma arma lendária no slot de mão direita
     const dragonBlade = Item.create('dragon_blade', {
       level: 11,
       luck: true,
       skill: true,
       excellentMask: WeaponExcellentOption.INCREASE_DMG_2_PERCENT,
     });
-    session.inventory.equipItem(dragonBlade, EquipmentSlot.WEAPON_RIGHT);
+    const placed = session.inventory.addItem(dragonBlade, 0, 0);
+    assert.ok(placed, 'Item deve ser adicionado ao grid');
+    const equipRes = session.inventory.equipItem(dragonBlade.uuid, EquipmentSlot.WEAPON_RIGHT);
+    assert.equal(equipRes.success, true);
 
     // Salva a sessão no repositório persistente
     const repo = new CharacterRepository(testDbFile);
