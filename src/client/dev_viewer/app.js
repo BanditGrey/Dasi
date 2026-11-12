@@ -1202,6 +1202,69 @@ class DevClientApp {
     document.querySelectorAll('.btn-stat-add').forEach((btn) => {
       btn.style.display = freePts > 0 ? 'inline-flex' : 'none';
     });
+
+    this.updateActionBarForClass(char.characterClass);
+  }
+
+  updateActionBarForClass(className) {
+    const isDw = className === 'DW' || className === 'SOUL_MASTER';
+    const slotCyclone = document.getElementById('slot-skill-cyclone');
+    const slotDeathstab = document.getElementById('slot-skill-deathstab');
+    const slotWeapon = document.getElementById('slot-skill-weapon');
+
+    if (isDw) {
+      if (slotCyclone) {
+        const icon = slotCyclone.querySelector('.idle-skill-icon');
+        const lbl = slotCyclone.querySelector('.idle-skill-label');
+        const status = slotCyclone.querySelector('.idle-skill-status');
+        if (icon) icon.textContent = '🔥';
+        if (lbl) lbl.textContent = 'Fireball';
+        if (status) status.textContent = '[E / 2]';
+        slotCyclone.title = 'Fireball [Atalho: E / 2] - Bola de Fogo Arcana';
+      }
+      if (slotDeathstab) {
+        const icon = slotDeathstab.querySelector('.idle-skill-icon');
+        const lbl = slotDeathstab.querySelector('.idle-skill-label');
+        const status = slotDeathstab.querySelector('.idle-skill-status');
+        if (icon) icon.textContent = '👻';
+        if (lbl) lbl.textContent = 'Evil Spirits';
+        if (status) status.textContent = '[R / 3 / RMB]';
+        slotDeathstab.title = 'Evil Spirits [Atalho: R / 3 ou Botão Direito] - Espíritos Malignos AoE';
+      }
+      if (slotWeapon) {
+        const icon = slotWeapon.querySelector('.idle-skill-icon');
+        const lbl = slotWeapon.querySelector('.idle-skill-label');
+        if (icon) icon.textContent = '🔮';
+        if (lbl) lbl.textContent = 'Energy Ball';
+        slotWeapon.title = 'Energy Ball [Atalho: Botão Esquerdo] - Projétil Arcano Básico';
+      }
+    } else {
+      if (slotCyclone) {
+        const icon = slotCyclone.querySelector('.idle-skill-icon');
+        const lbl = slotCyclone.querySelector('.idle-skill-label');
+        const status = slotCyclone.querySelector('.idle-skill-status');
+        if (icon) icon.textContent = '🌪️';
+        if (lbl) lbl.textContent = 'Twisting Slash';
+        if (status) status.textContent = '[E / 2 / RMB]';
+        slotCyclone.title = 'Twisting Slash [Atalho: E / 2 ou Botão Direito] - Dano em Área 360°';
+      }
+      if (slotDeathstab) {
+        const icon = slotDeathstab.querySelector('.idle-skill-icon');
+        const lbl = slotDeathstab.querySelector('.idle-skill-label');
+        const status = slotDeathstab.querySelector('.idle-skill-status');
+        if (icon) icon.textContent = '⚡';
+        if (lbl) lbl.textContent = 'Death Stab';
+        if (status) status.textContent = '[R / 3]';
+        slotDeathstab.title = 'Death Stab [Atalho: R / 3] - Estocada Perfurante Letal';
+      }
+      if (slotWeapon) {
+        const icon = slotWeapon.querySelector('.idle-skill-icon');
+        const lbl = slotWeapon.querySelector('.idle-skill-label');
+        if (icon) icon.textContent = '⚔️';
+        if (lbl) lbl.textContent = 'Golpe DK';
+        slotWeapon.title = 'Ataque Primário da Lâmina [Atalho: Botão Esquerdo]';
+      }
+    }
   }
 
   handleStatPointAllocResult(payload) {
@@ -2727,18 +2790,19 @@ class DevClientApp {
     // Cliques diretos nos slots da Action Bar
     document.querySelectorAll('.action-slot').forEach((slot) => {
       slot.addEventListener('click', () => {
+        const isDw = this.character?.characterClass === 'DW' || this.character?.characterClass === 'SOUL_MASTER';
         const key = slot.getAttribute('data-key');
         if (key === 'Q') this.useHealthPotion();
         else if (key === 'W') this.useManaPotion();
-        else if (key === 'E') this.castSkill('E', 'cyclone');
-        else if (key === 'R') this.castSkill('R', 'death_stab');
+        else if (key === 'E') this.castSkill('E', isDw ? 'fireball' : 'cyclone');
+        else if (key === 'R') this.castSkill('R', isDw ? 'evil_spirits' : 'death_stab');
         else if (key === 'SPACE') this.performDodge();
         else if (key === 'LMB') {
           const btnBossAtk = document.getElementById('btn-boss-attack');
           if (btnBossAtk) btnBossAtk.click();
-          else if (this.arena3D) this.arena3D.triggerSkill('ATTACK');
+          else if (this.arena3D) this.arena3D.triggerSkill(isDw ? 'energy_ball' : 'ATTACK');
         } else if (key === 'RMB') {
-          this.castSkill('E', 'cyclone');
+          this.castSkill('E', isDw ? 'evil_spirits' : 'cyclone');
         }
       });
     });
