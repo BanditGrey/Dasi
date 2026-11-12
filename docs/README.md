@@ -3,7 +3,7 @@
 > **Servidor Autoritativo:** Node.js / TypeScript (`ws://localhost:8080` & `http://localhost:8080`)  
 > **Cliente WebGL 3D:** Three.js PBR (`src/client/dev_viewer/`)  
 > **Cliente Desktop AAA:** Unreal Engine 5.5 C++ (`src/client/ue5_project/`)  
-> **Status dos Testes:** 🟢 **395 / 395 testes aprovados em 84 suítes (100% green)** + `npm run typecheck` sem erros
+> **Status dos Testes:** 🟢 **403 / 403 testes aprovados em 87 suítes (100% green)** + `npm run typecheck` sem erros
 
 ---
 
@@ -15,6 +15,7 @@
 - [`Combat_and_Stats.md`](file:///d:/Dasi/docs/Combat_and_Stats.md): Sistema de atributos (FOR, AGI, VIT, ENE), fórmulas de escalonamento, vitais e cálculos autoritativos de dano.
 - [`Economy_and_Crafting.md`](file:///d:/Dasi/docs/Economy_and_Crafting.md): Economia de Zen, Joias Sagradas (Bless, Soul, Chaos, Life), taxas de aprimoramento (+0..+15) e Máquina do Caos.
 - [`Bestiary_and_Bosses.md`](file:///d:/Dasi/docs/Bestiary_and_Bosses.md): Bestiário, chefes e invasões; inclui doze protótipos GLB estáticos em `prototypes/3d_bestiary/` (sem rig, animações, colisões ou VFX de runtime).
+- [`Bestiary_and_World_Vitality_Systems.md`](file:///d:/Dasi/docs/art/Bestiary_and_World_Vitality_Systems.md): Arquitetura completa de animações esqueléticas PBR reais dos monstros, FSM autoritativa do servidor, ecossistema de vida ambiental dinâmica (aves, raposas, morcegos, peixes), tochas com flicker e cidadãos 3D interativos (Han, Pupa, Sentinela, Duende do Caos).
 - [`PVP_and_Castle_Siege.md`](file:///d:/Dasi/docs/PVP_and_Castle_Siege.md): Regras de PK, duelo de arenas, batalhas de guildas e o lendário cerco ao castelo (*Castle Siege*).
 
 ### 1.2 Level Design & Os 56 Cenários Canônicos (8 Biomas + Cerco + Eventos)
@@ -93,12 +94,12 @@ d:\Dasi\
 
 ## ⚡ 3. COMO INICIALIZAR E TESTAR
 
-### 3.1 Executar a Suíte de Testes Automatizados (395 testes em 84 suítes)
+### 3.1 Executar a Suíte de Testes Automatizados (403 testes em 87 suítes)
 ```powershell
 npm test
-npm run typecheck   # tsc --noEmit (strict) — 0 erros
+npm run typecheck   # tsc -p tsconfig.json — 0 erros
 ```
-*Executa testes de inventário, economia, forja do caos, servidor de rede, motor de combate, gameplay de ação, caça 100% idle, catálogo e colisão dos 56 cenários, **paridade servidor ⇄ cliente**, arenas de evento e carregamento dos doze GLBs estáticos do bestiário no Dev Viewer.*
+*Executa testes de inventário, economia, forja do caos, servidor de rede, motor de combate, gameplay de ação, caça 100% idle, catálogo e colisão dos 56 cenários, **paridade servidor ⇄ cliente**, arenas de evento, carregamento e animação dos GLBs do bestiário, vida ambiental viva (aves, raposas, morcegos, peixes, tochas, NPCs 3D) e persistência autoritativa SQLite.*
 
 ### 3.2 Iniciar o Servidor de Jogo Autoritativo
 ```powershell
