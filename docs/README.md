@@ -3,7 +3,7 @@
 > **Servidor Autoritativo:** Node.js / TypeScript (`ws://localhost:8080` & `http://localhost:8080`)  
 > **Cliente WebGL 3D:** Three.js PBR (`src/client/dev_viewer/`)  
 > **Cliente Desktop AAA:** Unreal Engine 5.5 C++ (`src/client/ue5_project/`)  
-> **Status dos Testes:** 🟢 **403 / 403 testes aprovados em 87 suítes (100% green)** + `npm run typecheck` sem erros
+> **Status dos Testes:** 🟢 **407 / 407 testes aprovados em 88 suítes (100% green)** + `npm run typecheck` sem erros
 
 ---
 
@@ -94,7 +94,7 @@ d:\Dasi\
 
 ## ⚡ 3. COMO INICIALIZAR E TESTAR
 
-### 3.1 Executar a Suíte de Testes Automatizados (403 testes em 87 suítes)
+### 3.1 Executar a Suíte de Testes Automatizados (407 testes em 88 suítes)
 ```powershell
 npm test
 npm run typecheck   # tsc -p tsconfig.json — 0 erros
