@@ -528,6 +528,35 @@ export class Dasi3DRealtimeArena {
         this.onGroundClicked(hitPoint.x, hitPoint.z);
       }
     });
+
+    // 6. Botão Direito do Mouse: Dispara habilidade secundária icônica (Twisting Slash)
+    canvas.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      this.raycaster.setFromCamera(this.mouse, this.camera);
+
+      // Checa se mirou em um monstro específico com o botão direito
+      for (const [mobId, mobObj] of this.monsters3D.entries()) {
+        const hits = this.raycaster.intersectObjects(mobObj.group.children, true);
+        if (hits.length > 0) {
+          const mob = this.app.monsters?.get(mobId);
+          if (mob && !mob.isDead) {
+            this.app.selectedTargetId = mobId;
+            this.app.updateTargetHud(mob);
+          }
+          break;
+        }
+      }
+
+      // Dispara o Twisting Slash
+      if (this.app && typeof this.app.castSkill === 'function') {
+        this.app.castSkill('E', 'cyclone');
+      } else {
+        this.triggerTwistingSlash();
+      }
+    });
   }
 
   onGroundClicked(x3d, z3d) {
@@ -641,18 +670,24 @@ export class Dasi3DRealtimeArena {
   // DISPARO DE HABILIDADES 3D DO ACTION RPG
   // ==========================================================================
   triggerSkill(skillType) {
-    if (skillType === 'cyclone' || skillType === 'TWISTING_SLASH') {
+    const s = String(skillType || '').toLowerCase();
+    if (s.includes('twist') || s.includes('cyclone') || s.includes('spin')) {
       this.triggerTwistingSlash();
-    } else if (skillType === 'death_stab') {
+    } else if (s.includes('death') || s.includes('stab')) {
       this.triggerDeathStab();
-    } else if (skillType === 'roll') {
+    } else if (s.includes('roll') || s.includes('dodge')) {
       this.triggerRoll();
+    } else if (s.includes('attack') || s.includes('strike')) {
+      this.triggerPlayerAttackAnim();
     }
   }
 
   triggerPlayerAttackAnim() {
+    if (this.playerHero && this.playerHero.triggerAnimation) {
+      this.playerHero.triggerAnimation('ATTACK');
+    }
     if (this.playerHero && this.playerHero.updateAnim) {
-      this.playerHero.updateAnim('DEATH_STAB', this.clock.getElapsedTime(), 0.1);
+      this.playerHero.updateAnim('ATTACK', this.clock.getElapsedTime(), 0.1);
     }
   }
 
