@@ -270,6 +270,18 @@ export class GridInventory {
   }
 
   /**
+   * Obtém a instância do item na grade ou nos slots de equipamento pelo seu UUID
+   */
+  public getItemByUuid(uuid: string): ItemInstance | null {
+    const placed = this.placedItems.get(uuid);
+    if (placed) return placed.item;
+    for (const equipped of this.equippedSlots.values()) {
+      if (equipped.uuid === uuid) return equipped;
+    }
+    return null;
+  }
+
+  /**
    * Retorna todos os itens presentes na grade
    */
   public getAllGridItems(): PlacedItem[] {

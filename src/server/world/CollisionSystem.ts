@@ -151,7 +151,7 @@ export const SCENARIO_CATALOG: readonly ScenarioCatalogEntry[] = [
     name: 'Lorencia Citadel (Praça Central & Fonte do Arcanjo)',
     biome: 'LORENCIA',
     bounds: { minX: -20, maxX: 20, minZ: -20, maxZ: 20 },
-    spawnPoint: { x: 0, z: -2 },
+    spawnPoint: { x: 0, z: -5 },
     colliders: [
       { type: 'CYLINDER', id: 'fountain_basin', x: 0, z: 0, radius: 3.2 },
       { type: 'CYLINDER', id: 'archangel_pedestal', x: 0, z: 0, radius: 0.9 },
@@ -621,7 +621,7 @@ export const SCENARIO_CATALOG: readonly ScenarioCatalogEntry[] = [
     name: 'Lost Tower 4: Mirante Demoníaco & Gárgulas',
     biome: 'LOST_TOWER',
     bounds: { minX: -22, maxX: 22, minZ: -16, maxZ: 18 },
-    spawnPoint: { x: 0, z: 12 },
+    spawnPoint: { x: 0, z: 6 },
     colliders: [
       { type: 'BOX', id: 'balcony_abyss_railing', x: 0, z: -12, width: 36, depth: 2 },
       { type: 'CYLINDER', id: 'gargoyle_perch_left', x: -14, z: -10, radius: 2.2 },
@@ -876,7 +876,7 @@ export const SCENARIO_CATALOG: readonly ScenarioCatalogEntry[] = [
     name: 'Icarus Aethel: Dark Phoenix Lotus Nest (Ninho da Fênix)',
     biome: 'ICARUS',
     bounds: { minX: -26, maxX: 26, minZ: -26, maxZ: 26 },
-    spawnPoint: { x: 0, z: 12 },
+    spawnPoint: { x: 0, z: 5 },
     colliders: [
       { type: 'RADIAL_BOUNDARY', id: 'phoenix_nest_void', x: 0, z: 0, maxRadius: 10.5 },
       { type: 'CYLINDER', id: 'phoenix_nest_core', x: 0, z: -3.5, radius: 3.5 },
@@ -1087,6 +1087,46 @@ export const SCENARIO_CATALOG: readonly ScenarioCatalogEntry[] = [
 
 export class CollisionSystem {
   public static readonly DEFAULT_PLAYER_RADIUS = PLAYER_RADIUS_FALLBACK; // Metros (Cápsula de herói)
+  public static readonly DEFAULT_PLAYER_HEIGHT = 1.85; // Metros (Altura oficial da cápsula)
+  public static readonly DEFAULT_STEP_HEIGHT = 0.35; // Metros (Altura de passo para degraus)
+
+  /**
+   * Catálogo de Colisores Oficiais do Bestiário Canônico (MU Online Season 5.2)
+   */
+  public static readonly MONSTER_COLLISIONS: Record<string, { radius: number; height: number; stepHeight: number }> = Object.freeze({
+    SPIDER: { radius: 0.45, height: 0.70, stepHeight: 0.25 },
+    HOUND: { radius: 0.50, height: 1.10, stepHeight: 0.30 },
+    BUDGE_DRAGON: { radius: 0.40, height: 1.00, stepHeight: 0.25 },
+    BULL_FIGHTER: { radius: 0.65, height: 1.90, stepHeight: 0.35 },
+    SKELETON: { radius: 0.45, height: 1.80, stepHeight: 0.35 },
+    LICH: { radius: 0.55, height: 1.90, stepHeight: 0.35 },
+    DEATH_KNIGHT: { radius: 0.60, height: 2.10, stepHeight: 0.35 },
+
+    // Chefes Canônicos
+    GORGON: { radius: 0.85, height: 2.40, stepHeight: 0.35 },
+    ICE_QUEEN: { radius: 0.55, height: 2.00, stepHeight: 0.35 },
+    BALROG: { radius: 1.10, height: 3.20, stepHeight: 0.45 },
+    HYDRA: { radius: 1.40, height: 3.00, stepHeight: 0.45 },
+    ZAIKAN: { radius: 1.20, height: 2.80, stepHeight: 0.45 },
+    KUNDUN: { radius: 1.50, height: 3.60, stepHeight: 0.45 },
+
+    // Invasão Dourada
+    GOLDEN_BUDGE_DRAGON: { radius: 0.40, height: 1.00, stepHeight: 0.25 },
+    GOLDEN_TITAN: { radius: 0.90, height: 2.60, stepHeight: 0.40 },
+    GOLDEN_SOLDIER: { radius: 0.60, height: 2.10, stepHeight: 0.35 },
+    GOLDEN_DRAGON: { radius: 1.20, height: 2.80, stepHeight: 0.45 },
+    GOLDEN_LIZARD_KING: { radius: 0.85, height: 2.40, stepHeight: 0.40 },
+    GOLDEN_TANTALOS: { radius: 1.20, height: 2.80, stepHeight: 0.45 },
+  });
+
+  public static getMonsterCollision(type: string): { radius: number; height: number; stepHeight: number } {
+    const key = String(type || '').trim().toUpperCase();
+    return CollisionSystem.MONSTER_COLLISIONS[key] || {
+      radius: CollisionSystem.DEFAULT_PLAYER_RADIUS,
+      height: CollisionSystem.DEFAULT_PLAYER_HEIGHT,
+      stepHeight: CollisionSystem.DEFAULT_STEP_HEIGHT,
+    };
+  }
 
   /**
    * Catálogo Oficial de todos os 56 Cenários Canônicos e suas Barreiras Físicas.
@@ -1212,17 +1252,38 @@ export class CollisionSystem {
           collided = true;
           collidersHit.push(col.id);
 
-          // Determina a borda mais próxima para deslizar
+          // Restringe faces de saída válidas baseadas na direção de aproximação do jogador (anti-tunneling)
           const dLeft = Math.abs(finalX - minBoxX);
           const dRight = Math.abs(maxBoxX - finalX);
           const dTop = Math.abs(maxBoxZ - finalZ);
           const dBottom = Math.abs(finalZ - minBoxZ);
 
-          const minD = Math.min(dLeft, dRight, dTop, dBottom);
-          if (minD === dLeft) finalX = minBoxX;
-          else if (minD === dRight) finalX = maxBoxX;
-          else if (minD === dBottom) finalZ = minBoxZ;
-          else if (minD === dTop) finalZ = maxBoxZ;
+          const fromLeft = currentPos.x <= minBoxX;
+          const fromRight = currentPos.x >= maxBoxX;
+          const fromBottom = currentPos.z <= minBoxZ;
+          const fromTop = currentPos.z >= maxBoxZ;
+
+          let minD = Infinity;
+          let edge = 'bottom';
+
+          if (fromLeft && dLeft < minD) { minD = dLeft; edge = 'left'; }
+          if (fromRight && dRight < minD) { minD = dRight; edge = 'right'; }
+          if (fromBottom && dBottom < minD) { minD = dBottom; edge = 'bottom'; }
+          if (fromTop && dTop < minD) { minD = dTop; edge = 'top'; }
+
+          // Fallback se o jogador já começou dentro da AABB
+          if (minD === Infinity) {
+            minD = Math.min(dLeft, dRight, dTop, dBottom);
+            if (minD === dLeft) edge = 'left';
+            else if (minD === dRight) edge = 'right';
+            else if (minD === dBottom) edge = 'bottom';
+            else edge = 'top';
+          }
+
+          if (edge === 'left') finalX = minBoxX;
+          else if (edge === 'right') finalX = maxBoxX;
+          else if (edge === 'bottom') finalZ = minBoxZ;
+          else if (edge === 'top') finalZ = maxBoxZ;
         }
       } else if (col.type === 'RADIAL_BOUNDARY') {
         const dx = finalX - col.x;

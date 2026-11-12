@@ -25,6 +25,9 @@ export interface MonsterDefinition {
   dropTable: DropTableEntry[];
   zenMin: number;
   zenMax: number;
+  aggroRange?: number;
+  attackRange?: number;
+  attackCooldown?: number;
 }
 
 export interface DropTableEntry {
@@ -45,6 +48,8 @@ export interface GroundDropItem {
   createdAt: number;
   expiresAt: number;
   ownerSessionId?: string;
+  ownerPartyId?: string;
+  lootLockUntil?: number;
   isJewel: boolean;
   isExcellent: boolean;
 }
@@ -62,6 +67,7 @@ export interface SerializedMonster {
   targetY: number;
   state: MonsterState;
   isDead: boolean;
+  rotation?: number;
 }
 
 export const MONSTER_DEFINITIONS: Record<string, MonsterDefinition> = {
@@ -178,6 +184,78 @@ export const MONSTER_DEFINITIONS: Record<string, MonsterDefinition> = {
       { itemDefId: 'dragon_armor', chance: 0.06, maxLevel: 4, allowLuck: true, excellentChance: 0.08 },
       { itemDefId: 'dragon_pants', chance: 0.06, maxLevel: 4, allowLuck: true, excellentChance: 0.08 },
       { itemDefId: 'ring_of_ice', chance: 0.03, maxLevel: 0, excellentChance: 0.05 },
+    ],
+  },
+  lich: {
+    type: 'lich',
+    name: 'Lich (Feiticeiro das Catacumbas)',
+    level: 19,
+    maxHp: 380,
+    defense: 22,
+    defenseRate: 20,
+    attackMin: 55,
+    attackMax: 70,
+    attackRate: 65,
+    moveSpeed: 45,
+    xpReward: 480,
+    maxPoise: 60,
+    zenMin: 500,
+    zenMax: 1500,
+    aggroRange: 130,
+    attackRange: 80,
+    attackCooldown: 2.2,
+    dropTable: [
+      { itemDefId: 'jewel_of_chaos', chance: 0.08 },
+      { itemDefId: 'jewel_of_blessing', chance: 0.04 },
+      { itemDefId: 'chaos_lightning_staff', chance: 0.05, maxLevel: 3, allowLuck: true, allowSkill: true, excellentChance: 0.1 },
+    ],
+  },
+  yeti: {
+    type: 'yeti',
+    name: 'Yeti (A Fera Glacial de Devias)',
+    level: 30,
+    maxHp: 850,
+    defense: 45,
+    defenseRate: 35,
+    attackMin: 85,
+    attackMax: 110,
+    attackRate: 90,
+    moveSpeed: 55,
+    xpReward: 1200,
+    maxPoise: 120,
+    zenMin: 1200,
+    zenMax: 3500,
+    aggroRange: 110,
+    attackRange: 35,
+    attackCooldown: 1.8,
+    dropTable: [
+      { itemDefId: 'jewel_of_blessing', chance: 0.06 },
+      { itemDefId: 'jewel_of_soul', chance: 0.05 },
+      { itemDefId: 'ring_of_ice', chance: 0.04, excellentChance: 0.1 },
+    ],
+  },
+  demon: {
+    type: 'demon',
+    name: 'Lesser Demon (Cria de Balrog)',
+    level: 60,
+    maxHp: 4200,
+    defense: 120,
+    defenseRate: 110,
+    attackMin: 180,
+    attackMax: 240,
+    attackRate: 180,
+    moveSpeed: 65,
+    xpReward: 6500,
+    maxPoise: 220,
+    zenMin: 8000,
+    zenMax: 22000,
+    aggroRange: 140,
+    attackRange: 45,
+    attackCooldown: 1.6,
+    dropTable: [
+      { itemDefId: 'jewel_of_blessing', chance: 0.12 },
+      { itemDefId: 'jewel_of_soul', chance: 0.10 },
+      { itemDefId: 'jewel_of_life', chance: 0.08 },
     ],
   },
   golden_budge_dragon: {
@@ -456,6 +534,14 @@ export class Monster {
   public readonly zenMin: number;
   public readonly zenMax: number;
 
+  public aggroRange: number;
+  public attackRange: number;
+  public attackCooldown: number;
+  public lastAttackTime = 0;
+  public targetPlayerId: string | null = null;
+  public maxLeashDistance: number;
+  public rotation = 0;
+
   constructor(type: string, x: number, y: number, customDef?: Partial<MonsterDefinition>) {
     const baseDef = MONSTER_DEFINITIONS[type] || MONSTER_DEFINITIONS.spider;
     const def = { ...baseDef, ...customDef };
@@ -486,6 +572,11 @@ export class Monster {
     this.dropTable = def.dropTable;
     this.zenMin = def.zenMin;
     this.zenMax = def.zenMax;
+
+    this.aggroRange = def.aggroRange ?? 100;
+    this.attackRange = def.attackRange ?? 30;
+    this.attackCooldown = def.attackCooldown ?? 1.8;
+    this.maxLeashDistance = Math.max(160, this.aggroRange * 1.6);
   }
 
   /**
@@ -541,10 +632,11 @@ export class Monster {
   /**
    * Gera drops no chão com base na tabela de loot e coordenadas
    */
-  public rollDrops(ownerSessionId?: string): GroundDropItem[] {
+  public rollDrops(ownerSessionId?: string, ownerPartyId?: string): GroundDropItem[] {
     const drops: GroundDropItem[] = [];
     const now = Date.now();
     const dropLifetime = 60000; // 60 segundos no chão
+    const lootLockUntil = ownerSessionId ? now + 15000 : undefined;
 
     // 1. Drop de Zen (ouro)
     const zenAmount = Math.floor(this.zenMin + Math.random() * (this.zenMax - this.zenMin + 1));
@@ -560,6 +652,8 @@ export class Monster {
         createdAt: now,
         expiresAt: now + dropLifetime,
         ownerSessionId,
+        ownerPartyId,
+        lootLockUntil,
         isJewel: false,
         isExcellent: false,
       });
@@ -623,6 +717,8 @@ export class Monster {
             createdAt: now,
             expiresAt: now + dropLifetime,
             ownerSessionId,
+            ownerPartyId,
+            lootLockUntil,
             isJewel,
             isExcellent,
           });
@@ -633,6 +729,73 @@ export class Monster {
     }
 
     return drops;
+  }
+
+  /**
+   * Processa IA autoritativa com detecção de jogadores, perseguição e combate
+   */
+  public think(players: { id: string; x: number; y: number }[], deltaTimeSec: number): { action: string; targetId?: string } | null {
+    if (this.isDead || this.state === 'STAGGERED') return null;
+
+    const now = Date.now();
+
+    // 1. Valida se o alvo atual ainda existe e está dentro do limite de leash
+    let currentTarget = this.targetPlayerId ? players.find((p) => p.id === this.targetPlayerId) : null;
+    if (currentTarget) {
+      const distFromSpawn = Math.hypot(this.x - this.spawnX, this.y - this.spawnY);
+      if (distFromSpawn > this.maxLeashDistance) {
+        // Leash / Evade: desiste do jogador e retorna para a zona de spawn
+        this.targetPlayerId = null;
+        this.targetX = this.spawnX;
+        this.targetY = this.spawnY;
+        this.state = 'MOVING';
+        return null;
+      }
+    } else {
+      this.targetPlayerId = null;
+    }
+
+    // 2. Se não tem alvo, busca jogador mais próximo dentro de aggroRange
+    if (!this.targetPlayerId && players.length > 0) {
+      let closestDist = Infinity;
+      let closestPlayer: { id: string; x: number; y: number } | null = null;
+      for (const p of players) {
+        const d = Math.hypot(p.x - this.x, p.y - this.y);
+        if (d <= this.aggroRange && d < closestDist) {
+          closestDist = d;
+          closestPlayer = p;
+        }
+      }
+      if (closestPlayer) {
+        this.targetPlayerId = closestPlayer.id;
+        currentTarget = closestPlayer;
+      }
+    }
+
+    // 3. Execução da Ação com Alvo
+    if (currentTarget) {
+      const distToTarget = Math.hypot(currentTarget.x - this.x, currentTarget.y - this.y);
+      this.rotation = Math.atan2(currentTarget.y - this.y, currentTarget.x - this.x);
+
+      if (distToTarget <= this.attackRange) {
+        // Alcance de golpe atingido
+        this.targetX = this.x;
+        this.targetY = this.y;
+        this.state = 'ATTACKING';
+
+        if (now - this.lastAttackTime >= this.attackCooldown * 1000) {
+          this.lastAttackTime = now;
+          return { action: 'ATTACK', targetId: currentTarget.id };
+        }
+      } else {
+        // Perseguição (Chase)
+        this.targetX = currentTarget.x;
+        this.targetY = currentTarget.y;
+        this.state = 'MOVING';
+      }
+    }
+
+    return null;
   }
 
   /**
@@ -656,13 +819,16 @@ export class Monster {
 
     if (dist > 3) {
       this.state = 'MOVING';
+      this.rotation = Math.atan2(dy, dx);
       const step = Math.min(dist, this.moveSpeed * deltaTimeSec);
       this.x += (dx / dist) * step;
       this.y += (dy / dist) * step;
     } else {
       this.x = this.targetX;
       this.y = this.targetY;
-      this.state = 'IDLE';
+      if (this.state === 'MOVING') {
+        this.state = 'IDLE';
+      }
     }
   }
 
@@ -693,6 +859,7 @@ export class Monster {
       targetY: Math.round(this.targetY),
       state: this.state,
       isDead: this.isDead,
+      rotation: Number(this.rotation.toFixed(3)),
     };
   }
 }

@@ -137,6 +137,11 @@ export interface ItemInstance {
   optionLevel: number;      // Opção da Joia da Vida (+0, +4, +8, +12, +16, +20, +24, +28)
   excellentMask: number;    // Bitmask de opções excelentes
   harmonyOption?: HarmonyOption | null;
+  itemOption380?: boolean;
+  ancientOption?: number;
+  socketOptions?: number[];
+  socketBonusOption?: number;
+  serial?: number;
   rotated?: boolean;        // Orientação no grid (se rotacionado, width e height invertem)
 }
 

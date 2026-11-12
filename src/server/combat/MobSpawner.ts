@@ -82,6 +82,58 @@ export class MobSpawner {
     this.spawnInitialMobs();
   }
 
+  /**
+   * Registra zonas dinâmicas para biomas específicos (Devias, Dungeon, Lost Tower)
+   */
+  public initBiomeZones(biome: string): void {
+    const b = String(biome || '').toUpperCase();
+    if (b === 'DEVIAS') {
+      this.addZone({
+        id: 'zone_devias_yetis',
+        name: 'Fortaleza dos Yetis',
+        monsterType: 'yeti',
+        centerX: 300,
+        centerY: 300,
+        radius: 100,
+        maxMobs: 4,
+        respawnDelayMs: 6000,
+      });
+    } else if (b === 'DUNGEON') {
+      this.addZone({
+        id: 'zone_dungeon_liches',
+        name: 'Cripta dos Liches',
+        monsterType: 'lich',
+        centerX: 250,
+        centerY: 250,
+        radius: 90,
+        maxMobs: 4,
+        respawnDelayMs: 7000,
+      });
+      this.addZone({
+        id: 'zone_dungeon_skeletons',
+        name: 'Garras do Abismo',
+        monsterType: 'skeleton',
+        centerX: 400,
+        centerY: 400,
+        radius: 90,
+        maxMobs: 4,
+        respawnDelayMs: 6000,
+      });
+    } else if (b === 'LOST_TOWER') {
+      this.addZone({
+        id: 'zone_lost_tower_demons',
+        name: 'Passagem dos Demônios',
+        monsterType: 'demon',
+        centerX: 350,
+        centerY: 350,
+        radius: 110,
+        maxMobs: 4,
+        respawnDelayMs: 8000,
+      });
+    }
+    this.spawnInitialMobs();
+  }
+
   public addZone(config: SpawnerZoneConfig): void {
     this.zones.set(config.id, config);
   }
@@ -150,14 +202,28 @@ export class MobSpawner {
   /**
    * Ciclo de atualização de física, IA e respawn
    */
-  public update(deltaTimeSec: number): {
+  public update(deltaTimeSec: number, players: { id: string; x: number; y: number }[] = []): {
     hasMoved: boolean;
     respawned: Monster[];
     despawnedIds: string[];
+    attacks: { mobId: string; targetId: string }[];
   } {
     const now = Date.now();
     const respawned: Monster[] = [];
     const despawnedIds: string[] = [];
+    const attacks: { mobId: string; targetId: string }[] = [];
+
+    // 0. Processa IA com detecção de jogadores e combate
+    if (players.length > 0) {
+      for (const mob of this.monsters.values()) {
+        if (!mob.isDead) {
+          const res = mob.think(players, deltaTimeSec);
+          if (res && res.action === 'ATTACK' && res.targetId) {
+            attacks.push({ mobId: mob.id, targetId: res.targetId });
+          }
+        }
+      }
+    }
 
     // 1. Processa cadáveres expirados
     for (const [mobId, mob] of this.monsters.entries()) {
@@ -213,7 +279,7 @@ export class MobSpawner {
       }
     }
 
-    return { hasMoved, respawned, despawnedIds };
+    return { hasMoved, respawned, despawnedIds, attacks };
   }
 
   public clear(): void {

@@ -7,8 +7,18 @@ import { GridInventory } from '../inventory/GridInventory.ts';
 import { Item } from '../inventory/Item.ts';
 import { EquipmentSlot, WeaponExcellentOption, ArmorExcellentOption } from '../inventory/types.ts';
 import type { SerializedInventoryState, CharacterSummary } from './protocol.ts';
+import { ComboSkillEngine } from '../combat/ComboSkillEngine.ts';
+import { EffectManager } from '../combat/EffectManager.ts';
+import { QuestManager, type CharacterProgressionState } from '../progression/QuestManager.ts';
+import { MasterSkillTree, type MasterSkillTreeState } from '../progression/MasterSkillTree.ts';
 
 export type SessionState = 'HANDSHAKE' | 'AUTHENTICATED' | 'DISCONNECTED';
+
+export interface ActiveBuff {
+  value: number;
+  durationMs: number;
+  expiresAt: number;
+}
 
 export interface ClientSession {
   sessionId: string;
@@ -22,6 +32,35 @@ export interface ClientSession {
   lastPingAt: number;
   seqIn: number;
   seqOut: number;
+
+  // Atributos de Combate Canônicos
+  currentHp?: number;
+  maxHp?: number;
+  currentSd?: number;
+  maxSd?: number;
+  currentMp?: number;
+  maxMp?: number;
+  partyId?: string;
+  activeBuffs?: Map<string, ActiveBuff>;
+  recentSkills?: string[];
+  x?: number;
+  y?: number;
+  currentMap?: number;
+
+  // Sistemas Orquestrados do Servidor
+  resets?: number;
+  masterResets?: number;
+  wCoins?: number;
+  progressionState?: CharacterProgressionState;
+  masterTreeState?: MasterSkillTreeState;
+  comboEngine?: ComboSkillEngine;
+  effectManager?: EffectManager;
+  gensFamily?: number;
+  gensContribution?: number;
+  gensRank?: number;
+  activeTradeId?: string;
+  pshopTitle?: string;
+  pshopOpen?: boolean;
 }
 
 export class SessionManager {
@@ -61,6 +100,30 @@ export class SessionManager {
       lastPingAt: Date.now(),
       seqIn: 0,
       seqOut: 0,
+      currentHp: 1200,
+      maxHp: 1200,
+      currentSd: 800,
+      maxSd: 800,
+      currentMp: 300,
+      maxMp: 300,
+      activeBuffs: new Map(),
+      recentSkills: [],
+      x: 100,
+      y: 100,
+      currentMap: 0,
+      resets: 0,
+      masterResets: 0,
+      wCoins: 0,
+      progressionState: QuestManager.createDefaultState(sessionId, character.name, 1, character.level),
+      masterTreeState: MasterSkillTree.createDefaultTree(sessionId),
+      comboEngine: new ComboSkillEngine(),
+      effectManager: new EffectManager(),
+      gensFamily: 0,
+      gensContribution: 0,
+      gensRank: 0,
+      activeTradeId: undefined,
+      pshopTitle: undefined,
+      pshopOpen: false,
     };
 
     // Pré-popula com itens icônicos do Continent of Legend

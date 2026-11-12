@@ -418,6 +418,11 @@ describe('4. Integração de Rede GameServer: Combate, Monstros e Drops (Opcodes
   });
 
   it('Fluxo completo de Morte de Monstro, Drop no Chão (0x16:0x01) e Coleta (0x16:0x02)', async () => {
+    // Limpa drops anteriores para garantir que o cliente só receba o drop do monstro derrotado
+    for (const drop of server.combatEngine.getAllGroundDrops()) {
+      server.combatEngine.removeGroundDrop(drop.dropId);
+    }
+
     const ws = await connectClient();
 
     // Handshake & Login
@@ -440,6 +445,7 @@ describe('4. Integração de Rede GameServer: Combate, Monstros e Drops (Opcodes
     mob.isDead = false;
     mob.state = 'IDLE';
     mob.currentHp = 1;
+    server.combatEngine.clearMobDamageLog(mob.id);
 
     // Ataca até acertar e derrotar o monstro (tratando eventual esquiva de 4%)
     let dropPayload: any = null;

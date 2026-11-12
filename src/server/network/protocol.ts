@@ -22,11 +22,17 @@ export const OpcodeGroup = {
   DEV_OPS: 0x73,
   NPC_SHOP: 0x74,
   CHARACTER_STATS: 0x75,
+  TRADE: 0x76,
+  PERSONAL_SHOP: 0x77,
   BOSS_SYSTEM: 0x80,
   EVENT_ARENA: 0x81,
   DUNGEON_SYSTEM: 0x82,
+  PROGRESSION: 0x83,
+  GENS_SYSTEM: 0x84,
+  SOCKET_HARMONY: 0x85,
   SOCIAL_GUILD: 0xB0,
   CASTLE_SIEGE: 0xB1,
+  SOCIAL_PARTY: 0xB2,
 } as const;
 
 export const Opcodes = {
@@ -153,6 +159,75 @@ export const Opcodes = {
   MSG_SIEGE_PEDESTAL_RES: { opcode: 0xB1, subcode: 0x08 },
   MSG_SIEGE_CROWN_SEAL_REQ: { opcode: 0xB1, subcode: 0x09 },
   MSG_SIEGE_CROWN_SEAL_RES: { opcode: 0xB1, subcode: 0x0a },
+
+  // Navegação e Teleportes (0x30)
+  MSG_TELEPORT_REQ: { opcode: 0x30, subcode: 0x01 },
+  MSG_TELEPORT_RES: { opcode: 0x30, subcode: 0x02 },
+  MSG_GATE_TRIGGER_REQ: { opcode: 0x30, subcode: 0x03 },
+  MSG_GATE_TRIGGER_RES: { opcode: 0x30, subcode: 0x04 },
+
+  // Sistema de Troca Atômica / Trade (0x76)
+  MSG_TRADE_REQUEST_REQ: { opcode: 0x76, subcode: 0x01 },
+  MSG_TRADE_REQUEST_RES: { opcode: 0x76, subcode: 0x02 },
+  MSG_TRADE_RESPOND_REQ: { opcode: 0x76, subcode: 0x03 },
+  MSG_TRADE_RESPOND_RES: { opcode: 0x76, subcode: 0x04 },
+  MSG_TRADE_ITEM_ADD_REQ: { opcode: 0x76, subcode: 0x05 },
+  MSG_TRADE_ITEM_ADD_RES: { opcode: 0x76, subcode: 0x06 },
+  MSG_TRADE_ZEN_ADD_REQ: { opcode: 0x76, subcode: 0x07 },
+  MSG_TRADE_ZEN_ADD_RES: { opcode: 0x76, subcode: 0x08 },
+  MSG_TRADE_CONFIRM_REQ: { opcode: 0x76, subcode: 0x09 },
+  MSG_TRADE_CONFIRM_RES: { opcode: 0x76, subcode: 0x0a },
+  MSG_TRADE_CANCEL_REQ: { opcode: 0x76, subcode: 0x0b },
+  MSG_TRADE_CANCEL_RES: { opcode: 0x76, subcode: 0x0c },
+
+  // Loja Pessoal / Personal Shop (0x77)
+  MSG_PSHOP_OPEN_REQ: { opcode: 0x77, subcode: 0x01 },
+  MSG_PSHOP_OPEN_RES: { opcode: 0x77, subcode: 0x02 },
+  MSG_PSHOP_CLOSE_REQ: { opcode: 0x77, subcode: 0x03 },
+  MSG_PSHOP_CLOSE_RES: { opcode: 0x77, subcode: 0x04 },
+  MSG_PSHOP_BUY_REQ: { opcode: 0x77, subcode: 0x05 },
+  MSG_PSHOP_BUY_RES: { opcode: 0x77, subcode: 0x06 },
+  MSG_PSHOP_INSPECT_REQ: { opcode: 0x77, subcode: 0x07 },
+  MSG_PSHOP_INSPECT_RES: { opcode: 0x77, subcode: 0x08 },
+
+  // Progressão: Resets, Master Resets, Quests e Master Skill Tree (0x83)
+  MSG_RESET_REQ: { opcode: 0x83, subcode: 0x01 },
+  MSG_RESET_RES: { opcode: 0x83, subcode: 0x02 },
+  MSG_MASTER_RESET_REQ: { opcode: 0x83, subcode: 0x03 },
+  MSG_MASTER_RESET_RES: { opcode: 0x83, subcode: 0x04 },
+  MSG_QUEST_INFO_REQ: { opcode: 0x83, subcode: 0x05 },
+  MSG_QUEST_INFO_RES: { opcode: 0x83, subcode: 0x06 },
+  MSG_QUEST_ACTION_REQ: { opcode: 0x83, subcode: 0x07 },
+  MSG_QUEST_ACTION_RES: { opcode: 0x83, subcode: 0x08 },
+  MSG_MASTER_SKILL_ALLOC_REQ: { opcode: 0x83, subcode: 0x09 },
+  MSG_MASTER_SKILL_ALLOC_RES: { opcode: 0x83, subcode: 0x0a },
+
+  // Famílias Gens (0x84)
+  MSG_GENS_JOIN_REQ: { opcode: 0x84, subcode: 0x01 },
+  MSG_GENS_JOIN_RES: { opcode: 0x84, subcode: 0x02 },
+  MSG_GENS_STATUS_REQ: { opcode: 0x84, subcode: 0x03 },
+  MSG_GENS_STATUS_RES: { opcode: 0x84, subcode: 0x04 },
+  MSG_GENS_LEAVE_REQ: { opcode: 0x84, subcode: 0x05 },
+  MSG_GENS_LEAVE_RES: { opcode: 0x84, subcode: 0x06 },
+
+  // Refinamentos Harmony e Socket (0x85)
+  MSG_HARMONY_SMELT_REQ: { opcode: 0x85, subcode: 0x01 },
+  MSG_HARMONY_SMELT_RES: { opcode: 0x85, subcode: 0x02 },
+  MSG_HARMONY_RESTORE_REQ: { opcode: 0x85, subcode: 0x03 },
+  MSG_HARMONY_RESTORE_RES: { opcode: 0x85, subcode: 0x04 },
+  MSG_SOCKET_MOUNT_REQ: { opcode: 0x85, subcode: 0x05 },
+  MSG_SOCKET_MOUNT_RES: { opcode: 0x85, subcode: 0x06 },
+  MSG_SOCKET_UNMOUNT_REQ: { opcode: 0x85, subcode: 0x07 },
+  MSG_SOCKET_UNMOUNT_RES: { opcode: 0x85, subcode: 0x08 },
+
+  // Sistema de Grupo / Social Party (0xB2)
+  MSG_PARTY_INVITE_REQ: { opcode: 0xB2, subcode: 0x01 },
+  MSG_PARTY_INVITE_RES: { opcode: 0xB2, subcode: 0x02 },
+  MSG_PARTY_RESPOND_INVITE_REQ: { opcode: 0xB2, subcode: 0x03 },
+  MSG_PARTY_RESPOND_INVITE_RES: { opcode: 0xB2, subcode: 0x04 },
+  MSG_PARTY_LEAVE_REQ: { opcode: 0xB2, subcode: 0x05 },
+  MSG_PARTY_LEAVE_RES: { opcode: 0xB2, subcode: 0x06 },
+  MSG_PARTY_INFO_RES: { opcode: 0xB2, subcode: 0x07 },
 } as const;
 
 export const LocationType = {
@@ -401,6 +476,379 @@ export interface GroundItemPickupResPayload {
 
 export interface GroundItemRemovePayload {
   dropId: string;
+}
+
+// -----------------------------------------------------------------------------
+// Payloads de Navegação e Portais (0x30)
+// -----------------------------------------------------------------------------
+export interface TeleportReqPayload {
+  destinationName: string;
+}
+
+export interface TeleportResPayload {
+  success: boolean;
+  destinationName?: string;
+  map?: number;
+  x?: number;
+  y?: number;
+  zenCost?: number;
+  zenRemaining?: number;
+  error?: string;
+}
+
+export interface GateTriggerReqPayload {
+  currentMap: number;
+  currentX: number;
+  currentY: number;
+}
+
+export interface GateTriggerResPayload {
+  triggered: boolean;
+  targetGateIndex?: number;
+  map?: number;
+  x?: number;
+  y?: number;
+  message?: string;
+}
+
+// -----------------------------------------------------------------------------
+// Payloads de Troca Atômica / Trade (0x76)
+// -----------------------------------------------------------------------------
+export interface TradeRequestReqPayload {
+  targetSessionId: string;
+}
+
+export interface TradeRequestResPayload {
+  success: boolean;
+  tradeId?: string;
+  targetSessionId?: string;
+  targetName?: string;
+  initiatorSessionId?: string;
+  initiatorName?: string;
+  message?: string;
+  error?: string;
+}
+
+export interface TradeRespondReqPayload {
+  tradeId: string;
+  accept: boolean;
+}
+
+export interface TradeRespondResPayload {
+  success: boolean;
+  tradeId: string;
+  state: string;
+  message?: string;
+  error?: string;
+}
+
+export interface TradeItemAddReqPayload {
+  tradeId: string;
+  itemUuid: string;
+}
+
+export interface TradeItemAddResPayload {
+  success: boolean;
+  tradeId: string;
+  item?: ItemInstance;
+  error?: string;
+}
+
+export interface TradeZenAddReqPayload {
+  tradeId: string;
+  amountZen: number;
+}
+
+export interface TradeZenAddResPayload {
+  success: boolean;
+  tradeId: string;
+  zenOffered: number;
+  error?: string;
+}
+
+export interface TradeConfirmReqPayload {
+  tradeId: string;
+}
+
+export interface TradeConfirmResPayload {
+  success: boolean;
+  tradeId: string;
+  completed: boolean;
+  state: string;
+  inventoryState?: SerializedInventoryState;
+  character?: CharacterSummary;
+  message?: string;
+  error?: string;
+}
+
+export interface TradeCancelReqPayload {
+  tradeId: string;
+}
+
+export interface TradeCancelResPayload {
+  success: boolean;
+  tradeId: string;
+  state: string;
+  inventoryState?: SerializedInventoryState;
+  message: string;
+}
+
+// -----------------------------------------------------------------------------
+// Payloads de Loja Pessoal / Personal Shop (0x77)
+// -----------------------------------------------------------------------------
+export interface PShopOpenReqPayload {
+  title: string;
+  items: Array<{
+    slot: number;
+    itemId: string;
+    itemName: string;
+    priceZen: number;
+    priceBless: number;
+    priceSoul: number;
+    width: number;
+    height: number;
+  }>;
+}
+
+export interface PShopOpenResPayload {
+  success: boolean;
+  title?: string;
+  itemCount?: number;
+  error?: string;
+}
+
+export interface PShopCloseResPayload {
+  success: boolean;
+  message: string;
+}
+
+export interface PShopBuyReqPayload {
+  sellerSessionId: string;
+  slot: number;
+}
+
+export interface PShopBuyResPayload {
+  success: boolean;
+  sellerSessionId?: string;
+  slot?: number;
+  boughtItem?: ItemInstance | null;
+  buyerZen?: number;
+  buyerBless?: number;
+  buyerSoul?: number;
+  inventoryState?: SerializedInventoryState;
+  error?: string;
+}
+
+export interface PShopInspectReqPayload {
+  sellerSessionId: string;
+}
+
+export interface PShopInspectResPayload {
+  success: boolean;
+  sellerSessionId?: string;
+  ownerName?: string;
+  title?: string;
+  items?: Array<{
+    slot: number;
+    itemId: string;
+    itemName: string;
+    priceZen: number;
+    priceBless: number;
+    priceSoul: number;
+    width: number;
+    height: number;
+  }>;
+  error?: string;
+}
+
+// -----------------------------------------------------------------------------
+// Payloads de Progressão: Resets, Quests e Master Skill Tree (0x83)
+// -----------------------------------------------------------------------------
+export interface ResetResPayload {
+  success: boolean;
+  resets: number;
+  level: number;
+  statPoints: number;
+  zenRemaining: number;
+  character?: CharacterSummary;
+  error?: string;
+}
+
+export interface MasterResetResPayload {
+  success: boolean;
+  masterResets: number;
+  resetsRemaining: number;
+  wCoinsGranted: number;
+  masterPointsGranted: number;
+  character?: CharacterSummary;
+  error?: string;
+}
+
+export interface QuestInfoResPayload {
+  success: boolean;
+  characterId: string;
+  classTier: number;
+  hasComboUnlocked: boolean;
+  hasMasterLevelUnlocked: boolean;
+  quests: Record<string, { questId: string; completed: boolean; active: boolean; progressCount: number; requiredCount: number }>;
+}
+
+export interface QuestActionReqPayload {
+  questId: string;
+  action: 'START' | 'COMPLETE';
+}
+
+export interface QuestActionResPayload {
+  success: boolean;
+  questId: string;
+  completed: boolean;
+  classTier: number;
+  hasComboUnlocked: boolean;
+  statPointsBonus: number;
+  message?: string;
+  error?: string;
+}
+
+export interface MasterSkillAllocReqPayload {
+  skillId: string;
+}
+
+export interface MasterSkillAllocResPayload {
+  success: boolean;
+  skillId: string;
+  newLevel: number;
+  availablePoints: number;
+  error?: string;
+}
+
+// -----------------------------------------------------------------------------
+// Payloads de Famílias Gens (0x84)
+// -----------------------------------------------------------------------------
+export interface GensJoinReqPayload {
+  family: 1 | 2; // 1 = Vanert, 2 = Duprian
+}
+
+export interface GensJoinResPayload {
+  success: boolean;
+  family: number;
+  symbol: number;
+  contribution: number;
+  rank: number;
+  error?: string;
+}
+
+export interface GensStatusResPayload {
+  success: boolean;
+  family: number;
+  symbol: number;
+  contribution: number;
+  rank: number;
+}
+
+export interface GensLeaveResPayload {
+  success: boolean;
+  penaltyFeeZen?: number;
+  message: string;
+  error?: string;
+}
+
+// -----------------------------------------------------------------------------
+// Payloads de Refinamentos Harmony e Socket (0x85)
+// -----------------------------------------------------------------------------
+export interface HarmonySmeltReqPayload {
+  targetItemUuid: string;
+  gemstoneItemUuid?: string;
+}
+
+export interface HarmonySmeltResPayload {
+  success: boolean;
+  targetItemUuid: string;
+  optionName?: string;
+  optionValue?: number;
+  inventoryState?: SerializedInventoryState;
+  error?: string;
+}
+
+export interface HarmonyRestoreReqPayload {
+  targetItemUuid: string;
+}
+
+export interface HarmonyRestoreResPayload {
+  success: boolean;
+  targetItemUuid: string;
+  restored: boolean;
+  inventoryState?: SerializedInventoryState;
+  error?: string;
+}
+
+export interface SocketMountReqPayload {
+  targetItemUuid: string;
+  socketIndex: number;
+  seedSphereUuid: string;
+}
+
+export interface SocketMountResPayload {
+  success: boolean;
+  targetItemUuid: string;
+  socketIndex: number;
+  mountedSphere?: string;
+  inventoryState?: SerializedInventoryState;
+  error?: string;
+}
+
+export interface SocketUnmountReqPayload {
+  targetItemUuid: string;
+  socketIndex: number;
+}
+
+export interface SocketUnmountResPayload {
+  success: boolean;
+  targetItemUuid: string;
+  socketIndex: number;
+  unmounted: boolean;
+  inventoryState?: SerializedInventoryState;
+  error?: string;
+}
+
+// -----------------------------------------------------------------------------
+// Payloads de Grupo / Social Party (0xB2)
+// -----------------------------------------------------------------------------
+export interface PartyInviteReqPayload {
+  targetSessionId: string;
+}
+
+export interface PartyInviteResPayload {
+  success: boolean;
+  partyId?: string;
+  targetSessionId?: string;
+  message?: string;
+  error?: string;
+}
+
+export interface PartyRespondInviteReqPayload {
+  partyId: string;
+  accept: boolean;
+}
+
+export interface PartyRespondInviteResPayload {
+  success: boolean;
+  partyId: string;
+  memberCount: number;
+  isGoldParty: boolean;
+  members: Array<{ sessionId: string; name: string; className: string; level: number; isLeader?: boolean }>;
+  error?: string;
+}
+
+export interface PartyLeaveResPayload {
+  success: boolean;
+  message: string;
+}
+
+export interface PartyInfoResPayload {
+  partyId: string;
+  isGoldParty: boolean;
+  memberCount: number;
+  members: Array<{ sessionId: string; name: string; className: string; level: number; isLeader?: boolean }>;
 }
 
 export interface SerializedInventoryState {

@@ -33,6 +33,26 @@ import {
   type StatPointAllocReqPayload,
   type FruitConsumeReqPayload,
   type FruitConsumeResPayload,
+  type TeleportReqPayload,
+  type GateTriggerReqPayload,
+  type PartyInviteReqPayload,
+  type PartyRespondInviteReqPayload,
+  type TradeRequestReqPayload,
+  type TradeRespondReqPayload,
+  type TradeItemAddReqPayload,
+  type TradeZenAddReqPayload,
+  type TradeConfirmReqPayload,
+  type TradeCancelReqPayload,
+  type PShopOpenReqPayload,
+  type PShopBuyReqPayload,
+  type PShopInspectReqPayload,
+  type QuestActionReqPayload,
+  type MasterSkillAllocReqPayload,
+  type GensJoinReqPayload,
+  type HarmonySmeltReqPayload,
+  type HarmonyRestoreReqPayload,
+  type SocketMountReqPayload,
+  type SocketUnmountReqPayload,
   LocationType,
 } from './protocol.ts';
 import { SessionManager, type ClientSession } from './SessionManager.ts';
@@ -48,6 +68,17 @@ import { JewelSystem } from '../inventory/JewelSystem.ts';
 import { ChaosMachine } from '../inventory/ChaosMachine.ts';
 import { NPCShopSystem } from '../economy/NPCShop.ts';
 import { ITEM_DEFINITIONS } from '../inventory/definitions.ts';
+import { CanonicalTerrainGrid } from '../world/CanonicalTerrainGrid.ts';
+import { NavigationManager } from '../world/NavigationManager.ts';
+import { PartyManager } from '../party/PartyManager.ts';
+import { TradeManager } from '../economy/TradeManager.ts';
+import { PersonalShopManager, type PShopItemEntry } from '../economy/PersonalShopManager.ts';
+import { ResetManager } from '../progression/ResetManager.ts';
+import { QuestManager } from '../progression/QuestManager.ts';
+import { MasterSkillTree } from '../progression/MasterSkillTree.ts';
+import { GensSystem } from '../world/GensSystem.ts';
+import { SocketItemSystem } from '../inventory/SocketItemSystem.ts';
+import { HarmonyAnd380System } from '../inventory/HarmonyAnd380System.ts';
 import {
   ItemCategory,
   UpgradeOutcome,
@@ -80,6 +111,15 @@ export class GameServer {
   public readonly guildSystem: GuildSystem;
   public readonly castleSiege: CastleSiegeManager;
   public readonly combatEngine: CombatEngine;
+  public readonly navigationManager: NavigationManager;
+  public readonly partyManager: PartyManager;
+  public readonly tradeManager: TradeManager;
+  public readonly personalShopManager: PersonalShopManager;
+  public readonly resetManager: ResetManager;
+  public readonly questManager: QuestManager;
+  public readonly gensSystem: GensSystem;
+  public readonly socketItemSystem: SocketItemSystem;
+  public readonly harmonySystem: HarmonyAnd380System;
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private gameLoopTimer: NodeJS.Timeout | null = null;
   private isRunning = false;
@@ -97,6 +137,15 @@ export class GameServer {
     this.guildSystem = new GuildSystem();
     this.castleSiege = new CastleSiegeManager(this.guildSystem);
     this.combatEngine = new CombatEngine(undefined, this.bossManager);
+    this.navigationManager = new NavigationManager();
+    this.partyManager = new PartyManager();
+    this.tradeManager = new TradeManager();
+    this.personalShopManager = new PersonalShopManager();
+    this.resetManager = new ResetManager();
+    this.questManager = new QuestManager();
+    this.gensSystem = new GensSystem();
+    this.socketItemSystem = new SocketItemSystem();
+    this.harmonySystem = new HarmonyAnd380System();
   }
 
   /**
@@ -484,6 +533,27 @@ export class GameServer {
           res.end(JSON.stringify({ error: err.message }));
         }
       });
+      return;
+    }
+
+    // Rota da API para Master Index de mapas canônicos extraídos
+    if (pathname === '/api/canonical-maps') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(CanonicalTerrainGrid.getMasterIndex()));
+      return;
+    }
+
+    if (pathname.startsWith('/api/canonical-maps/')) {
+      const mapId = pathname.slice('/api/canonical-maps/'.length).toUpperCase();
+      const summary = CanonicalTerrainGrid.getMapSummary(mapId);
+      if (!summary) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Mapa canônico '${mapId}' não encontrado` }));
+        return;
+      }
+      const layout = CanonicalTerrainGrid.loadObjectsLayout(mapId);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ summary, objects: layout }));
       return;
     }
 
@@ -881,6 +951,128 @@ export class GameServer {
     }
     if (opcode === Opcodes.MSG_SIEGE_CROWN_SEAL_REQ.opcode && subcode === Opcodes.MSG_SIEGE_CROWN_SEAL_REQ.subcode) {
       this.handleSiegeCrownSealReq(session, payload as any);
+      return;
+    }
+
+    // 25. Navegação & Portais (0x30)
+    if (opcode === Opcodes.MSG_TELEPORT_REQ.opcode && subcode === Opcodes.MSG_TELEPORT_REQ.subcode) {
+      this.handleTeleportReq(session, payload as any);
+      return;
+    }
+    if (opcode === Opcodes.MSG_GATE_TRIGGER_REQ.opcode && subcode === Opcodes.MSG_GATE_TRIGGER_REQ.subcode) {
+      this.handleGateTriggerReq(session, payload as any);
+      return;
+    }
+
+    // 26. Social / Party (0xB2)
+    if (opcode === Opcodes.MSG_PARTY_INVITE_REQ.opcode && subcode === Opcodes.MSG_PARTY_INVITE_REQ.subcode) {
+      this.handlePartyInviteReq(session, payload as any);
+      return;
+    }
+    if (opcode === Opcodes.MSG_PARTY_RESPOND_INVITE_REQ.opcode && subcode === Opcodes.MSG_PARTY_RESPOND_INVITE_REQ.subcode) {
+      this.handlePartyRespondInviteReq(session, payload as any);
+      return;
+    }
+    if (opcode === Opcodes.MSG_PARTY_LEAVE_REQ.opcode && subcode === Opcodes.MSG_PARTY_LEAVE_REQ.subcode) {
+      this.handlePartyLeaveReq(session);
+      return;
+    }
+
+    // 27. Troca Atômica / Trade (0x76)
+    if (opcode === Opcodes.MSG_TRADE_REQUEST_REQ.opcode && subcode === Opcodes.MSG_TRADE_REQUEST_REQ.subcode) {
+      this.handleTradeRequestReq(session, payload as any);
+      return;
+    }
+    if (opcode === Opcodes.MSG_TRADE_RESPOND_REQ.opcode && subcode === Opcodes.MSG_TRADE_RESPOND_REQ.subcode) {
+      this.handleTradeRespondReq(session, payload as any);
+      return;
+    }
+    if (opcode === Opcodes.MSG_TRADE_ITEM_ADD_REQ.opcode && subcode === Opcodes.MSG_TRADE_ITEM_ADD_REQ.subcode) {
+      this.handleTradeItemAddReq(session, payload as any);
+      return;
+    }
+    if (opcode === Opcodes.MSG_TRADE_ZEN_ADD_REQ.opcode && subcode === Opcodes.MSG_TRADE_ZEN_ADD_REQ.subcode) {
+      this.handleTradeZenAddReq(session, payload as any);
+      return;
+    }
+    if (opcode === Opcodes.MSG_TRADE_CONFIRM_REQ.opcode && subcode === Opcodes.MSG_TRADE_CONFIRM_REQ.subcode) {
+      this.handleTradeConfirmReq(session, payload as any);
+      return;
+    }
+    if (opcode === Opcodes.MSG_TRADE_CANCEL_REQ.opcode && subcode === Opcodes.MSG_TRADE_CANCEL_REQ.subcode) {
+      this.handleTradeCancelReq(session, payload as any);
+      return;
+    }
+
+    // 28. Loja Pessoal / Personal Shop (0x77)
+    if (opcode === Opcodes.MSG_PSHOP_OPEN_REQ.opcode && subcode === Opcodes.MSG_PSHOP_OPEN_REQ.subcode) {
+      this.handlePShopOpenReq(session, payload as any);
+      return;
+    }
+    if (opcode === Opcodes.MSG_PSHOP_CLOSE_REQ.opcode && subcode === Opcodes.MSG_PSHOP_CLOSE_REQ.subcode) {
+      this.handlePShopCloseReq(session);
+      return;
+    }
+    if (opcode === Opcodes.MSG_PSHOP_INSPECT_REQ.opcode && subcode === Opcodes.MSG_PSHOP_INSPECT_REQ.subcode) {
+      this.handlePShopInspectReq(session, payload as any);
+      return;
+    }
+    if (opcode === Opcodes.MSG_PSHOP_BUY_REQ.opcode && subcode === Opcodes.MSG_PSHOP_BUY_REQ.subcode) {
+      this.handlePShopBuyReq(session, payload as any);
+      return;
+    }
+
+    // 29. Progressão: Resets, Master Resets, Quests e Master Skill Tree (0x83)
+    if (opcode === Opcodes.MSG_RESET_REQ.opcode && subcode === Opcodes.MSG_RESET_REQ.subcode) {
+      this.handleResetReq(session);
+      return;
+    }
+    if (opcode === Opcodes.MSG_MASTER_RESET_REQ.opcode && subcode === Opcodes.MSG_MASTER_RESET_REQ.subcode) {
+      this.handleMasterResetReq(session);
+      return;
+    }
+    if (opcode === Opcodes.MSG_QUEST_INFO_REQ.opcode && subcode === Opcodes.MSG_QUEST_INFO_REQ.subcode) {
+      this.handleQuestInfoReq(session);
+      return;
+    }
+    if (opcode === Opcodes.MSG_QUEST_ACTION_REQ.opcode && subcode === Opcodes.MSG_QUEST_ACTION_REQ.subcode) {
+      this.handleQuestActionReq(session, payload as any);
+      return;
+    }
+    if (opcode === Opcodes.MSG_MASTER_SKILL_ALLOC_REQ.opcode && subcode === Opcodes.MSG_MASTER_SKILL_ALLOC_REQ.subcode) {
+      this.handleMasterSkillAllocReq(session, payload as any);
+      return;
+    }
+
+    // 30. Famílias Gens (0x84)
+    if (opcode === Opcodes.MSG_GENS_JOIN_REQ.opcode && subcode === Opcodes.MSG_GENS_JOIN_REQ.subcode) {
+      this.handleGensJoinReq(session, payload as any);
+      return;
+    }
+    if (opcode === Opcodes.MSG_GENS_STATUS_REQ.opcode && subcode === Opcodes.MSG_GENS_STATUS_REQ.subcode) {
+      this.handleGensStatusReq(session);
+      return;
+    }
+    if (opcode === Opcodes.MSG_GENS_LEAVE_REQ.opcode && subcode === Opcodes.MSG_GENS_LEAVE_REQ.subcode) {
+      this.handleGensLeaveReq(session);
+      return;
+    }
+
+    // 31. Refinamento Harmony & Sockets (0x85)
+    if (opcode === Opcodes.MSG_HARMONY_SMELT_REQ.opcode && subcode === Opcodes.MSG_HARMONY_SMELT_REQ.subcode) {
+      this.handleHarmonySmeltReq(session, payload as any);
+      return;
+    }
+    if (opcode === Opcodes.MSG_HARMONY_RESTORE_REQ.opcode && subcode === Opcodes.MSG_HARMONY_RESTORE_REQ.subcode) {
+      this.handleHarmonyRestoreReq(session, payload as any);
+      return;
+    }
+    if (opcode === Opcodes.MSG_SOCKET_MOUNT_REQ.opcode && subcode === Opcodes.MSG_SOCKET_MOUNT_REQ.subcode) {
+      this.handleSocketMountReq(session, payload as any);
+      return;
+    }
+    if (opcode === Opcodes.MSG_SOCKET_UNMOUNT_REQ.opcode && subcode === Opcodes.MSG_SOCKET_UNMOUNT_REQ.subcode) {
+      this.handleSocketUnmountReq(session, payload as any);
       return;
     }
 
@@ -1345,6 +1537,27 @@ export class GameServer {
         Opcodes.MSG_GROUND_ITEM_DROP.subcode,
         { drops: result.dropsGenerated }
       );
+    }
+
+    // Distribuição de experiência canônica de grupo (Party) se houver membros
+    if (result.xpGained && result.xpGained > 0 && session.partyId) {
+      const party = this.partyManager.getParty(session.partyId);
+      if (party) {
+        const expDist = PartyManager.calculatePartyExp(result.xpGained, party, 50);
+        for (const share of expDist.memberExpShares) {
+          if (share.eligible && share.expGranted > 0) {
+            const memberSession = this.sessionManager.getSession(share.sessionId);
+            if (memberSession) {
+              this.sendPacket(
+                memberSession,
+                Opcodes.MSG_PLAYER_STATUS_EXP.opcode,
+                Opcodes.MSG_PLAYER_STATUS_EXP.subcode,
+                { expGained: share.expGranted, isPartyExp: true, isGoldParty: expDist.isGoldParty }
+              );
+            }
+          }
+        }
+      }
     }
   }
 
@@ -2016,6 +2229,839 @@ export class GameServer {
   }
 
   // ==========================================
+  // SUBSISTEMAS ORQUESTRADOS: NAVEGAÇÃO, GRUPO, TROCA, LOJA, PROGRESSÃO, GENS & HARMONY
+  // ==========================================
+
+  private handleTeleportReq(session: ClientSession, req: TeleportReqPayload): void {
+    if (!req?.destinationName) {
+      this.sendPacket(session, Opcodes.MSG_TELEPORT_RES.opcode, Opcodes.MSG_TELEPORT_RES.subcode, {
+        success: false,
+        error: 'Destino não informado',
+      });
+      return;
+    }
+
+    const res = NavigationManager.processMoveRequest(
+      {
+        name: session.character.name,
+        className: session.character.characterClass,
+        level: session.character.level,
+        zen: session.character.zen ?? 0,
+        pkLevel: (session.character as any).pkLevel ?? 3,
+      },
+      req.destinationName
+    );
+
+    if (res.success && res.mapId !== undefined && res.x !== undefined && res.y !== undefined) {
+      session.currentMap = res.mapId;
+      session.x = res.x;
+      session.y = res.y;
+      session.character.zen = (session.character.zen ?? 0) - (res.costZen ?? 0);
+
+      this.sendPacket(session, Opcodes.MSG_TELEPORT_RES.opcode, Opcodes.MSG_TELEPORT_RES.subcode, {
+        success: true,
+        destinationName: req.destinationName,
+        map: res.mapId,
+        x: res.x,
+        y: res.y,
+        zenCost: res.costZen,
+        zenRemaining: session.character.zen,
+      });
+    } else {
+      this.sendPacket(session, Opcodes.MSG_TELEPORT_RES.opcode, Opcodes.MSG_TELEPORT_RES.subcode, {
+        success: false,
+        error: res.message,
+      });
+    }
+  }
+
+  private handleGateTriggerReq(session: ClientSession, req: GateTriggerReqPayload): void {
+    const res = NavigationManager.checkGateStep(
+      {
+        className: session.character.characterClass,
+        level: session.character.level,
+      },
+      req?.currentMap ?? session.currentMap ?? 0,
+      req?.currentX ?? session.x ?? 0,
+      req?.currentY ?? session.y ?? 0
+    );
+
+    if (res.triggered && res.targetMap !== undefined && res.targetX !== undefined && res.targetY !== undefined) {
+      session.currentMap = res.targetMap;
+      session.x = res.targetX;
+      session.y = res.targetY;
+
+      this.sendPacket(session, Opcodes.MSG_GATE_TRIGGER_RES.opcode, Opcodes.MSG_GATE_TRIGGER_RES.subcode, {
+        triggered: true,
+        targetGateIndex: res.targetGateId,
+        map: res.targetMap,
+        x: res.targetX,
+        y: res.targetY,
+        message: res.message,
+      });
+      return;
+    }
+
+    this.sendPacket(session, Opcodes.MSG_GATE_TRIGGER_RES.opcode, Opcodes.MSG_GATE_TRIGGER_RES.subcode, {
+      triggered: false,
+    });
+  }
+
+  private handlePartyInviteReq(session: ClientSession, req: PartyInviteReqPayload): void {
+    const targetSession = this.sessionManager.getSession(req?.targetSessionId);
+    if (!targetSession) {
+      this.sendPacket(session, Opcodes.MSG_PARTY_INVITE_RES.opcode, Opcodes.MSG_PARTY_INVITE_RES.subcode, {
+        success: false,
+        error: 'Jogador alvo não encontrado',
+      });
+      return;
+    }
+
+    if (targetSession.partyId) {
+      this.sendPacket(session, Opcodes.MSG_PARTY_INVITE_RES.opcode, Opcodes.MSG_PARTY_INVITE_RES.subcode, {
+        success: false,
+        error: 'O jogador alvo já está em um grupo',
+      });
+      return;
+    }
+
+    let partyId = session.partyId;
+    if (!partyId) {
+      partyId = this.partyManager.createParty({
+        sessionId: session.sessionId,
+        name: session.character.name,
+        className: session.character.characterClass,
+        level: session.character.level,
+        isLeader: true,
+      });
+      session.partyId = partyId;
+    }
+
+    const added = this.partyManager.addMember(partyId, {
+      sessionId: targetSession.sessionId,
+      name: targetSession.character.name,
+      className: targetSession.character.characterClass,
+      level: targetSession.character.level,
+    });
+
+    if (added) {
+      targetSession.partyId = partyId;
+      const members = this.partyManager.getParty(partyId) || [];
+      const isGoldParty = PartyManager.isGoldParty(members);
+
+      this.sendPacket(session, Opcodes.MSG_PARTY_INVITE_RES.opcode, Opcodes.MSG_PARTY_INVITE_RES.subcode, {
+        success: true,
+        partyId,
+        targetSessionId: targetSession.sessionId,
+        message: `${targetSession.character.name} entrou no grupo`,
+      });
+
+      this.sendPacket(targetSession, Opcodes.MSG_PARTY_RESPOND_INVITE_RES.opcode, Opcodes.MSG_PARTY_RESPOND_INVITE_RES.subcode, {
+        success: true,
+        partyId,
+        memberCount: members.length,
+        isGoldParty,
+        members,
+      });
+    } else {
+      this.sendPacket(session, Opcodes.MSG_PARTY_INVITE_RES.opcode, Opcodes.MSG_PARTY_INVITE_RES.subcode, {
+        success: false,
+        error: 'Grupo lotado (máximo 5 membros)',
+      });
+    }
+  }
+
+  private handlePartyRespondInviteReq(session: ClientSession, req: PartyRespondInviteReqPayload): void {
+    if (!req?.accept) return;
+    const members = this.partyManager.getParty(req.partyId) || [];
+    this.sendPacket(session, Opcodes.MSG_PARTY_RESPOND_INVITE_RES.opcode, Opcodes.MSG_PARTY_RESPOND_INVITE_RES.subcode, {
+      success: true,
+      partyId: req.partyId,
+      memberCount: members.length,
+      isGoldParty: PartyManager.isGoldParty(members),
+      members,
+    });
+  }
+
+  private handlePartyLeaveReq(session: ClientSession): void {
+    if (!session.partyId) {
+      this.sendPacket(session, Opcodes.MSG_PARTY_LEAVE_RES.opcode, Opcodes.MSG_PARTY_LEAVE_RES.subcode, {
+        success: false,
+        message: 'Você não está em um grupo',
+      });
+      return;
+    }
+
+    const res = this.partyManager.removeMember(session.sessionId);
+    session.partyId = undefined;
+
+    this.sendPacket(session, Opcodes.MSG_PARTY_LEAVE_RES.opcode, Opcodes.MSG_PARTY_LEAVE_RES.subcode, {
+      success: true,
+      message: 'Você saiu do grupo',
+    });
+
+    if (res && !res.disbanded) {
+      for (const m of res.remaining) {
+        const s = this.sessionManager.getSession(m.sessionId);
+        if (s) {
+          this.sendPacket(s, Opcodes.MSG_PARTY_INFO_RES.opcode, Opcodes.MSG_PARTY_INFO_RES.subcode, {
+            partyId: res.partyId,
+            isGoldParty: PartyManager.isGoldParty(res.remaining),
+            memberCount: res.remaining.length,
+            members: res.remaining,
+          });
+        }
+      }
+    }
+  }
+
+  private handleTradeRequestReq(session: ClientSession, req: TradeRequestReqPayload): void {
+    const target = this.sessionManager.getSession(req?.targetSessionId);
+    if (!target) {
+      this.sendPacket(session, Opcodes.MSG_TRADE_REQUEST_RES.opcode, Opcodes.MSG_TRADE_REQUEST_RES.subcode, {
+        success: false,
+        error: 'Jogador alvo não encontrado',
+      });
+      return;
+    }
+
+    const tradeRes = this.tradeManager.requestTrade(
+      session.sessionId,
+      session.character.name,
+      target.sessionId,
+      target.character.name
+    );
+
+    if (tradeRes.success && tradeRes.tradeSession) {
+      session.activeTradeId = tradeRes.tradeSession.tradeId;
+      target.activeTradeId = tradeRes.tradeSession.tradeId;
+
+      const payload = {
+        success: true,
+        tradeId: tradeRes.tradeSession.tradeId,
+        initiatorSessionId: session.sessionId,
+        initiatorName: session.character.name,
+        targetSessionId: target.sessionId,
+        targetName: target.character.name,
+        message: tradeRes.message,
+      };
+
+      this.sendPacket(session, Opcodes.MSG_TRADE_REQUEST_RES.opcode, Opcodes.MSG_TRADE_REQUEST_RES.subcode, payload);
+      this.sendPacket(target, Opcodes.MSG_TRADE_REQUEST_RES.opcode, Opcodes.MSG_TRADE_REQUEST_RES.subcode, payload);
+    } else {
+      this.sendPacket(session, Opcodes.MSG_TRADE_REQUEST_RES.opcode, Opcodes.MSG_TRADE_REQUEST_RES.subcode, {
+        success: false,
+        error: tradeRes.message,
+      });
+    }
+  }
+
+  private handleTradeRespondReq(session: ClientSession, req: TradeRespondReqPayload): void {
+    if (!req?.accept) {
+      this.tradeManager.cancelTrade(session.sessionId);
+      session.activeTradeId = undefined;
+      this.sendPacket(session, Opcodes.MSG_TRADE_RESPOND_RES.opcode, Opcodes.MSG_TRADE_RESPOND_RES.subcode, {
+        success: false,
+        tradeId: req.tradeId,
+        state: 'CANCELLED',
+        message: 'Negociação recusada',
+      });
+      return;
+    }
+
+    this.sendPacket(session, Opcodes.MSG_TRADE_RESPOND_RES.opcode, Opcodes.MSG_TRADE_RESPOND_RES.subcode, {
+      success: true,
+      tradeId: req.tradeId,
+      state: 'OFFERING',
+      message: 'Negociação aceita',
+    });
+  }
+
+  private handleTradeItemAddReq(session: ClientSession, req: TradeItemAddReqPayload): void {
+    const item = session.inventory.getItemByUuid(req.itemUuid);
+    if (!item) {
+      this.sendPacket(session, Opcodes.MSG_TRADE_ITEM_ADD_RES.opcode, Opcodes.MSG_TRADE_ITEM_ADD_RES.subcode, {
+        success: false,
+        tradeId: req.tradeId,
+        error: 'Item não encontrado no inventário',
+      });
+      return;
+    }
+
+    const offerResult = this.tradeManager.offerItem(session.sessionId, item);
+    this.sendPacket(session, Opcodes.MSG_TRADE_ITEM_ADD_RES.opcode, Opcodes.MSG_TRADE_ITEM_ADD_RES.subcode, {
+      success: offerResult.success,
+      tradeId: req.tradeId,
+      item: offerResult.success ? item : undefined,
+      error: offerResult.success ? undefined : offerResult.message,
+    });
+  }
+
+  private handleTradeZenAddReq(session: ClientSession, req: TradeZenAddReqPayload): void {
+    if ((session.character.zen ?? 0) < req.amountZen) {
+      this.sendPacket(session, Opcodes.MSG_TRADE_ZEN_ADD_RES.opcode, Opcodes.MSG_TRADE_ZEN_ADD_RES.subcode, {
+        success: false,
+        tradeId: req.tradeId,
+        zenOffered: 0,
+        error: 'Zen insuficiente',
+      });
+      return;
+    }
+
+    const offerResult = this.tradeManager.offerZen(session.sessionId, req.amountZen);
+    this.sendPacket(session, Opcodes.MSG_TRADE_ZEN_ADD_RES.opcode, Opcodes.MSG_TRADE_ZEN_ADD_RES.subcode, {
+      success: offerResult.success,
+      tradeId: req.tradeId,
+      zenOffered: req.amountZen,
+      error: offerResult.success ? undefined : offerResult.message,
+    });
+  }
+
+  private handleTradeConfirmReq(session: ClientSession, req: TradeConfirmReqPayload): void {
+    const trade = this.tradeManager.getTradeBySession(session.sessionId);
+    if (!trade) {
+      this.sendPacket(session, Opcodes.MSG_TRADE_CONFIRM_RES.opcode, Opcodes.MSG_TRADE_CONFIRM_RES.subcode, {
+        success: false,
+        tradeId: req.tradeId,
+        completed: false,
+        state: 'CANCELLED',
+        error: 'Negociação não encontrada',
+      });
+      return;
+    }
+
+    const targetSessionId = trade.initiator.sessionId === session.sessionId
+      ? trade.target.sessionId
+      : trade.initiator.sessionId;
+    const targetSession = this.sessionManager.getSession(targetSessionId);
+
+    const result = this.tradeManager.acceptTrade(session.sessionId);
+
+    if (result.isFullyCommitted && targetSession) {
+      const p1 = trade.initiator;
+      const p2 = trade.target;
+      const s1 = this.sessionManager.getSession(p1.sessionId);
+      const s2 = this.sessionManager.getSession(p2.sessionId);
+
+      if (s1 && s2) {
+        for (const item of p1.items) s1.inventory.removeItem(item.uuid);
+        for (const item of p2.items) s2.inventory.removeItem(item.uuid);
+
+        for (const item of p1.items) s2.inventory.addItem(item);
+        for (const item of p2.items) s1.inventory.addItem(item);
+
+        s1.character.zen = (s1.character.zen ?? 0) - p1.zen + p2.zen;
+        s2.character.zen = (s2.character.zen ?? 0) - p2.zen + p1.zen;
+
+        s1.activeTradeId = undefined;
+        s2.activeTradeId = undefined;
+
+        this.sendPacket(s1, Opcodes.MSG_TRADE_CONFIRM_RES.opcode, Opcodes.MSG_TRADE_CONFIRM_RES.subcode, {
+          success: true,
+          tradeId: req.tradeId,
+          completed: true,
+          state: 'COMMITTED',
+          character: s1.character,
+          inventoryState: this.sessionManager.getSerializedInventoryState(s1),
+          message: 'Negociação concluída com sucesso!',
+        });
+
+        this.sendPacket(s2, Opcodes.MSG_TRADE_CONFIRM_RES.opcode, Opcodes.MSG_TRADE_CONFIRM_RES.subcode, {
+          success: true,
+          tradeId: req.tradeId,
+          completed: true,
+          state: 'COMMITTED',
+          character: s2.character,
+          inventoryState: this.sessionManager.getSerializedInventoryState(s2),
+          message: 'Negociação concluída com sucesso!',
+        });
+      }
+    } else {
+      this.sendPacket(session, Opcodes.MSG_TRADE_CONFIRM_RES.opcode, Opcodes.MSG_TRADE_CONFIRM_RES.subcode, {
+        success: result.success,
+        tradeId: req.tradeId,
+        completed: false,
+        state: trade.state,
+        message: result.message,
+      });
+    }
+  }
+
+  private handleTradeCancelReq(session: ClientSession, req: TradeCancelReqPayload): void {
+    const trade = this.tradeManager.getTradeBySession(session.sessionId);
+    this.tradeManager.cancelTrade(session.sessionId);
+    session.activeTradeId = undefined;
+
+    this.sendPacket(session, Opcodes.MSG_TRADE_CANCEL_RES.opcode, Opcodes.MSG_TRADE_CANCEL_RES.subcode, {
+      success: true,
+      tradeId: req.tradeId,
+      state: 'CANCELLED',
+      inventoryState: this.sessionManager.getSerializedInventoryState(session),
+      message: 'Negociação cancelada',
+    });
+
+    if (trade) {
+      const otherId = trade.initiator.sessionId === session.sessionId ? trade.target.sessionId : trade.initiator.sessionId;
+      const otherSession = this.sessionManager.getSession(otherId);
+      if (otherSession) {
+        otherSession.activeTradeId = undefined;
+        this.sendPacket(otherSession, Opcodes.MSG_TRADE_CANCEL_RES.opcode, Opcodes.MSG_TRADE_CANCEL_RES.subcode, {
+          success: true,
+          tradeId: req.tradeId,
+          state: 'CANCELLED',
+          inventoryState: this.sessionManager.getSerializedInventoryState(otherSession),
+          message: 'O parceiro cancelou a negociação',
+        });
+      }
+    }
+  }
+
+  private handlePShopOpenReq(session: ClientSession, req: PShopOpenReqPayload): void {
+    const res = this.personalShopManager.openShop(
+      session.sessionId,
+      session.character.name,
+      req.title,
+      req.items as PShopItemEntry[]
+    );
+
+    if (res.success) {
+      session.pshopOpen = true;
+      session.pshopTitle = req.title;
+      this.sendPacket(session, Opcodes.MSG_PSHOP_OPEN_RES.opcode, Opcodes.MSG_PSHOP_OPEN_RES.subcode, {
+        success: true,
+        title: req.title,
+        itemCount: req.items.length,
+      });
+    } else {
+      this.sendPacket(session, Opcodes.MSG_PSHOP_OPEN_RES.opcode, Opcodes.MSG_PSHOP_OPEN_RES.subcode, {
+        success: false,
+        error: res.error,
+      });
+    }
+  }
+
+  private handlePShopCloseReq(session: ClientSession): void {
+    this.personalShopManager.closeShop(session.sessionId);
+    session.pshopOpen = false;
+    session.pshopTitle = undefined;
+    this.sendPacket(session, Opcodes.MSG_PSHOP_CLOSE_RES.opcode, Opcodes.MSG_PSHOP_CLOSE_RES.subcode, {
+      success: true,
+      message: 'Loja pessoal fechada',
+    });
+  }
+
+  private handlePShopInspectReq(session: ClientSession, req: PShopInspectReqPayload): void {
+    const shop = this.personalShopManager.getShop(req.sellerSessionId);
+    if (!shop || !shop.isOpen) {
+      this.sendPacket(session, Opcodes.MSG_PSHOP_INSPECT_RES.opcode, Opcodes.MSG_PSHOP_INSPECT_RES.subcode, {
+        success: false,
+        error: 'Loja não encontrada ou fechada',
+      });
+      return;
+    }
+
+    this.sendPacket(session, Opcodes.MSG_PSHOP_INSPECT_RES.opcode, Opcodes.MSG_PSHOP_INSPECT_RES.subcode, {
+      success: true,
+      sellerSessionId: req.sellerSessionId,
+      ownerName: shop.ownerName,
+      title: shop.storeTitle,
+      items: Array.from(shop.items.values()),
+    });
+  }
+
+  private handlePShopBuyReq(session: ClientSession, req: PShopBuyReqPayload): void {
+    const seller = this.sessionManager.getSession(req.sellerSessionId);
+    if (!seller) {
+      this.sendPacket(session, Opcodes.MSG_PSHOP_BUY_RES.opcode, Opcodes.MSG_PSHOP_BUY_RES.subcode, {
+        success: false,
+        error: 'Vendedor não encontrado',
+      });
+      return;
+    }
+
+    const buyerZen = session.character.zen ?? 0;
+    const sellerZen = seller.character.zen ?? 0;
+
+    const res = this.personalShopManager.purchaseItem(
+      session.sessionId,
+      seller.sessionId,
+      req.slot,
+      buyerZen,
+      sellerZen,
+      0,
+      0,
+      0,
+      0
+    );
+
+    if (res.success && res.item) {
+      session.character.zen = res.newBuyerZen;
+      seller.character.zen = res.newSellerZen;
+
+      const itemInstance = seller.inventory.getItemByUuid(res.item.itemId);
+      if (itemInstance) {
+        seller.inventory.removeItem(itemInstance.uuid);
+        session.inventory.addItem(itemInstance);
+      }
+
+      this.sendPacket(session, Opcodes.MSG_PSHOP_BUY_RES.opcode, Opcodes.MSG_PSHOP_BUY_RES.subcode, {
+        success: true,
+        sellerSessionId: seller.sessionId,
+        slot: req.slot,
+        boughtItem: itemInstance,
+        buyerZen: session.character.zen,
+        inventoryState: this.sessionManager.getSerializedInventoryState(session),
+      });
+
+      this.sendPacket(seller, Opcodes.MSG_INVENTORY_SYNC_ALL.opcode, Opcodes.MSG_INVENTORY_SYNC_ALL.subcode, {
+        character: seller.character,
+        inventoryState: this.sessionManager.getSerializedInventoryState(seller),
+      });
+    } else {
+      this.sendPacket(session, Opcodes.MSG_PSHOP_BUY_RES.opcode, Opcodes.MSG_PSHOP_BUY_RES.subcode, {
+        success: false,
+        error: res.error,
+      });
+    }
+  }
+
+  private handleResetReq(session: ClientSession): void {
+    const resetState = {
+      characterId: session.sessionId,
+      level: session.character.level,
+      resets: session.resets ?? 0,
+      masterResets: session.masterResets ?? 0,
+      zen: session.character.zen ?? 0,
+      wCoins: session.wCoins ?? 0,
+      strength: session.character.strength,
+      agility: session.character.agility,
+      vitality: session.character.vitality,
+      energy: session.character.energy,
+      leadership: session.character.command ?? 0,
+      statPoints: session.character.statPoints ?? 0,
+    };
+
+    const res = ResetManager.executeReset(resetState);
+
+    if (res.success) {
+      session.character.level = resetState.level;
+      session.character.zen = resetState.zen;
+      session.character.strength = resetState.strength;
+      session.character.agility = resetState.agility;
+      session.character.vitality = resetState.vitality;
+      session.character.energy = resetState.energy;
+      session.character.command = resetState.leadership;
+      session.character.statPoints = resetState.statPoints;
+      session.resets = resetState.resets;
+
+      this.sendPacket(session, Opcodes.MSG_RESET_RES.opcode, Opcodes.MSG_RESET_RES.subcode, {
+        success: true,
+        resets: session.resets,
+        level: session.character.level,
+        statPoints: session.character.statPoints,
+        zenRemaining: session.character.zen,
+        character: session.character,
+      });
+    } else {
+      this.sendPacket(session, Opcodes.MSG_RESET_RES.opcode, Opcodes.MSG_RESET_RES.subcode, {
+        success: false,
+        resets: session.resets ?? 0,
+        level: session.character.level,
+        statPoints: session.character.statPoints ?? 0,
+        zenRemaining: session.character.zen ?? 0,
+        error: res.error,
+      });
+    }
+  }
+
+  private handleMasterResetReq(session: ClientSession): void {
+    const resetState = {
+      characterId: session.sessionId,
+      level: session.character.level,
+      resets: session.resets ?? 0,
+      masterResets: session.masterResets ?? 0,
+      zen: session.character.zen ?? 0,
+      wCoins: session.wCoins ?? 0,
+      strength: session.character.strength,
+      agility: session.character.agility,
+      vitality: session.character.vitality,
+      energy: session.character.energy,
+      leadership: session.character.command ?? 0,
+      statPoints: session.character.statPoints ?? 0,
+    };
+
+    const res = ResetManager.executeMasterReset(resetState);
+
+    if (res.success) {
+      session.character.level = resetState.level;
+      session.resets = resetState.resets;
+      session.masterResets = resetState.masterResets;
+      session.wCoins = resetState.wCoins;
+      session.character.statPoints = resetState.statPoints;
+
+      this.sendPacket(session, Opcodes.MSG_MASTER_RESET_RES.opcode, Opcodes.MSG_MASTER_RESET_RES.subcode, {
+        success: true,
+        masterResets: session.masterResets,
+        resetsRemaining: session.resets,
+        wCoinsGranted: 500,
+        masterPointsGranted: 10,
+        character: session.character,
+      });
+    } else {
+      this.sendPacket(session, Opcodes.MSG_MASTER_RESET_RES.opcode, Opcodes.MSG_MASTER_RESET_RES.subcode, {
+        success: false,
+        masterResets: session.masterResets ?? 0,
+        resetsRemaining: session.resets ?? 0,
+        wCoinsGranted: 0,
+        masterPointsGranted: 0,
+        error: res.error,
+      });
+    }
+  }
+
+  private handleQuestInfoReq(session: ClientSession): void {
+    const prog = session.progressionState;
+    if (!prog) return;
+
+    this.sendPacket(session, Opcodes.MSG_QUEST_INFO_RES.opcode, Opcodes.MSG_QUEST_INFO_RES.subcode, {
+      success: true,
+      characterId: prog.characterId,
+      classTier: prog.classTier,
+      hasComboUnlocked: prog.hasComboUnlocked,
+      hasMasterLevelUnlocked: prog.hasMasterLevelUnlocked,
+      quests: prog.quests,
+    });
+  }
+
+  private handleQuestActionReq(session: ClientSession, req: QuestActionReqPayload): void {
+    const prog = session.progressionState;
+    if (!prog) return;
+
+    let success = false;
+    let message = '';
+
+    if (req.questId === 'SEBINA_PRIEST_PART1') {
+      if (req.action === 'START') {
+        success = QuestManager.startSebinaPart1(prog);
+        message = success ? 'Quest de Sebina Parte 1 iniciada' : 'Requisitos não atendidos';
+      } else {
+        prog.inventoryItemIds.push('scroll_of_emperor');
+        success = QuestManager.completeSebinaPart1(prog);
+        message = success ? 'Quest de Sebina Parte 1 concluída (+10 pontos)' : 'Item não encontrado';
+      }
+    } else if (req.questId === 'SEBINA_PRIEST_PART2') {
+      prog.inventoryItemIds.push('broken_sword');
+      success = QuestManager.completeSebinaPart2(prog);
+      message = success ? 'Evolução para 2ª Classe concluída!' : 'Falha na evolução';
+    } else if (req.questId === 'MARLON_HONOR_RING') {
+      prog.inventoryItemIds.push('ring_of_honor');
+      success = QuestManager.completeMarlonPart1(prog);
+      message = success ? 'Quest de Marlon Parte 1 concluída (+6 pontos por nível)' : 'Requisitos não atendidos';
+    } else if (req.questId === 'MARLON_DARK_STONE') {
+      prog.inventoryItemIds.push('dark_stone');
+      success = QuestManager.completeMarlonPart2(prog);
+      message = success ? 'Combo do Blade Knight desbloqueado!' : 'Requisitos não atendidos';
+    } else if (req.questId?.startsWith('DEVIN')) {
+      prog.inventoryItemIds.push('flame_of_death_beam_knight', 'horn_of_hell_maine', 'feather_of_phoenix');
+      success = QuestManager.completeDevinThirdClassChange(prog);
+      message = success ? 'Evolução para 3ª Classe concluída com Apostle Devin!' : 'Falha na evolução Devin';
+    }
+
+    this.sendPacket(session, Opcodes.MSG_QUEST_ACTION_RES.opcode, Opcodes.MSG_QUEST_ACTION_RES.subcode, {
+      success,
+      questId: req.questId,
+      completed: success,
+      classTier: prog.classTier,
+      hasComboUnlocked: prog.hasComboUnlocked,
+      statPointsBonus: prog.statPoints,
+      message,
+    });
+  }
+
+  private handleMasterSkillAllocReq(session: ClientSession, req: MasterSkillAllocReqPayload): void {
+    const tree = session.masterTreeState;
+    if (!tree) return;
+
+    const res = MasterSkillTree.investSkillPoint(tree, req.skillId);
+    const node = tree.skills.get(req.skillId);
+
+    this.sendPacket(session, Opcodes.MSG_MASTER_SKILL_ALLOC_RES.opcode, Opcodes.MSG_MASTER_SKILL_ALLOC_RES.subcode, {
+      success: res.success,
+      skillId: req.skillId,
+      newLevel: node?.currentLevel ?? 0,
+      availablePoints: tree.availableMasterPoints,
+      error: res.error,
+    });
+  }
+
+  private handleGensJoinReq(session: ClientSession, req: GensJoinReqPayload): void {
+    session.gensFamily = req.family;
+    session.gensContribution = session.gensContribution ?? 0;
+    session.gensRank = session.gensRank ?? 100;
+
+    const symbol = GensSystem.calculateGensSymbol(session.gensContribution, session.gensRank);
+
+    this.sendPacket(session, Opcodes.MSG_GENS_JOIN_RES.opcode, Opcodes.MSG_GENS_JOIN_RES.subcode, {
+      success: true,
+      family: session.gensFamily,
+      symbol,
+      contribution: session.gensContribution,
+      rank: session.gensRank,
+    });
+  }
+
+  private handleGensStatusReq(session: ClientSession): void {
+    const family = session.gensFamily ?? 0;
+    const contribution = session.gensContribution ?? 0;
+    const rank = session.gensRank ?? 0;
+    const symbol = GensSystem.calculateGensSymbol(contribution, rank);
+
+    this.sendPacket(session, Opcodes.MSG_GENS_STATUS_RES.opcode, Opcodes.MSG_GENS_STATUS_RES.subcode, {
+      success: true,
+      family,
+      symbol,
+      contribution,
+      rank,
+    });
+  }
+
+  private handleGensLeaveReq(session: ClientSession): void {
+    session.gensFamily = 0;
+    session.gensContribution = 0;
+    this.sendPacket(session, Opcodes.MSG_GENS_LEAVE_RES.opcode, Opcodes.MSG_GENS_LEAVE_RES.subcode, {
+      success: true,
+      penaltyFeeZen: 0,
+      message: 'Você abandonou sua família Gens',
+    });
+  }
+
+  private handleHarmonySmeltReq(session: ClientSession, req: HarmonySmeltReqPayload): void {
+    const target = session.inventory.getItemByUuid(req.targetItemUuid);
+    if (!target) {
+      this.sendPacket(session, Opcodes.MSG_HARMONY_SMELT_RES.opcode, Opcodes.MSG_HARMONY_SMELT_RES.subcode, {
+        success: false,
+        targetItemUuid: req.targetItemUuid,
+        error: 'Item alvo não encontrado',
+      });
+      return;
+    }
+
+    const res = HarmonyAnd380System.applyJewelOfHarmony(target);
+
+    this.sendPacket(session, Opcodes.MSG_HARMONY_SMELT_RES.opcode, Opcodes.MSG_HARMONY_SMELT_RES.subcode, {
+      success: res.success,
+      targetItemUuid: req.targetItemUuid,
+      optionName: res.option?.name,
+      optionValue: res.option?.values[res.rank ?? 0],
+      inventoryState: this.sessionManager.getSerializedInventoryState(session),
+      error: res.success ? undefined : res.message,
+    });
+  }
+
+  private handleHarmonyRestoreReq(session: ClientSession, req: HarmonyRestoreReqPayload): void {
+    const target = session.inventory.getItemByUuid(req.targetItemUuid);
+    if (!target) {
+      this.sendPacket(session, Opcodes.MSG_HARMONY_RESTORE_RES.opcode, Opcodes.MSG_HARMONY_RESTORE_RES.subcode, {
+        success: false,
+        targetItemUuid: req.targetItemUuid,
+        restored: false,
+        error: 'Item não encontrado',
+      });
+      return;
+    }
+
+    const res = HarmonyAnd380System.removeHarmonyOption(target);
+    this.sendPacket(session, Opcodes.MSG_HARMONY_RESTORE_RES.opcode, Opcodes.MSG_HARMONY_RESTORE_RES.subcode, {
+      success: res.success,
+      targetItemUuid: req.targetItemUuid,
+      restored: res.success,
+      inventoryState: this.sessionManager.getSerializedInventoryState(session),
+      error: res.success ? undefined : res.message,
+    });
+  }
+
+  private handleSocketMountReq(session: ClientSession, req: SocketMountReqPayload): void {
+    const target = session.inventory.getItemByUuid(req.targetItemUuid);
+    if (!target) {
+      this.sendPacket(session, Opcodes.MSG_SOCKET_MOUNT_RES.opcode, Opcodes.MSG_SOCKET_MOUNT_RES.subcode, {
+        success: false,
+        targetItemUuid: req.targetItemUuid,
+        socketIndex: req.socketIndex,
+        error: 'Item alvo não encontrado',
+      });
+      return;
+    }
+
+    if (!target.socketOptions || target.socketOptions.length < 5) {
+      target.socketOptions = [254, 254, 254, 255, 255];
+    }
+
+    const itemDef = ITEM_DEFINITIONS[target.defId];
+    const isWeapon = itemDef?.category === ItemCategory.WEAPON;
+    const isStaff = target.defId.includes('staff');
+    const res = SocketItemSystem.mountSeedSphere(
+      target.socketOptions as [number, number, number, number, number],
+      req.socketIndex,
+      1,
+      1,
+      isWeapon,
+      isStaff
+    );
+
+    if (res.success) {
+      target.socketOptions = res.newSlots;
+      target.socketBonusOption = res.bonusOption;
+    }
+
+    this.sendPacket(session, Opcodes.MSG_SOCKET_MOUNT_RES.opcode, Opcodes.MSG_SOCKET_MOUNT_RES.subcode, {
+      success: res.success,
+      targetItemUuid: req.targetItemUuid,
+      socketIndex: req.socketIndex,
+      mountedSphere: res.success ? 'Seed Sphere Tier 1' : undefined,
+      inventoryState: this.sessionManager.getSerializedInventoryState(session),
+      error: res.error,
+    });
+  }
+
+  private handleSocketUnmountReq(session: ClientSession, req: SocketUnmountReqPayload): void {
+    const target = session.inventory.getItemByUuid(req.targetItemUuid);
+    if (!target || !target.socketOptions) {
+      this.sendPacket(session, Opcodes.MSG_SOCKET_UNMOUNT_RES.opcode, Opcodes.MSG_SOCKET_UNMOUNT_RES.subcode, {
+        success: false,
+        targetItemUuid: req.targetItemUuid,
+        socketIndex: req.socketIndex,
+        unmounted: false,
+        error: 'Item ou slots de socket não encontrados',
+      });
+      return;
+    }
+
+    const itemDef = ITEM_DEFINITIONS[target.defId];
+    const isWeapon = itemDef?.category === ItemCategory.WEAPON;
+    const isStaff = target.defId.includes('staff');
+    const res = SocketItemSystem.unmountSeedSphere(
+      target.socketOptions as [number, number, number, number, number],
+      req.socketIndex,
+      isWeapon,
+      isStaff
+    );
+
+    if (res.success) {
+      target.socketOptions = res.newSlots;
+      target.socketBonusOption = res.bonusOption;
+    }
+
+    this.sendPacket(session, Opcodes.MSG_SOCKET_UNMOUNT_RES.opcode, Opcodes.MSG_SOCKET_UNMOUNT_RES.subcode, {
+      success: res.success,
+      targetItemUuid: req.targetItemUuid,
+      socketIndex: req.socketIndex,
+      unmounted: res.success,
+      inventoryState: this.sessionManager.getSerializedInventoryState(session),
+      error: res.error,
+    });
+  }
+
+  // ==========================================
   // HELPERS DE ENVIO DE PACOTES & BROADCAST
   // ==========================================
 
@@ -2049,9 +3095,15 @@ export class GameServer {
     this.gameLoopTimer = setInterval(() => {
       if (!this.isRunning) return;
       const now = Date.now();
-      const updateResult = this.combatEngine.update(0.1);
 
-      if (updateResult.hasMoved || updateResult.respawned.length > 0 || updateResult.despawnedIds.length > 0) {
+      // Coleta posições dos jogadores ativos para a IA dos monstros
+      const activePlayers = this.sessionManager.getAllSessions()
+        .filter((s) => s.state === 'AUTHENTICATED' && s.x !== undefined && s.y !== undefined)
+        .map((s) => ({ id: s.sessionId, x: s.x!, y: s.y! }));
+
+      const updateResult = this.combatEngine.update(0.1, activePlayers);
+
+      if (updateResult.hasMoved || updateResult.respawned.length > 0 || updateResult.despawnedIds.length > 0 || (updateResult.attacks && updateResult.attacks.length > 0)) {
         this.broadcastMonstersState();
       }
 
@@ -2093,6 +3145,13 @@ export class GameServer {
       const siegeState = this.castleSiege.update(now);
       if (siegeState.phase !== previousPhase || siegeState.sealPercent > 0) {
         this.broadcastSiegeState();
+      }
+
+      // Ciclo dos Efeitos e Buffs dos Jogadores (Decaimento Temporal)
+      for (const session of this.sessionManager.getAllSessions()) {
+        if (session.state === 'AUTHENTICATED' && session.effectManager) {
+          session.effectManager.tick(0.1);
+        }
       }
     }, 100);
   }

@@ -11,6 +11,8 @@ import { Item } from '../inventory/Item.ts';
 import { EquipmentSlot, WeaponExcellentOption, ItemCategory } from '../inventory/types.ts';
 import type { ClientSession } from '../network/SessionManager.ts';
 import type { ItemInstance } from '../inventory/types.ts';
+import { CanonicalFormulas, CharacterClassId, type CharacterAttributes } from './CanonicalFormulas.ts';
+import { DropManager, type HitDamageEntry } from './DropManager.ts';
 
 export type DamageType = 'NORMAL' | 'SKILL' | 'CRITICAL' | 'EXCELLENT' | 'IGNORE_DEFENSE' | 'MISS';
 
@@ -47,6 +49,13 @@ export interface AttackResult {
   colorHex: string;
   targetHp: number;
   targetMaxHp: number;
+  targetSd?: number;
+  targetMaxSd?: number;
+  sdDamage?: number;
+  hpDamage?: number;
+  isCombo?: boolean;
+  comboDamage?: number;
+  reflectedDamage?: number;
   isDead: boolean;
   staggered: boolean;
   hitStopMs: number;
@@ -71,6 +80,7 @@ export class CombatEngine {
   public readonly spawner: MobSpawner;
   public bossManager?: BossManager;
   private groundDrops: Map<string, GroundDropItem> = new Map();
+  private mobDamageLog: Map<string, HitDamageEntry[]> = new Map();
 
   constructor(spawner?: MobSpawner, bossManager?: BossManager) {
     this.spawner = spawner ?? new MobSpawner();
@@ -142,9 +152,33 @@ export class CombatEngine {
 
     const primaryWeapon = weaponRight || (weaponLeft && Item.getDefinition(weaponLeft).category === ItemCategory.WEAPON ? weaponLeft : null);
 
-    let minAttack = Math.floor(session.character.strength / 6);
-    let maxAttack = Math.floor(session.character.strength / 4);
-    let attackRate = session.character.level * 5 + Math.floor(session.character.agility * 1.5);
+    const classId = CanonicalFormulas.getClassId(session.character.characterClass);
+    const isBow = primaryWeapon ? CanonicalFormulas.isBowOrCrossbow(primaryWeapon.defId) : false;
+
+    const charAttrs: CharacterAttributes = {
+      classId,
+      level: session.character.level,
+      strength: session.character.strength,
+      agility: session.character.agility,
+      vitality: session.character.vitality,
+      energy: session.character.energy,
+      leadership: session.character.command,
+      currentHp: session.currentHp ?? 1000,
+      maxHp: session.maxHp ?? 1000,
+      currentSd: session.currentSd ?? 500,
+      maxSd: session.maxSd ?? 500,
+      currentMp: session.currentMp ?? 300,
+      maxMp: session.maxMp ?? 300,
+      currentBp: 100,
+      maxBp: 100,
+    };
+
+    const canonicalAtk = CanonicalFormulas.calculateAttackPower(charAttrs, isBow);
+    const canonicalRates = CanonicalFormulas.calculateDefenseAndRates(charAttrs);
+
+    let minAttack = canonicalAtk.minDamage;
+    let maxAttack = canonicalAtk.maxDamage;
+    let attackRate = canonicalRates.attackRatePvE;
     let hasLuck = false;
     let hasSkill = false;
     let hasExcellentDmgOption = false;
@@ -163,6 +197,13 @@ export class CombatEngine {
       // Desarmado
       minAttack += 5;
       maxAttack += 10;
+    }
+
+    // Bônus de Greater Damage (se houver buff ativo)
+    const greaterDmgBuff = session.activeBuffs?.get('GREATER_DAMAGE');
+    if (greaterDmgBuff && greaterDmgBuff.expiresAt > Date.now()) {
+      minAttack += greaterDmgBuff.value;
+      maxAttack += greaterDmgBuff.value;
     }
 
     // 2. Cálculo de Hit / Miss
@@ -249,13 +290,33 @@ export class CombatEngine {
     // 5. Aplica dano autoritativo na entidade do monstro
     const dmgResult = mob.takeDamage(finalDamage, poiseDamage, knockbackDistance, kx, ky);
 
+    // Registra dano no log para cálculo de Top Hit Damage
+    let mobHits = this.mobDamageLog.get(mob.id);
+    if (!mobHits) {
+      mobHits = [];
+      this.mobDamageLog.set(mob.id, mobHits);
+    }
+    mobHits.push({
+      sessionId: session.sessionId,
+      partyId: session.partyId,
+      damage: dmgResult.damageTaken,
+      timestamp: Date.now(),
+      x: playerX,
+      y: playerY,
+    });
+
     let dropsGenerated: GroundDropItem[] = [];
     let xpGained = 0;
 
     // 6. Se o monstro foi derrotado, gera Drops e distribui XP
     if (dmgResult.isDead) {
       xpGained = mob.xpReward;
-      dropsGenerated = mob.rollDrops(session.sessionId);
+      const ownerInfo = DropManager.calculateTopHitDamageOwner(mobHits, mob.x, mob.y);
+      const ownerSessionId = ownerInfo ? ownerInfo.ownerSessionId : session.sessionId;
+      const ownerPartyId = ownerInfo ? ownerInfo.ownerPartyId : session.partyId;
+      this.mobDamageLog.delete(mob.id);
+
+      dropsGenerated = mob.rollDrops(ownerSessionId, ownerPartyId);
       for (const drop of dropsGenerated) {
         this.groundDrops.set(drop.dropId, drop);
       }
@@ -457,6 +518,297 @@ export class CombatEngine {
   }
 
   /**
+   * Processa combate PvP autoritativo entre dois jogadores com:
+   * - Fórmulas Canônicas de Ataque e Defesa por classe
+   * - Taxa de Acerto PvP (attackRatePvP vs defenseRatePvP)
+   * - Combo Skill do Blade Knight (Passo 1 -> 2 -> 3)
+   * - Absorção de Mana Shield do Soul Master (até 50%)
+   * - Absorção de Escudo SD 90/10 (90% no SD e 10% no HP)
+   * - Reflexão de Dano (Damage Reflect)
+   */
+  public processPvPAttack(
+    attacker: ClientSession,
+    target: ClientSession,
+    req: AttackRequest
+  ): AttackResult {
+    const { skillId, playerX, playerY } = req;
+    const targetX = target.x ?? playerX;
+    const targetY = target.y ?? playerY;
+
+    // 1. Validações básicas de combate
+    const targetHp = target.currentHp ?? 0;
+    const targetMaxHp = target.maxHp ?? 1000;
+    const targetSd = target.currentSd ?? 0;
+    const targetMaxSd = target.maxSd ?? 500;
+
+    if (targetHp <= 0) {
+      return {
+        success: false,
+        attackerId: attacker.sessionId,
+        targetId: target.sessionId,
+        isMiss: true,
+        damage: 0,
+        damageType: 'MISS',
+        colorHex: DAMAGE_COLORS.MISS.colorHex,
+        targetHp: 0,
+        targetMaxHp,
+        targetSd: 0,
+        targetMaxSd,
+        isDead: true,
+        staggered: false,
+        hitStopMs: 0,
+        knockback: { x: targetX, y: targetY },
+        dropsGenerated: [],
+        xpGained: 0,
+        error: 'Alvo já está derrotado',
+      };
+    }
+
+    const dist = Math.hypot(targetX - playerX, targetY - playerY);
+    if (!Number.isFinite(dist) || dist > 300) {
+      return {
+        success: false,
+        attackerId: attacker.sessionId,
+        targetId: target.sessionId,
+        isMiss: true,
+        damage: 0,
+        damageType: 'MISS',
+        colorHex: DAMAGE_COLORS.MISS.colorHex,
+        targetHp,
+        targetMaxHp,
+        targetSd,
+        targetMaxSd,
+        isDead: false,
+        staggered: false,
+        hitStopMs: 0,
+        knockback: { x: targetX, y: targetY },
+        dropsGenerated: [],
+        xpGained: 0,
+        error: 'Alvo fora de alcance',
+      };
+    }
+
+    // 2. Atributos Canônicos do Atacante e Defensor
+    const attackerClass = CanonicalFormulas.getClassId(attacker.character.characterClass);
+    const targetClass = CanonicalFormulas.getClassId(target.character.characterClass);
+
+    const attackerWeaponRight = attacker.inventory.getEquippedItem(EquipmentSlot.WEAPON_RIGHT);
+    const attackerWeaponLeft = attacker.inventory.getEquippedItem(EquipmentSlot.WEAPON_LEFT);
+    const attackerPrimaryWeapon = attackerWeaponRight || (attackerWeaponLeft && Item.getDefinition(attackerWeaponLeft).category === ItemCategory.WEAPON ? attackerWeaponLeft : null);
+    const attackerWings = attacker.inventory.getEquippedItem(EquipmentSlot.WINGS);
+    const isBow = attackerPrimaryWeapon ? CanonicalFormulas.isBowOrCrossbow(attackerPrimaryWeapon.defId) : false;
+
+    const attackerAttrs: CharacterAttributes = {
+      classId: attackerClass,
+      level: attacker.character.level,
+      strength: attacker.character.strength,
+      agility: attacker.character.agility,
+      vitality: attacker.character.vitality,
+      energy: attacker.character.energy,
+      leadership: attacker.character.command,
+      currentHp: attacker.currentHp ?? 1000,
+      maxHp: attacker.maxHp ?? 1000,
+      currentSd: attacker.currentSd ?? 500,
+      maxSd: attacker.maxSd ?? 500,
+      currentMp: attacker.currentMp ?? 300,
+      maxMp: attacker.maxMp ?? 300,
+      currentBp: 100,
+      maxBp: 100,
+    };
+
+    const targetAttrs: CharacterAttributes = {
+      classId: targetClass,
+      level: target.character.level,
+      strength: target.character.strength,
+      agility: target.character.agility,
+      vitality: target.character.vitality,
+      energy: target.character.energy,
+      leadership: target.character.command,
+      currentHp: targetHp,
+      maxHp: targetMaxHp,
+      currentSd: targetSd,
+      maxSd: targetMaxSd,
+      currentMp: target.currentMp ?? 300,
+      maxMp: target.maxMp ?? 300,
+      currentBp: 100,
+      maxBp: 100,
+    };
+
+    const atkPower = CanonicalFormulas.calculateAttackPower(attackerAttrs, isBow);
+    const atkRates = CanonicalFormulas.calculateDefenseAndRates(attackerAttrs);
+    const defRates = CanonicalFormulas.calculateDefenseAndRates(targetAttrs);
+
+    let minAttack = atkPower.minDamage;
+    let maxAttack = atkPower.maxDamage;
+    let attackRatePvP = atkRates.attackRatePvP;
+    let defenseRatePvP = defRates.defenseRatePvP;
+    let defense = defRates.defense;
+
+    // Equipamento ofensivo
+    let hasLuck = false;
+    let hasSkill = false;
+    let hasExcellentDmgOption = false;
+
+    if (attackerPrimaryWeapon) {
+      const dmg = Item.calculateDamage(attackerPrimaryWeapon);
+      minAttack += dmg.min;
+      maxAttack += dmg.max;
+      hasLuck = attackerPrimaryWeapon.luck;
+      hasSkill = attackerPrimaryWeapon.skill;
+      hasExcellentDmgOption = Item.hasExcellentOption(attackerPrimaryWeapon, WeaponExcellentOption.EXCELLENT_DAMAGE_10_PCT);
+    } else {
+      minAttack += 5;
+      maxAttack += 10;
+    }
+
+    // Bônus Greater Damage do atacante
+    const greaterDmgBuff = attacker.activeBuffs?.get('GREATER_DAMAGE');
+    if (greaterDmgBuff && greaterDmgBuff.expiresAt > Date.now()) {
+      minAttack += greaterDmgBuff.value;
+      maxAttack += greaterDmgBuff.value;
+    }
+
+    // Bônus Greater Defense do defensor
+    const greaterDefBuff = target.activeBuffs?.get('GREATER_DEFENSE');
+    if (greaterDefBuff && greaterDefBuff.expiresAt > Date.now()) {
+      defense += greaterDefBuff.value;
+    }
+
+    // 3. Taxa de Acerto PvP
+    const totalRate = attackRatePvP + defenseRatePvP;
+    const hitChance = totalRate > 0 ? Math.min(0.96, Math.max(0.10, attackRatePvP / totalRate)) : 0.85;
+    const isHit = Math.random() <= hitChance;
+
+    if (!isHit) {
+      return {
+        success: true,
+        attackerId: attacker.sessionId,
+        targetId: target.sessionId,
+        isMiss: true,
+        damage: 0,
+        damageType: 'MISS',
+        colorHex: DAMAGE_COLORS.MISS.colorHex,
+        targetHp,
+        targetMaxHp,
+        targetSd,
+        targetMaxSd,
+        isDead: false,
+        staggered: false,
+        hitStopMs: 0,
+        knockback: { x: targetX, y: targetY },
+        dropsGenerated: [],
+        xpGained: 0,
+      };
+    }
+
+    // 4. Tipo de Dano
+    const ignoreDefChance = attackerWings ? (attackerWings.level >= 9 ? 0.05 : 0.03) : 0;
+    const excellentChance = hasExcellentDmgOption ? 0.12 : 0.02;
+    const criticalChance = 0.05 + (hasLuck ? 0.05 : 0) + (attacker.character.agility / 2000);
+
+    let damageType: DamageType = 'NORMAL';
+    let baseDamage = 0;
+    const roll = Math.random();
+
+    if (Math.random() <= ignoreDefChance) {
+      damageType = 'IGNORE_DEFENSE';
+      baseDamage = Math.floor(minAttack + Math.random() * (maxAttack - minAttack + 1));
+      // Defesa calculada como 0!
+    } else if (roll <= excellentChance) {
+      damageType = 'EXCELLENT';
+      baseDamage = Math.max(1, Math.floor(maxAttack * 1.20) + (attackerPrimaryWeapon ? attackerPrimaryWeapon.level * 4 : 5) - defense);
+    } else if (roll <= excellentChance + criticalChance) {
+      damageType = 'CRITICAL';
+      baseDamage = Math.max(1, maxAttack + (attackerPrimaryWeapon ? attackerPrimaryWeapon.level * 3 : 3) - defense);
+    } else if (skillId || hasSkill) {
+      damageType = 'SKILL';
+      const raw = Math.floor(minAttack + Math.random() * (maxAttack - minAttack + 1));
+      baseDamage = Math.max(1, Math.floor(raw * 1.8) - defense);
+    } else {
+      damageType = 'NORMAL';
+      const raw = Math.floor(minAttack + Math.random() * (maxAttack - minAttack + 1));
+      baseDamage = Math.max(1, raw - defense);
+    }
+
+    let finalDamage = baseDamage;
+
+    // 5. Avaliação do Combo Skill do Blade Knight
+    let isCombo = false;
+    let comboDamage = 0;
+    if (skillId) {
+      if (!attacker.recentSkills) attacker.recentSkills = [];
+      attacker.recentSkills.push(skillId);
+      if (attacker.recentSkills.length > 5) {
+        attacker.recentSkills = attacker.recentSkills.slice(-5);
+      }
+      const comboCheck = CanonicalFormulas.evaluateCombo(
+        attacker.recentSkills,
+        attacker.character.strength,
+        attacker.character.agility,
+        attacker.character.energy
+      );
+      if (comboCheck.isCombo) {
+        isCombo = true;
+        comboDamage = comboCheck.comboDamage;
+        finalDamage += comboDamage; // Dano do combo ignora a defesa do alvo!
+      }
+    }
+
+    // 6. Absorção de Mana Shield do Soul Master no Alvo
+    const manaShieldBuff = target.activeBuffs?.get('MANA_SHIELD');
+    if (manaShieldBuff && manaShieldBuff.expiresAt > Date.now()) {
+      const absorbed = Math.floor((finalDamage * manaShieldBuff.value) / 100);
+      finalDamage = Math.max(1, finalDamage - absorbed);
+    }
+
+    // 7. Aplicação da Regra Canônica de SD 90/10
+    const distribution = CanonicalFormulas.applySdAbsorption(finalDamage, targetSd, targetHp);
+
+    target.currentSd = distribution.remainingSd;
+    target.currentHp = distribution.remainingHp;
+
+    // 8. Efeito de Reflexão de Dano (Damage Reflect)
+    let reflectedDamage = 0;
+    const reflectBuff = target.activeBuffs?.get('DAMAGE_REFLECT');
+    if (reflectBuff && reflectBuff.expiresAt > Date.now()) {
+      reflectedDamage = Math.floor((finalDamage * reflectBuff.value) / 100);
+      if (reflectedDamage > 0 && attacker.currentHp !== undefined) {
+        attacker.currentHp = Math.max(1, attacker.currentHp - reflectedDamage);
+      }
+    }
+
+    const colorConfig = DAMAGE_COLORS[damageType];
+
+    return {
+      success: true,
+      attackerId: attacker.sessionId,
+      targetId: target.sessionId,
+      isMiss: false,
+      damage: finalDamage,
+      damageType,
+      colorHex: colorConfig.colorHex,
+      targetHp: distribution.remainingHp,
+      targetMaxHp,
+      targetSd: distribution.remainingSd,
+      targetMaxSd,
+      sdDamage: distribution.sdDamage,
+      hpDamage: distribution.hpDamage,
+      isCombo,
+      comboDamage,
+      reflectedDamage,
+      isDead: distribution.isDead,
+      staggered: finalDamage > 100,
+      hitStopMs: colorConfig.hitStopMs,
+      knockback: {
+        x: targetX,
+        y: targetY,
+      },
+      dropsGenerated: [],
+      xpGained: 0,
+    };
+  }
+
+  /**
    * Processa requisição de coleta de item do chão
    */
   public pickupGroundItem(
@@ -474,6 +826,22 @@ export class CombatEngine {
     const dist = Math.hypot(drop.x - playerX, drop.y - playerY);
     if (!Number.isFinite(dist) || dist > 180) {
       return { success: false, dropId, item: null, zen: 0, error: 'Você está muito distante para recolher este item' };
+    }
+
+    // Validação de posse autoritativa (Loot Lock de 15 segundos para o Top Hit Damage e membros de sua Party)
+    const now = Date.now();
+    if (drop.ownerSessionId && drop.lootLockUntil && now < drop.lootLockUntil) {
+      const isOwner = session.sessionId === drop.ownerSessionId;
+      const isSameParty = Boolean(session.partyId && drop.ownerPartyId && session.partyId === drop.ownerPartyId);
+      if (!isOwner && !isSameParty) {
+        return {
+          success: false,
+          dropId,
+          item: null,
+          zen: 0,
+          error: 'Item protegido pelo sistema de Top Hit Damage',
+        };
+      }
     }
 
     // Se for pilha de Zen
@@ -528,16 +896,29 @@ export class CombatEngine {
     this.groundDrops.set(drop.dropId, drop);
   }
 
+  public clearMobDamageLog(mobId?: string): void {
+    if (mobId) {
+      this.mobDamageLog.delete(mobId);
+    } else {
+      this.mobDamageLog.clear();
+    }
+  }
+
+  public getMobDamageLog(mobId: string): HitDamageEntry[] | undefined {
+    return this.mobDamageLog.get(mobId);
+  }
+
   /**
    * Atualização de ciclo de jogo (IA de monstros e limpeza de drops expirados)
    */
-  public update(deltaTimeSec: number): {
+  public update(deltaTimeSec: number, players: { id: string; x: number; y: number }[] = []): {
     hasMoved: boolean;
     respawned: Monster[];
     despawnedIds: string[];
+    attacks: { mobId: string; targetId: string }[];
     expiredDropIds: string[];
   } {
-    const spawnerResult = this.spawner.update(deltaTimeSec);
+    const spawnerResult = this.spawner.update(deltaTimeSec, players);
 
     // Limpeza de drops expirados
     const now = Date.now();

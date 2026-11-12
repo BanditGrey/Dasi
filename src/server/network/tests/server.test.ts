@@ -178,6 +178,13 @@ describe('Servidor de Jogo Dasi (WebSocket / HTTP Dev Server)', () => {
       assert.deepEqual(ClientOpcodes.GOLDEN_INVASION_RES, Opcodes.MSG_GOLDEN_INVASION_RES);
       assert.deepEqual(ClientOpcodes.BOX_KUNDUN_OPEN_REQ, Opcodes.MSG_BOX_KUNDUN_OPEN_REQ);
       assert.deepEqual(ClientOpcodes.BOX_KUNDUN_OPEN_RES, Opcodes.MSG_BOX_KUNDUN_OPEN_RES);
+      assert.deepEqual(ClientOpcodes.TELEPORT_REQ, Opcodes.MSG_TELEPORT_REQ);
+      assert.deepEqual(ClientOpcodes.TRADE_REQUEST_REQ, Opcodes.MSG_TRADE_REQUEST_REQ);
+      assert.deepEqual(ClientOpcodes.PSHOP_OPEN_REQ, Opcodes.MSG_PSHOP_OPEN_REQ);
+      assert.deepEqual(ClientOpcodes.RESET_REQ, Opcodes.MSG_RESET_REQ);
+      assert.deepEqual(ClientOpcodes.GENS_JOIN_REQ, Opcodes.MSG_GENS_JOIN_REQ);
+      assert.deepEqual(ClientOpcodes.HARMONY_SMELT_REQ, Opcodes.MSG_HARMONY_SMELT_REQ);
+      assert.deepEqual(ClientOpcodes.PARTY_INVITE_REQ, Opcodes.MSG_PARTY_INVITE_REQ);
 
       // Exercita o caminho usado pelo clique 3D. O app fake não expõe OPCODES,
       // para garantir que a arena use o módulo compartilhado e não uma propriedade inexistente.
@@ -260,6 +267,27 @@ describe('Servidor de Jogo Dasi (WebSocket / HTTP Dev Server)', () => {
     assert.equal(res404.status, 404);
     const errJson = await res404.json();
     assert.ok(errJson.error);
+  });
+
+  test('API de Mapas Canônicos: /api/canonical-maps e /api/canonical-maps/:id', async () => {
+    const resMaps = await fetch(`${HTTP_URL}/api/canonical-maps`);
+    assert.equal(resMaps.status, 200);
+    const maps = await resMaps.json();
+    assert.ok(Array.isArray(maps));
+    assert.equal(maps.length, 12);
+    assert.ok(maps.some((m: any) => m.id === 'LORENCIA'));
+
+    const resLor = await fetch(`${HTTP_URL}/api/canonical-maps/LORENCIA`);
+    assert.equal(resLor.status, 200);
+    const lorData = await resLor.json();
+    assert.ok(lorData.summary);
+    assert.equal(lorData.summary.width, 256);
+    assert.equal(lorData.summary.height, 256);
+    assert.ok(lorData.objects);
+    assert.equal(lorData.objects.total_objects, 2870);
+
+    const resUnknown = await fetch(`${HTTP_URL}/api/canonical-maps/MAPA_INEXISTENTE`);
+    assert.equal(resUnknown.status, 404);
   });
 
   test('Módulo TypeScript compartilhado é servido como JavaScript executável', async () => {
