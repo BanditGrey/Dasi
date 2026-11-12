@@ -693,6 +693,12 @@ export class Dasi3DRealtimeArena {
       this.triggerTwistingSlash();
     } else if (s.includes('death') || s.includes('stab')) {
       this.triggerDeathStab();
+    } else if (s.includes('evil') || s.includes('spirit')) {
+      this.triggerEvilSpirits();
+    } else if (s.includes('fireball') || s.includes('lightning') || s.includes('energy')) {
+      this.triggerSpellCast(s);
+    } else if (s.includes('mana_shield') || s.includes('soul_barrier')) {
+      this.triggerManaShield();
     } else if (s.includes('roll') || s.includes('dodge')) {
       this.triggerRoll();
     } else if (s.includes('attack') || s.includes('strike')) {
@@ -735,6 +741,90 @@ export class Dasi3DRealtimeArena {
       }
     };
     fadeOut();
+  }
+
+  triggerEvilSpirits() {
+    this.harmonicAudio?.playSkillSound?.('cyclone');
+    if (this.playerHero && this.playerHero.triggerAnimation) {
+      this.playerHero.triggerAnimation('ATTACK');
+    }
+
+    const ringGeom = new THREE.TorusGeometry(3.5, 0.08, 8, 36);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0x8b5cf6,
+      transparent: true,
+      opacity: 0.95,
+      blending: THREE.AdditiveBlending,
+    });
+    const spiritWave = new THREE.Mesh(ringGeom, ringMat);
+    spiritWave.rotation.x = Math.PI / 2;
+    spiritWave.position.set(this.playerGroup.position.x, 1.0, this.playerGroup.position.z);
+    this.scene.add(spiritWave);
+
+    const fadeOut = () => {
+      spiritWave.scale.multiplyScalar(1.07);
+      ringMat.opacity -= 0.05;
+      if (ringMat.opacity > 0) {
+        requestAnimationFrame(fadeOut);
+      } else {
+        this.scene.remove(spiritWave);
+      }
+    };
+    fadeOut();
+  }
+
+  triggerSpellCast(spellName = 'fireball') {
+    if (this.playerHero && this.playerHero.triggerAnimation) {
+      this.playerHero.triggerAnimation('ATTACK');
+    }
+    const colorHex = spellName.includes('fire') ? 0xef4444 : spellName.includes('light') ? 0x38bdf8 : 0xa855f7;
+    const orbGeom = new THREE.SphereGeometry(0.35, 12, 12);
+    const orbMat = new THREE.MeshBasicMaterial({ color: colorHex });
+    const projectile = new THREE.Mesh(orbGeom, orbMat);
+    projectile.position.set(this.playerGroup.position.x, 1.2, this.playerGroup.position.z);
+    this.scene.add(projectile);
+
+    const dir = new THREE.Vector3(0, 0, -1).applyEuler(this.playerGroup.rotation);
+    let step = 0;
+    const moveProj = () => {
+      step++;
+      projectile.position.addScaledVector(dir, 0.35);
+      if (step < 20) {
+        requestAnimationFrame(moveProj);
+      } else {
+        this.scene.remove(projectile);
+      }
+    };
+    moveProj();
+  }
+
+  triggerManaShield() {
+    this.harmonicAudio?.playLevelUpSound?.();
+    const shieldGeom = new THREE.SphereGeometry(1.4, 16, 16);
+    const shieldMat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.45,
+      wireframe: true,
+      blending: THREE.AdditiveBlending,
+    });
+    const shieldMesh = new THREE.Mesh(shieldGeom, shieldMat);
+    shieldMesh.position.set(0, 1.2, 0);
+    this.playerGroup.add(shieldMesh);
+
+    setTimeout(() => {
+      let fade = 0.45;
+      const fadeShield = () => {
+        fade -= 0.03;
+        shieldMat.opacity = Math.max(0, fade);
+        if (fade > 0) {
+          requestAnimationFrame(fadeShield);
+        } else {
+          this.playerGroup.remove(shieldMesh);
+        }
+      };
+      fadeShield();
+    }, 3000);
   }
 
   triggerDeathStab() {

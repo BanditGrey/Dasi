@@ -53,18 +53,45 @@ Gerencia a vitalidade visual e a fauna dinâmica dos cenários:
    - Se o herói se aproxima a menos de 4,2 metros, comutam para `TAKING_OFF` com aceleração vetorial e bater de asas veloz.
    - Entram em órbita aérea senoidal (`FLYING`) e, quando a área se acalma, pousam suavemente (`LANDING`).
 2. **CaveBats (Morcegos da Dungeon):**
-   - Revoada de morcegos sombrios voando em órbitas elípticas perto do teto das catacumbas com bater de asas a alta frequência.
+   - Revoada de morcegos sombrios voando em órbitas elípticas perto do teto das catacumbas com bater de asas a alta frequência e ecolocalização procedural.
 3. **SchoolOfFish (Cardume de Peixes de Atlans):**
-   - Peixes bioluminescentes navegando em trajetórias ondulatórias de 3 eixos pelo oceano profundo.
-4. **TorchFlickerSystem (Flicker Dinâmico de Tochas & Braseiros):**
+   - Peixes bioluminescentes navegando em trajetórias ondulatórias de 3 eixos pelo oceano profundo com natação rítmica.
+4. **Jellyfish (Águas-vivas Abissais em Atlans):**
+   - 6 águas-vivas bioluminescentes translúcidas com propulsão pulsante senoidal periódica e respiração radial, emitindo fosforescência nos tons ciano e magenta.
+5. **FairyFlies (Fadas Luminosas em Noria):**
+   - 12 pixies/fadas luminosas com batimento de asas de alta frequência (18 Hz), trajetórias espirais em torno de flores élficas e halos emissores suaves.
+6. **SnowHares (Lebres da Neve em Devias):**
+   - 3 lebres árticas com saltos procedurais parabólicos na neve, estado de vigília e fuga veloz ao detectar o herói a menos de 4,2 metros.
+7. **TorchFlickerSystem (Flicker Dinâmico de Tochas & Braseiros):**
    - Modulação de intensidade luminosa (`PointLight`) usando sobreposição de três frequências senoidais para simular chamas vivas sem travar o processador.
    - Partículas pontuais de fuligem e brasas que sobem continuamente da boca da tocha.
-5. **WildCritters (Fauna Terrestre Pacífica - Raposas em Lorencia & Noria):**
+8. **WildCritters (Fauna Terrestre Pacífica - Raposas em Lorencia & Noria):**
    - Pequenos animais perambulam pacificamente em clareiras (`GRAZING` e `PATROL` a 1,1 m/s).
    - Ao detectar a aproximação veloz do herói (< 4,5m), entram imediatamente em pânico (`FLEEING` a 4,2 m/s no clipe `Gallop`), emitindo áudio procedural de revoada/fuga e buscando distância segura (> 8m).
-6. **Síntese de Áudio Procedural da Fauna & Bestiário (`HarmonicAudioSynthesizer`):**
-   - Áudio sintetizado em tempo real via Web Audio API: `playWildlifeSound('wings')` na decolagem de aves, `playWildlifeSound('bat')` nas catacumbas, rugidos e agonias de monstros (`playMonsterHitSound`, `playMonsterDeathSound`).
-7. **Controles de HUD & Telemetria no Dev Viewer:**
+9. **Cidadãos e Habitantes 3D Interativos (NPCs):**
+   - Modelados e animados continuamente com idle sutil e billboards indicativos flutuantes.
+   - **Ferreiro Han** (Lorencia - Bigorna e martelo): abre loja de armas/armaduras.
+   - **Pupa Alquimista** (Lorencia - Poções): vende elixires de cura e mana.
+   - **Sentinela Imperial** (Lorencia - Guarda do portão): patrulha armada com lança.
+   - **Duende do Caos** (Noria - Bigorna arcana): interface da Chaos Machine.
+   - **Sacerdotisa Sebina** (Devias - Orbe sagrado): orquestradora da quest de evolução de classe.
+   - **Lumen da Taberna** (Lorencia - Balcão): serve ale e restaura vigor instantaneamente.
+   - **Lala Elfa** (Noria - Tenda botânica): loja de elixires naturais e pergaminhos.
+   - Integração com raycasting de clique do mouse abrindo diálogos e ações contextuais.
+10. **Clima Atmosférico Dinâmico por Bioma:**
+   - Lorencia: precipitação de chuva com respingos dinâmicos no solo.
+   - Devias: nevasca densa com flocos afetados por vetores de vento turbulento.
+   - Noria: esporos vegetais flutuantes e bioluminescência suave.
+   - Atlans: fluxo contínuo de bolhas de ar ascendentes e partículas marinhas.
+   - Lost Tower: fuligem incandescente e brasas ascendentes de lava.
+11. **Paisagens Sonoras Ambientais Procedurais (`HarmonicAudioSynthesizer`):**
+   - Áudio sintetizado em tempo real via Web Audio API sem assets de áudio externos pesados:
+     * Lorencia: ruído rosa filtrado contínuo simulando chuva mansa nas pedras.
+     * Devias: ruído branco modulado por oscilador LFO simulando uivos do vento polar ártico.
+     * Noria: harmônicos de sinos pentatônicos cristalinos da floresta ancestral.
+     * Atlans: ressonância passa-baixa profunda subaquática em 65 Hz.
+     * Fauna e combate: bater de asas (`wings`), ecolocalização (`bat`), assobios de fadas (`fairy`), borbulhar marinho (`water`), e rugidos de combate (`playMonsterHitSound`, `playMonsterDeathSound`, `playMonsterAggroSound`).
+12. **Controles de HUD & Telemetria no Dev Viewer:**
    - Botão interativo `🕊️ Fauna: ON / OFF` no painel superior do Viewport 3D (`#btn-toggle-ambient-life`) permitindo alternar instantaneamente a visibilidade e processamento da fauna e efeitos de vitalidade.
 
 ---
@@ -94,10 +121,32 @@ A máquina de estados dos monstros no servidor opera em um ciclo contínuo:
 
 ---
 
-## 6. Validação e Testes Automatizados
+## 6. Catálogo Canônico de Habilidades das 5 Classes (`SkillCatalog.ts`)
 
-O sistema conta com cobertura integral na suíte de testes do projeto:
-- `src/client/dev_viewer/tests/animated_monsters_runtime.test.ts`: 4 testes de integridade de malha, cabeçalho GLTF, presença de ossos e AnimationMixer.
-- `src/client/dev_viewer/tests/ambient_life_systems.test.ts`: 9 testes de fauna por bioma, reação de fuga de aves e raposas selvagens, áudio procedural na decolagem, toggle de HUD, flicker de tochas e liberação de recursos.
+O motor autoritativo de combate (`CombatEngine.ts`) integra o catálogo completo das 5 classes canônicas com validação de custo de Mana (MP), Vigor (AG), alcance, tipo de dano e efeitos colaterais em área:
+- **Dark Knight (DK):**
+  * `twisting_slash` (Giro do Destruidor): Raio 180, consome 10 MP, atinge múltiplos alvos simultaneamente.
+  * `death_stab` (Estocada Mortal): Golpe perfurante de alto impacto frontal com dano massivo multiplicativo.
+- **Dark Wizard (DW):**
+  * `evil_spirits` (Espíritos Nefastos): Projéteis arcanos em 360°, dano mágico em área total com consumo de 35 MP.
+  * `hellfire` (Chamas Abissais): Erupção vulcânica de alto impacto em torno do conjurador com consumo de 45 MP.
+- **Fairy Elf (FE):**
+  * `triple_shot` (Disparo Tríplice): 3 flechas simultâneas concentradas com baixo consumo de 5 MP.
+  * `ice_arrow` (Flecha Congelante): Flecha glacial que retarda o movimento do alvo com 20 MP.
+- **Magic Gladiator (MG):**
+  * `power_slash` (Golpe de Poder): Leque frontal de energia mística com consumo de 12 MP.
+  * `fire_slash` (Fatiamento Flamejante): Redução temporária de armadura do inimigo com corte ígneo de 20 MP.
+- **Dark Lord (DL):**
+  * `fireburst` (Explosão de Fogo): Correntes de fogo de longo alcance com alto dano de Comando/Energia.
+  * `earthquake` (Terremoto do Corcel): Pisada sísmica com abalo em raio 240 e consumo de 25 MP / 15 AG.
+
+---
+
+## 7. Validação e Testes Automatizados
+
+O ecossistema conta com cobertura integral na suíte de testes do projeto:
+- `src/client/dev_viewer/tests/animated_monsters_runtime.test.ts`: integridade de malha, cabeçalho GLTF, presença de ossos e AnimationMixer.
+- `src/client/dev_viewer/tests/ambient_life_systems.test.ts`: 11 testes de fauna por bioma (aves, morcegos, peixes, águas-vivas, fadas, lebres, raposas), NPCs 3D, áudio procedural, toggle de HUD, flicker de tochas e soundscapes.
 - `src/server/combat/tests/mob_spawner_fsm.test.ts`: 6 testes de IA de detecção, alcance de ataque, leash, serialização angular e multi-bioma.
-- Total de **414 testes executados e 100% aprovados em 93 suítes** (0 falhas).
+- `src/server/combat/tests/canonical_skills.test.ts`: 7 testes de catálogo e execução autoritativa de habilidades das 5 classes.
+- Total de **429 testes executados e 100% aprovados em 97 suítes** (0 falhas) com `npm test` e tipagem estrita com `npm run typecheck`.
