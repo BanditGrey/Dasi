@@ -125,7 +125,7 @@ describe('2. Sistema de Vida Ambiental & Fauna Dinâmica (AmbientLifeEngine)', (
     };
 
     const scene = new THREE.Scene();
-    const engine = new AmbientLifeEngine(scene, 'lorencia_citadel', mockAudio);
+    const engine = new AmbientLifeEngine(scene, 'lorencia_citadel', mockAudio as any);
     const firstBird = engine.birds[0];
     const birdPos = firstBird.mesh.position;
     const nearbyPlayer = new THREE.Vector3(birdPos.x + 1.0, 0, birdPos.z + 1.0);
