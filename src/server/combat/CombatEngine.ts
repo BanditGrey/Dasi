@@ -272,10 +272,31 @@ export class CombatEngine {
     } else if (skillId || hasSkill) {
       damageType = 'SKILL';
       const baseDmg = Math.floor(minAttack + Math.random() * (maxAttack - minAttack + 1));
-      // Habilidade DK multiplica dano base por ~1.8
-      finalDamage = Math.floor(baseDmg * 1.8) - mob.defense;
-      poiseDamage = 25;
-      knockbackDistance += 6;
+      
+      const sId = String(skillId || '').toLowerCase();
+      let skillMultiplier = 1.8;
+      if (sId.includes('death') || sId.includes('stab')) {
+        // Death Stab do Blade Knight: Fator 250% + (Energy / 10)%
+        const rawMult = (ComboSkillEngine.calculateDKSkillMultiplier(session.character.energy) + 50) / 100;
+        skillMultiplier = Math.max(2.5, rawMult);
+        poiseDamage = 45;
+        knockbackDistance = 35;
+        if (session.currentMp !== undefined) session.currentMp = Math.max(0, session.currentMp - 12);
+      } else if (sId.includes('twist') || sId.includes('cyclone') || sId.includes('spin')) {
+        // Twisting Slash do Blade Knight: Fator 200% + (Energy / 10)%
+        const rawMult = ComboSkillEngine.calculateDKSkillMultiplier(session.character.energy) / 100;
+        skillMultiplier = Math.max(2.0, rawMult);
+        poiseDamage = 30;
+        knockbackDistance = 16;
+        if (session.currentMp !== undefined) session.currentMp = Math.max(0, session.currentMp - 10);
+      } else {
+        const rawMult = ComboSkillEngine.calculateDKSkillMultiplier(session.character.energy) / 100;
+        skillMultiplier = Math.max(1.8, rawMult);
+        poiseDamage = 25;
+        knockbackDistance += 6;
+      }
+
+      finalDamage = Math.floor(baseDmg * skillMultiplier) - mob.defense;
     } else {
       damageType = 'NORMAL';
       const baseDmg = Math.floor(minAttack + Math.random() * (maxAttack - minAttack + 1));
