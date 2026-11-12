@@ -12,11 +12,25 @@
 
 import * as THREE from './libs/three.module.js';
 import { OrbitControls } from './libs/OrbitControls.js';
+import { GLTFLoader } from './libs/GLTFLoader.js';
 import { createHero, createMonster, createEnvironment, loadBestiaryCreatureGLB, loadBestiaryCreatureAnimatedGLB, GLTF_BESTIARY_ANIMATED_MAP } from './dasi3dContent.js';
 import { createModularHero } from './modularHero.js';
 import { buildArmoryShowcase, ARMORY_METADATA } from './dasi3dArmory.js';
 import { DasiCollisionEngine } from './dasiCollisionEngine.js';
 import { ChaosMachineVFX, HarmonicAudioSynthesizer } from './dasiActionGameplay.js';
+
+export const EXTRA_MONSTER_GLB_MAP = Object.freeze({
+  DEATH_KNIGHT: 'models/bestiary/death_knight.glb',
+  HOUND: 'models/bestiary/hound.glb',
+  LICH: 'models/bestiary/lich.glb',
+  DEMON: 'models/monsters/demon_animated.glb',
+  DRAGON: 'models/monsters/dragon_animated.glb',
+  GHOST: 'models/monsters/ghost_animated.glb',
+  ORC: 'models/monsters/orc_animated.glb',
+  SKELETON_WARRIOR: 'models/monsters/skeleton_warrior_animated.glb',
+  YETI: 'models/monsters/yeti_animated.glb',
+  FOX: 'models/critters/fox_animated.glb',
+});
 
 export class Dasi3DFeatureViewer {
   constructor(canvasContainerId, initialCategory = 'ENVIRONMENT', initialSubId = null) {
@@ -340,9 +354,42 @@ export class Dasi3DFeatureViewer {
         }
       };
       // Criaturas com GLB articulado entram com clips reais; as demais mantêm o
-      // protótipo estático ou a geração procedural existente.
+      // protótipo estático, GLB extra dedicado ou a geração procedural existente.
       if (GLTF_BESTIARY_ANIMATED_MAP[id]) {
         loadBestiaryCreatureAnimatedGLB(id, monster.group, THREE, onBestiaryGlb, [monster.parts.groundRing]);
+      } else if (EXTRA_MONSTER_GLB_MAP[id]) {
+        const extraPath = EXTRA_MONSTER_GLB_MAP[id];
+        const loader = new GLTFLoader();
+        loader.load(extraPath, (gltf) => {
+          const model = gltf.scene;
+          model.name = `GLTF_EXTRA_MONSTER_${id}`;
+          model.traverse((child) => {
+            if (child.isMesh) {
+              child.castShadow = true;
+              child.receiveShadow = true;
+            }
+          });
+          // Oculta geometria procedural anterior mantendo apenas o anel de spawn
+          for (const child of monster.group.children) {
+            if (child !== monster.parts.groundRing) child.visible = false;
+          }
+          monster.group.add(model);
+          monster.parts.realGLB = model;
+          if (gltf.animations && gltf.animations.length > 0) {
+            const mixer = new THREE.AnimationMixer(model);
+            const clip = gltf.animations[0];
+            const action = mixer.clipAction(clip);
+            action.play();
+            monster.parts.mixer = mixer;
+          }
+          const statusBadge = document.getElementById('lbl-real-scenery-status');
+          if (statusBadge) {
+            statusBadge.textContent = `🦴 Monstro 3D Oficial: ${id} (${extraPath})`;
+            statusBadge.style.color = '#4ade80';
+          }
+        }, undefined, (err) => {
+          console.warn(`[Dasi3D] Falha ao carregar modelo extra ${extraPath}:`, err);
+        });
       } else {
         loadBestiaryCreatureGLB(id, monster.group, THREE, onBestiaryGlb, [monster.parts.groundRing]);
       }
@@ -395,6 +442,36 @@ export class Dasi3DFeatureViewer {
       } else if (id === 'GOLDEN_TITAN') {
         this.controls.target.set(0, 2.1, 0);
         this.camera.position.set(0, 3.2, 6.4);
+      } else if (id === 'DEMON') {
+        this.controls.target.set(0, 1.6, 0);
+        this.camera.position.set(0, 2.5, 5.0);
+      } else if (id === 'DRAGON') {
+        this.controls.target.set(0, 1.8, 0);
+        this.camera.position.set(0, 2.8, 6.5);
+      } else if (id === 'GHOST') {
+        this.controls.target.set(0, 1.4, 0);
+        this.camera.position.set(0, 2.0, 4.2);
+      } else if (id === 'ORC') {
+        this.controls.target.set(0, 1.4, 0);
+        this.camera.position.set(0, 2.1, 4.5);
+      } else if (id === 'SKELETON_WARRIOR') {
+        this.controls.target.set(0, 1.4, 0);
+        this.camera.position.set(0, 2.1, 4.2);
+      } else if (id === 'YETI') {
+        this.controls.target.set(0, 1.6, 0);
+        this.camera.position.set(0, 2.4, 5.2);
+      } else if (id === 'FOX') {
+        this.controls.target.set(0, 0.4, 0);
+        this.camera.position.set(0, 1.0, 2.4);
+      } else if (id === 'DEATH_KNIGHT') {
+        this.controls.target.set(0, 1.6, 0);
+        this.camera.position.set(0, 2.4, 4.8);
+      } else if (id === 'HOUND') {
+        this.controls.target.set(0, 0.8, 0);
+        this.camera.position.set(0, 1.4, 3.2);
+      } else if (id === 'LICH') {
+        this.controls.target.set(0, 1.5, 0);
+        this.camera.position.set(0, 2.2, 4.6);
       }
 
     } else if (category === 'ENVIRONMENT') {
@@ -661,6 +738,8 @@ export class Dasi3DFeatureViewer {
     // 1b. Clips GLTF do bestiário articulado (AnimationMixer + máquina de estados)
     const bestiaryController = this.activeEntity?.parts?.animController;
     if (bestiaryController) bestiaryController.update(delta);
+    const extraMixer = this.activeEntity?.parts?.mixer;
+    if (extraMixer) extraMixer.update(delta);
 
     // 2. Animação da Máquina do Caos (quando ativa)
     if (this.currentCategory === 'CHAOS_MACHINE') {

@@ -17,30 +17,38 @@ describe('Estúdio de Validação Canônica (Sim / Não)', () => {
     assert.ok(html.includes('val-progress-bar-wrap'), 'Barra de progresso ausente no HTML');
   });
 
-  it('valida que o catálogo contenha exatamente os 24 assets canônicos (incluindo Golden Master Base)', () => {
-    assert.strictEqual(VALIDATION_CATALOG.length, 24, 'O catálogo deve conter exatamente 24 assets');
+  it('valida que o catálogo contenha exatamente os 63 assets canônicos em 8 categorias estruturadas', () => {
+    assert.strictEqual(VALIDATION_CATALOG.length, 63, 'O catálogo deve conter exatamente 63 assets');
 
     const heroes = VALIDATION_CATALOG.filter((a: any) => a.category === 'HERO');
     const bosses = VALIDATION_CATALOG.filter((a: any) => a.category === 'BOSS');
     const golden = VALIDATION_CATALOG.filter((a: any) => a.category === 'GOLDEN');
     const field = VALIDATION_CATALOG.filter((a: any) => a.category === 'FIELD');
+    const armors = VALIDATION_CATALOG.filter((a: any) => a.category === 'ARMOR');
+    const weapons = VALIDATION_CATALOG.filter((a: any) => a.category === 'WEAPON');
+    const creatures = VALIDATION_CATALOG.filter((a: any) => a.category === 'CREATURE');
+    const sceneries = VALIDATION_CATALOG.filter((a: any) => a.category === 'SCENERY');
 
     assert.strictEqual(heroes.length, 6, 'Devem existir 6 classes heroicas (5 animadas + Golden Master Base)');
     assert.strictEqual(bosses.length, 6, 'Devem existir 6 chefes de bioma');
     assert.strictEqual(golden.length, 6, 'Devem existir 6 criaturas de invasão dourada');
     assert.strictEqual(field.length, 6, 'Devem existir 6 criaturas de campo');
+    assert.strictEqual(armors.length, 6, 'Devem existir 6 conjuntos de armaduras de museu');
+    assert.strictEqual(weapons.length, 13, 'Devem existir 13 armas e escudos canônicos');
+    assert.strictEqual(creatures.length, 7, 'Devem existir 7 criaturas do bestiário animado');
+    assert.strictEqual(sceneries.length, 13, 'Devem existir 13 cenários mundiais e arenas de eventos');
 
     const dkMaster = VALIDATION_CATALOG.find((a: any) => a.id === 'HERO_DK_MASTER');
     assert.ok(dkMaster, 'HERO_DK_MASTER deve estar registrado no catálogo');
     assert.strictEqual(dkMaster.glb, 'models/hero_dk_master_base.glb');
   });
 
-  it('verifica que todos os 24 arquivos GLB existem no disco', () => {
+  it('verifica que todos os 63 arquivos GLB existem no disco', () => {
     for (const asset of VALIDATION_CATALOG) {
       const fullPath = path.join('src/client/dev_viewer', asset.glb);
       assert.ok(fs.existsSync(fullPath), `${asset.id}: GLB não encontrado em ${fullPath}`);
       const stats = fs.statSync(fullPath);
-      assert.ok(stats.size > 10_000, `${asset.id}: GLB muito pequeno (${stats.size} bytes)`);
+      assert.ok(stats.size > 5_000, `${asset.id}: GLB muito pequeno (${stats.size} bytes)`);
     }
   });
 

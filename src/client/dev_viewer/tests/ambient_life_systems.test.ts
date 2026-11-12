@@ -42,13 +42,14 @@ describe('2. Sistema de Vida Ambiental & Fauna Dinâmica (AmbientLifeEngine)', (
     assert.ok(engine.torches.length > 0, 'Deve conter tochas verdes na Dungeon');
   });
 
-  it('inicializa fauna correta para Atlans Thalassa (cardume de peixes)', () => {
+  it('inicializa fauna correta para Atlans Thalassa (cardume de peixes e águas-vivas)', () => {
     const scene = new THREE.Scene();
     const engine = new AmbientLifeEngine(scene, 'atlans_thalassa');
 
     assert.strictEqual(engine.birds.length, 0);
     assert.strictEqual(engine.bats.length, 0);
     assert.ok(engine.fishes.length >= 15, 'Deve conter cardume de peixes em Atlans');
+    assert.ok(engine.jellyfishes.length >= 6, 'Deve conter águas-vivas bioluminescentes em Atlans');
   });
 
   it('reação de fuga das aves ao jogador se aproximar a menos de 4 metros', () => {
@@ -102,7 +103,7 @@ describe('2. Sistema de Vida Ambiental & Fauna Dinâmica (AmbientLifeEngine)', (
     const scene = new THREE.Scene();
     const engine = new AmbientLifeEngine(scene, 'lorencia_citadel');
 
-    assert.strictEqual(engine.npcs.length, 3, 'Lorencia deve conter 3 NPCs cidadãos (Han, Pupa, Sentinela)');
+    assert.ok(engine.npcs.length >= 3, 'Lorencia deve conter os NPCs cidadãos (Han, Pupa, Sentinela, Lumen)');
     const npcIds = engine.npcs.map((n: any) => n.npcId);
     assert.ok(npcIds.includes('han_blacksmith'), 'Deve conter Ferreiro Han');
     assert.ok(npcIds.includes('pupa_potion_girl'), 'Deve conter Pupa Alquimista');
@@ -117,6 +118,14 @@ describe('2. Sistema de Vida Ambiental & Fauna Dinâmica (AmbientLifeEngine)', (
     const noriaEngine = new AmbientLifeEngine(scene, 'noria_feywood');
     const noriaNpcIds = noriaEngine.npcs.map((n: any) => n.npcId);
     assert.ok(noriaNpcIds.includes('chaos_goblin'), 'Noria deve conter o Duende da Chaos Machine');
+    assert.ok(noriaNpcIds.includes('lala_elf'), 'Noria deve conter a Elfa Lala');
+    assert.ok(noriaEngine.fairyFlies.length >= 10, 'Noria deve conter fadas luminosas');
+
+    // Testa Devias
+    const deviasEngine = new AmbientLifeEngine(scene, 'devias_boreal');
+    const deviasNpcIds = deviasEngine.npcs.map((n: any) => n.npcId);
+    assert.ok(deviasNpcIds.includes('sebina_priest'), 'Devias deve conter a Sacerdotisa Sebina');
+    assert.ok(deviasEngine.snowHares.length >= 3, 'Devias deve conter lebres da neve');
   });
 
   it('inicializa clima atmosférico dinâmico com atualização contínua de partículas', () => {
@@ -156,16 +165,25 @@ describe('2. Sistema de Vida Ambiental & Fauna Dinâmica (AmbientLifeEngine)', (
     assert.ok(firstFox.fleeDirection.lengthSq() > 0, 'Direção de fuga deve estar normalizada');
   });
 
-  it('conecta síntese de áudio procedural na decolagem de aves', () => {
+  it('conecta síntese de áudio procedural na decolagem de aves e soundscape ambiental', () => {
     const soundCalls: string[] = [];
+    const soundscapes: string[] = [];
     const mockAudio = {
       playWildlifeSound(kind: string) {
         soundCalls.push(kind);
+      },
+      startAmbientSoundscape(biome: string) {
+        soundscapes.push(biome);
+      },
+      stopAmbientSoundscape() {
+        soundscapes.push('STOP');
       },
     };
 
     const scene = new THREE.Scene();
     const engine = new AmbientLifeEngine(scene, 'lorencia_citadel', mockAudio as any);
+    assert.ok(soundscapes.includes('lorencia_citadel'), 'Deve disparar soundscape ambiental de Lorencia');
+
     const firstBird = engine.birds[0];
     const birdPos = firstBird.mesh.position;
     const nearbyPlayer = new THREE.Vector3(birdPos.x + 1.0, 0, birdPos.z + 1.0);
@@ -173,6 +191,9 @@ describe('2. Sistema de Vida Ambiental & Fauna Dinâmica (AmbientLifeEngine)', (
     engine.update(0.016, nearbyPlayer);
 
     assert.ok(soundCalls.includes('wings'), 'Deve disparar áudio procedural de revoada de asas');
+
+    engine.publicClear();
+    assert.ok(soundscapes.includes('STOP'), 'Ao limpar cenário, deve pausar o soundscape ambiental');
   });
 
   it('toggleAmbient alterna visibilidade e execução da vitalidade ambiental', () => {

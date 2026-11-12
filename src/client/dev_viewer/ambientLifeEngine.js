@@ -63,6 +63,9 @@ export class AmbientLifeEngine {
     this.birds = [];
     this.bats = [];
     this.fishes = [];
+    this.jellyfishes = [];
+    this.fairyFlies = [];
+    this.snowHares = [];
     this.torches = [];
     this.critters = [];
     this.npcs = [];
@@ -85,6 +88,10 @@ export class AmbientLifeEngine {
    * Limpa entidades ambientais ativas ao trocar de cenário
    */
   publicClear() {
+    if (this.audioSynthesizer && typeof this.audioSynthesizer.stopAmbientSoundscape === 'function') {
+      try { this.audioSynthesizer.stopAmbientSoundscape(); } catch {}
+    }
+
     while (this.containerGroup.children.length > 0) {
       const child = this.containerGroup.children[0];
       this.containerGroup.remove(child);
@@ -97,6 +104,9 @@ export class AmbientLifeEngine {
     this.birds = [];
     this.bats = [];
     this.fishes = [];
+    this.jellyfishes = [];
+    this.fairyFlies = [];
+    this.snowHares = [];
     this.torches = [];
     this.critters = [];
     this.npcs = [];
@@ -111,14 +121,22 @@ export class AmbientLifeEngine {
     this.currentScenarioId = scenarioId;
     const sId = String(scenarioId || '').toLowerCase();
 
-    if (sId.includes('lorencia') || sId.includes('noria')) {
-      this.initFlockOfBirds(12, sId.includes('noria') ? 0x60a5fa : 0x334155);
+    if (sId.includes('lorencia')) {
+      this.initFlockOfBirds(12, 0x334155);
       this.initTorches([
         { x: -6.5, y: 2.2, z: -6.5, color: 0xff7722, intensity: 2.2, dist: 14 },
         { x: 6.5, y: 2.2, z: -6.5, color: 0xff7722, intensity: 2.2, dist: 14 },
         { x: -6.5, y: 2.2, z: 6.5, color: 0xff7722, intensity: 2.2, dist: 14 },
         { x: 6.5, y: 2.2, z: 6.5, color: 0xff7722, intensity: 2.2, dist: 14 },
       ]);
+      this.initWildCritters(3, 'fox');
+    } else if (sId.includes('noria')) {
+      this.initFlockOfBirds(12, 0x60a5fa);
+      this.initTorches([
+        { x: -6.5, y: 2.2, z: -6.5, color: 0x34d399, intensity: 2.2, dist: 14 },
+        { x: 6.5, y: 2.2, z: 6.5, color: 0x34d399, intensity: 2.2, dist: 14 },
+      ]);
+      this.initFairyFlies(12);
       this.initWildCritters(3, 'fox');
     } else if (sId.includes('devias')) {
       // Braseiro Rei de Devias (Chama azul-dourada épica)
@@ -127,6 +145,7 @@ export class AmbientLifeEngine {
         { x: -10, y: 2.0, z: -8, color: 0xf59e0b, intensity: 2.5, dist: 12 },
         { x: 10, y: 2.0, z: -8, color: 0xf59e0b, intensity: 2.5, dist: 12 },
       ]);
+      this.initSnowHares(3);
     } else if (sId.includes('dungeon')) {
       this.initCaveBats(10);
       this.initTorches([
@@ -136,6 +155,7 @@ export class AmbientLifeEngine {
       ]);
     } else if (sId.includes('atlans')) {
       this.initSchoolOfFish(18);
+      this.initJellyfish(6);
     } else if (sId.includes('lost_tower')) {
       this.initTorches([
         { x: -5, y: 2.4, z: -5, color: 0xef4444, intensity: 3.2, dist: 16 },
@@ -146,6 +166,11 @@ export class AmbientLifeEngine {
     // Inicialização de Cidadãos / Habitantes (NPCs 3D) e Clima Atmosférico
     this.initNpcs(scenarioId);
     this.initWeather(scenarioId);
+
+    // Dispara soundscape procedural se o sintetizador de áudio estiver presente
+    if (this.audioSynthesizer && typeof this.audioSynthesizer.startAmbientSoundscape === 'function') {
+      try { this.audioSynthesizer.startAmbientSoundscape(scenarioId); } catch {}
+    }
   }
 
   // =========================================================================
@@ -264,6 +289,149 @@ export class AmbientLifeEngine {
   }
 
   // =========================================================================
+  // 3.1 ÁGUAS-VIVAS BIOLUMINESCENTES (ATLANS THALASSA)
+  // =========================================================================
+  initJellyfish(count = 6) {
+    const domeGeo = new THREE.SphereGeometry(0.3, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.5);
+    const domeMat = new THREE.MeshStandardMaterial({
+      color: 0x38bdf8,
+      emissive: 0x06b6d4,
+      emissiveIntensity: 0.7,
+      transparent: true,
+      opacity: 0.78,
+      roughness: 0.2,
+      side: THREE.DoubleSide,
+    });
+    const tentacleGeo = new THREE.CylinderGeometry(0.012, 0.006, 0.55, 4);
+    const tentacleMat = new THREE.MeshStandardMaterial({
+      color: 0x818cf8,
+      emissive: 0x6366f1,
+      emissiveIntensity: 0.6,
+      transparent: true,
+      opacity: 0.65,
+    });
+
+    for (let i = 0; i < count; i++) {
+      const group = new THREE.Group();
+      const dome = new THREE.Mesh(domeGeo, domeMat);
+      dome.position.y = 0.25;
+      group.add(dome);
+
+      for (let t = 0; t < 4; t++) {
+        const tentacle = new THREE.Mesh(tentacleGeo, tentacleMat);
+        const tAngle = (t / 4) * Math.PI * 2;
+        tentacle.position.set(Math.cos(tAngle) * 0.16, -0.05, Math.sin(tAngle) * 0.16);
+        group.add(tentacle);
+      }
+
+      const angle = (i / count) * Math.PI * 2;
+      const radius = 5 + Math.random() * 6;
+      group.position.set(Math.cos(angle) * radius, 1.2 + Math.random() * 2.2, Math.sin(angle) * radius);
+      this.containerGroup.add(group);
+
+      this.jellyfishes.push({
+        group,
+        baseY: group.position.y,
+        speed: 1.2 + Math.random() * 0.8,
+        phase: Math.random() * Math.PI * 2,
+        driftAngle: angle,
+      });
+    }
+  }
+
+  // =========================================================================
+  // 3.2 FADAS LUMINOSAS / PIXIES FLORESTAIS (NORIA FEYWOOD)
+  // =========================================================================
+  initFairyFlies(count = 12) {
+    const bodyGeo = new THREE.SphereGeometry(0.065, 6, 6);
+    const fairyMat = new THREE.MeshStandardMaterial({
+      color: 0xfef08a,
+      emissive: 0x10b981,
+      emissiveIntensity: 0.9,
+      roughness: 0.1,
+    });
+    const wingGeo = new THREE.PlaneGeometry(0.09, 0.05);
+    const wingMat = new THREE.MeshBasicMaterial({
+      color: 0xa7f3d0,
+      transparent: true,
+      opacity: 0.8,
+      side: THREE.DoubleSide,
+    });
+
+    for (let i = 0; i < count; i++) {
+      const group = new THREE.Group();
+      const body = new THREE.Mesh(bodyGeo, fairyMat);
+      group.add(body);
+
+      const leftWing = new THREE.Mesh(wingGeo, wingMat);
+      leftWing.position.set(-0.06, 0.03, 0);
+      group.add(leftWing);
+
+      const rightWing = new THREE.Mesh(wingGeo, wingMat);
+      rightWing.position.set(0.06, 0.03, 0);
+      group.add(rightWing);
+
+      const center = new THREE.Vector3((Math.random() - 0.5) * 12, 1.5 + Math.random() * 1.8, (Math.random() - 0.5) * 12);
+      group.position.copy(center);
+      this.containerGroup.add(group);
+
+      this.fairyFlies.push({
+        group,
+        leftWing,
+        rightWing,
+        center,
+        radius: 1.2 + Math.random() * 2.5,
+        speed: 1.5 + Math.random() * 1.5,
+        phase: Math.random() * Math.PI * 2,
+      });
+    }
+  }
+
+  // =========================================================================
+  // 3.3 LEBRES DA NEVE (DEVIAS BOREAL)
+  // =========================================================================
+  initSnowHares(count = 3) {
+    const furMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.85 });
+    const earMat = new THREE.MeshStandardMaterial({ color: 0xfbcfe8, roughness: 0.7 });
+
+    for (let i = 0; i < count; i++) {
+      const group = new THREE.Group();
+      group.name = `CRITTER_HARE_${i}`;
+
+      const body = new THREE.Mesh(new THREE.SphereGeometry(0.18, 6, 6), furMat);
+      body.position.y = 0.18;
+      group.add(body);
+
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.11, 6, 6), furMat);
+      head.position.set(0.15, 0.28, 0);
+      group.add(head);
+
+      const ear1 = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.18, 4), earMat);
+      ear1.position.set(0.14, 0.44, 0.05);
+      group.add(ear1);
+
+      const ear2 = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.18, 4), earMat);
+      ear2.position.set(0.14, 0.44, -0.05);
+      group.add(ear2);
+
+      const startAngle = (i / count) * Math.PI * 2;
+      const startDist = 6 + Math.random() * 4;
+      group.position.set(Math.cos(startAngle) * startDist, 0, Math.sin(startAngle) * startDist);
+      this.containerGroup.add(group);
+
+      this.snowHares.push({
+        group,
+        homePos: group.position.clone(),
+        targetPos: group.position.clone(),
+        state: 'IDLE',
+        speed: 2.2,
+        hopTimer: 0,
+        stateTimer: 2.0 + Math.random() * 3.0,
+      });
+    }
+  }
+
+  // =========================================================================
   // 4. TOCHAS E BRASEIROS COM FLICKER DE LUZ DINÂMICA
   // =========================================================================
   initTorches(torchConfigs) {
@@ -372,12 +540,15 @@ export class AmbientLifeEngine {
       this.spawnBlacksmithNpc({ x: -6.5, y: 0, z: -2.0, name: 'Ferreiro Han' });
       this.spawnPotionGirlNpc({ x: 6.5, y: 0, z: -2.0, name: 'Pupa Alquimista' });
       this.spawnSentinelNpc({ x: 0.0, y: 0, z: 12.0, name: 'Sentinela de Lorencia' });
+      this.spawnLumenNpc({ x: 8.5, y: 0, z: 4.0, name: 'Lumen da Taberna' });
     } else if (sId.includes('noria')) {
       this.spawnChaosGoblinNpc({ x: 5.5, y: 0, z: 2.0, name: 'Duende do Caos' });
       this.spawnPotionGirlNpc({ x: -5.5, y: 0, z: 2.0, name: 'Fada das Essências' });
+      this.spawnLalaNpc({ x: -6.0, y: 0, z: -2.0, name: 'Lala Elfa Mercadora' });
     } else if (sId.includes('devias')) {
       this.spawnBlacksmithNpc({ x: -7.0, y: 0, z: -3.0, name: 'Armeiro Boreal' });
       this.spawnPotionGirlNpc({ x: 7.0, y: 0, z: -3.0, name: 'Alquimista do Gelo' });
+      this.spawnSebinaNpc({ x: 0.0, y: 0, z: -8.0, name: 'Sacerdotisa Sebina' });
     }
   }
 
@@ -621,6 +792,175 @@ export class AmbientLifeEngine {
     this.containerGroup.add(group);
   }
 
+  spawnSebinaNpc(cfg) {
+    const group = new THREE.Group();
+    group.name = `NPC_PRIESTESS_${cfg.name}`;
+    group.position.set(cfg.x, cfg.y, cfg.z);
+
+    const robeMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.35, metalness: 0.1 });
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.25, metalness: 0.85 });
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.7 });
+    const gemMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.85, roughness: 0.1 });
+
+    // Túnica e manto sacerdotal
+    const robe = new THREE.Mesh(new THREE.ConeGeometry(0.44, 1.48, 8), robeMat);
+    robe.position.y = 0.74;
+    group.add(robe);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), new THREE.MeshStandardMaterial({ color: 0xfde68a, roughness: 0.5 }));
+    head.position.y = 1.52;
+    group.add(head);
+
+    // Auréola Sagrada Dourada Flutuante
+    const haloGeo = new THREE.TorusGeometry(0.22, 0.025, 6, 16);
+    const halo = new THREE.Mesh(haloGeo, new THREE.MeshBasicMaterial({ color: 0xfbbf24 }));
+    halo.rotation.x = Math.PI / 2;
+    halo.position.set(0, 1.82, 0);
+    group.add(halo);
+
+    // Cajado Sacerdotal Sagrado
+    const staffGroup = new THREE.Group();
+    staffGroup.position.set(0.48, 0.9, 0.1);
+
+    const staffPole = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.6, 6), woodMat);
+    staffGroup.add(staffPole);
+
+    const staffHead = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.03, 6, 12), goldMat);
+    staffHead.position.y = 0.82;
+    staffGroup.add(staffHead);
+
+    const staffGem = new THREE.Mesh(new THREE.SphereGeometry(0.065, 8, 8), gemMat);
+    staffGem.position.y = 0.82;
+    staffGroup.add(staffGem);
+
+    group.add(staffGroup);
+
+    // Billboard de Identificação
+    const nameSprite = createNpcBillboardSprite('✨ ' + cfg.name, 'Evolução de 2ª Classe (Nível 150)', '#38bdf8', THREE);
+    nameSprite.position.set(0, 2.15, 0);
+    group.add(nameSprite);
+
+    const npcData = {
+      group,
+      npcId: 'sebina_priest',
+      name: cfg.name,
+      halo,
+      staffGem,
+    };
+
+    group.userData = { isNpc: true, npcId: 'sebina_priest', name: cfg.name };
+    group.traverse((c) => { c.userData = group.userData; });
+
+    this.npcs.push(npcData);
+    this.containerGroup.add(group);
+  }
+
+  spawnLumenNpc(cfg) {
+    const group = new THREE.Group();
+    group.name = `NPC_TAVERN_${cfg.name}`;
+    group.position.set(cfg.x, cfg.y, cfg.z);
+
+    const dressMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.65 });
+    const apronMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.8 });
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.7 });
+    const foamMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+    const dress = new THREE.Mesh(new THREE.ConeGeometry(0.42, 1.38, 8), dressMat);
+    dress.position.y = 0.69;
+    group.add(dress);
+
+    const apron = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.6, 0.04), apronMat);
+    apron.position.set(0, 0.72, 0.22);
+    group.add(apron);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.19, 8, 8), new THREE.MeshStandardMaterial({ color: 0xfde047, roughness: 0.6 }));
+    head.position.y = 1.48;
+    group.add(head);
+
+    // Braço segurando Caneca de Cerveja de Lorencia
+    const mugArm = new THREE.Group();
+    mugArm.position.set(0.38, 1.05, 0.2);
+
+    const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.08, 0.16, 8), woodMat);
+    mugArm.add(mug);
+
+    const foam = new THREE.Mesh(new THREE.CylinderGeometry(0.088, 0.088, 0.05, 8), foamMat);
+    foam.position.y = 0.09;
+    mugArm.add(foam);
+
+    group.add(mugArm);
+
+    const nameSprite = createNpcBillboardSprite('🍺 ' + cfg.name, 'Bebidas, Vigor & Boatos', '#f59e0b', THREE);
+    nameSprite.position.set(0, 2.05, 0);
+    group.add(nameSprite);
+
+    const npcData = {
+      group,
+      npcId: 'lumen_tavern',
+      name: cfg.name,
+      mugArm,
+    };
+
+    group.userData = { isNpc: true, npcId: 'lumen_tavern', name: cfg.name };
+    group.traverse((c) => { c.userData = group.userData; });
+
+    this.npcs.push(npcData);
+    this.containerGroup.add(group);
+  }
+
+  spawnLalaNpc(cfg) {
+    const group = new THREE.Group();
+    group.name = `NPC_ELF_LALA_${cfg.name}`;
+    group.position.set(cfg.x, cfg.y, cfg.z);
+
+    const tunicMat = new THREE.MeshStandardMaterial({ color: 0x059669, roughness: 0.5 });
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.4 });
+
+    const tunic = new THREE.Mesh(new THREE.ConeGeometry(0.38, 1.4, 8), tunicMat);
+    tunic.position.y = 0.7;
+    group.add(tunic);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), new THREE.MeshStandardMaterial({ color: 0xfbcfe8, roughness: 0.6 }));
+    head.position.y = 1.48;
+    group.add(head);
+
+    // Orelhas de Elfa
+    const earMat = new THREE.MeshStandardMaterial({ color: 0xfbcfe8 });
+    const leftEar = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.16, 4), earMat);
+    leftEar.rotation.z = Math.PI / 3;
+    leftEar.position.set(-0.18, 1.52, 0);
+    group.add(leftEar);
+
+    const rightEar = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.16, 4), earMat);
+    rightEar.rotation.z = -Math.PI / 3;
+    rightEar.position.set(0.18, 1.52, 0);
+    group.add(rightEar);
+
+    // Arco élfico curvo nas costas
+    const bow = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.022, 6, 12, Math.PI), woodMat);
+    bow.rotation.y = Math.PI / 2;
+    bow.rotation.z = 0.25;
+    bow.position.set(0, 0.95, -0.22);
+    group.add(bow);
+
+    const nameSprite = createNpcBillboardSprite('🏹 ' + cfg.name, 'Flechas, Arcos & Elixires', '#34d399', THREE);
+    nameSprite.position.set(0, 2.05, 0);
+    group.add(nameSprite);
+
+    const npcData = {
+      group,
+      npcId: 'lala_elf',
+      name: cfg.name,
+      head,
+    };
+
+    group.userData = { isNpc: true, npcId: 'lala_elf', name: cfg.name };
+    group.traverse((c) => { c.userData = group.userData; });
+
+    this.npcs.push(npcData);
+    this.containerGroup.add(group);
+  }
+
   // =========================================================================
   // 7. SISTEMA CLIMÁTICO E ATMOSFERA AMBIENTAL
   // =========================================================================
@@ -790,6 +1130,25 @@ export class AmbientLifeEngine {
       fish.mesh.rotation.z = Math.sin(elapsed * 8 + fish.wigglePhase) * 0.15; // Ondulação da cauda
     }
 
+    // 3.1 Atualiza Águas-Vivas Bioluminescentes (Atlans)
+    for (const j of this.jellyfishes) {
+      const pulse = Math.sin(elapsed * j.speed + j.phase);
+      j.group.position.y = j.baseY + pulse * 0.35;
+      const scaleS = 1.0 + pulse * 0.12;
+      j.group.scale.set(scaleS, 1.0 / scaleS, scaleS);
+    }
+
+    // 3.2 Atualiza Fadas Luminosas / Pixies (Noria)
+    for (const f of this.fairyFlies) {
+      const angle = elapsed * f.speed + f.phase;
+      f.group.position.x = f.center.x + Math.cos(angle) * f.radius;
+      f.group.position.z = f.center.z + Math.sin(angle) * f.radius;
+      f.group.position.y = f.center.y + Math.sin(elapsed * 3.0 + f.phase) * 0.3;
+      const flap = Math.sin(elapsed * 26 + f.phase) * 0.75;
+      f.leftWing.rotation.y = flap;
+      f.rightWing.rotation.y = -flap;
+    }
+
     // 4. Atualiza Tochas e Braseiros (Flicker Orgânico)
     for (const torch of this.torches) {
       const flicker = 1.0 + 0.14 * Math.sin(elapsed * 14 + torch.flickerSeed) +
@@ -882,6 +1241,32 @@ export class AmbientLifeEngine {
       }
     }
 
+    // 5.1 Atualiza Lebres da Neve (Devias Boreal)
+    for (const hare of this.snowHares) {
+      const dist = playerPos ? hare.group.position.distanceTo(playerPos) : 999;
+      if (dist < 4.0 && playerPos) {
+        // Fuga rápida saltitando
+        hare.state = 'FLEE';
+        const dir = new THREE.Vector3(hare.group.position.x - playerPos.x, 0, hare.group.position.z - playerPos.z).normalize();
+        hare.group.position.addScaledVector(dir, 4.5 * delta);
+        hare.hopTimer += delta * 14;
+        hare.group.position.y = Math.max(0, Math.sin(hare.hopTimer) * 0.22);
+        hare.group.rotation.y = Math.atan2(dir.x, dir.z);
+      } else {
+        hare.stateTimer -= delta;
+        if (hare.stateTimer <= 0) {
+          hare.state = hare.state === 'IDLE' ? 'HOP' : 'IDLE';
+          hare.stateTimer = 1.5 + Math.random() * 2.5;
+        }
+        if (hare.state === 'HOP') {
+          hare.hopTimer += delta * 8;
+          hare.group.position.y = Math.max(0, Math.sin(hare.hopTimer) * 0.12);
+        } else {
+          hare.group.position.y = 0;
+        }
+      }
+    }
+
     // 6. Atualiza Cidadãos e Habitantes (NPCs 3D)
     for (const npc of this.npcs) {
       if (npc.npcId === 'han_blacksmith') {
@@ -911,6 +1296,20 @@ export class AmbientLifeEngine {
         }
       } else if (npc.npcId === 'chaos_goblin') {
         npc.group.position.y = Math.abs(Math.sin(elapsed * 4.5)) * 0.12;
+      } else if (npc.npcId === 'sebina_priest') {
+        if (npc.halo) npc.halo.rotation.z += delta * 1.5;
+        if (npc.staffGem && npc.staffGem.material) {
+          npc.staffGem.material.emissiveIntensity = 0.5 + Math.sin(elapsed * 3.5) * 0.35;
+        }
+      } else if (npc.npcId === 'lumen_tavern') {
+        if (npc.mugArm) npc.mugArm.rotation.x = Math.sin(elapsed * 2.2) * 0.14;
+      } else if (npc.npcId === 'lala_elf') {
+        const dist = playerPos ? npc.group.position.distanceTo(playerPos) : 999;
+        if (dist < 4.5 && playerPos && npc.head) {
+          const dx = playerPos.x - npc.group.position.x;
+          const dz = playerPos.z - npc.group.position.z;
+          npc.head.rotation.y = THREE.MathUtils.lerp(npc.head.rotation.y, Math.atan2(dx, dz), 4 * delta);
+        }
       }
     }
 

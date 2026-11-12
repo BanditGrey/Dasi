@@ -118,8 +118,8 @@
 
     <!-- View Switcher Tabs -->
     <div class="view-mode-tabs">
-      <button class="tab-btn active" id="tab-scenery" data-mode="scenery" style="border-color: #38bdf8; color: #7dd3fc; font-weight: bold;">🏰 Cenários 3D (Biomas)</button>
-      <button class="tab-btn" id="tab-combat" data-mode="combat">⚔️ Arena de Combate (Lorencia)</button>
+      <button class="tab-btn active" id="tab-combat" data-mode="combat" style="border-color: #f59e0b; color: #fef08a; font-weight: bold; box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);">⚔️ ARENA LORENCIA 3D (JOGAR)</button>
+      <button class="tab-btn" id="tab-scenery" data-mode="scenery">🏰 Cenários 3D (Biomas)</button>
       <button class="tab-btn" id="tab-bosses" data-mode="bosses">👹 Chefes & Invasões</button>
       <button class="tab-btn" id="tab-events" data-mode="events">🏆 Arenas & Dungeons</button>
       <button class="tab-btn" id="tab-inventory" data-mode="inventory">🎒 Forja & Bolsa 8x8</button>
@@ -129,7 +129,7 @@
     </div>
 
     <!-- COMBAT ARENA SECTION -->
-    <section class="panel-box combat-arena-box" id="combat-arena-panel" style="display: none;">
+    <section class="panel-box combat-arena-box" id="combat-arena-panel" style="display: flex;">
       <div class="panel-header">
         <div class="title-with-badge">
           <span class="panel-title">ARENA DE COMBATE AUTORITATIVO</span>
@@ -162,6 +162,23 @@
         <div class="levelup-celebration-banner" id="levelup-celebration-banner">
           <span class="levelup-banner-title">⭐ LEVEL UP! ⭐</span>
           <span class="levelup-banner-sub" id="levelup-banner-sub">Nível 251 Alcançado! Atributos e Vitais Elevados!</span>
+        </div>
+
+        <!-- Overlay de Controles e Dicas Rápidas Lorencia 3D (Dark Knight) -->
+        <div class="arena-controls-hint-overlay" style="position: absolute; top: 12px; left: 14px; z-index: 25; pointer-events: none; background: rgba(10, 14, 23, 0.85); backdrop-filter: blur(8px); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 8px; padding: 8px 12px; font-family: 'Rajdhani', sans-serif; font-size: 12px; color: #cbd5e1; box-shadow: 0 4px 16px rgba(0,0,0,0.6);">
+          <div style="font-weight: 700; color: #fbbf24; font-size: 13px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            <span>⚔️</span> <span>GUIA DE COMANDOS CANÔNICOS (DK / BLADE KNIGHT)</span>
+          </div>
+          <div style="display: grid; grid-template-columns: auto auto; column-gap: 14px; row-gap: 2px;">
+            <div><strong style="color: #38bdf8;">[LMB / Clique Esq]:</strong> Mover / Atacar</div>
+            <div><strong style="color: #eab308;">[RMB / Clique Dir]:</strong> Twisting Slash (360° AoE)</div>
+            <div><strong style="color: #eab308;">[E / 2]:</strong> Twisting Slash (10 MP/AG)</div>
+            <div><strong style="color: #f43f5e;">[R / 3]:</strong> Death Stab (Estocada Perfurante)</div>
+            <div><strong style="color: #a855f7;">[Espaço]:</strong> Esquiva Tática (I-Frames)</div>
+            <div><strong style="color: #4ade80;">[F / Clique]:</strong> Coletar Drops & Joias</div>
+            <div><strong style="color: #ef4444;">[Q / 1]:</strong> Beber Poção de Vida</div>
+            <div><strong style="color: #0ea5e9;">[W]:</strong> Beber Poção de Mana</div>
+          </div>
         </div>
 
         <!-- Motor 3D Realtime Three.js WebGL (Nativo) -->
@@ -269,41 +286,46 @@
                 </div>
               </div>
 
-              <!-- Monitor da Rotação Autônoma de Habilidades e Poções -->
+              <!-- Monitor da Rotação de Habilidades e Poções (Action Slots) -->
               <div class="idle-rotation-monitor">
-                <div class="idle-skill-slot" id="slot-skill-cyclone" title="Auto-Skill: Twisting Slash (Dano em Área 360°)">
+                <div class="idle-skill-slot action-slot" id="slot-skill-cyclone" data-key="E" title="Twisting Slash [Atalho: E / 2 ou Botão Direito] - Dano em Área 360°" style="cursor: pointer;">
                   <div class="idle-skill-icon">🌪️</div>
                   <span class="idle-skill-label">Twisting Slash</span>
                   <div class="idle-cooldown-overlay" id="idle-cd-cyclone"></div>
-                  <span class="idle-skill-status" id="idle-status-cyclone">PRONTO</span>
+                  <span class="idle-skill-status" id="idle-status-cyclone">[E / 2 / RMB]</span>
                 </div>
-                <div class="idle-skill-slot" id="slot-skill-deathstab" title="Auto-Skill: Death Stab (Estocada Perfurante Letal)">
+                <div class="idle-skill-slot action-slot" id="slot-skill-deathstab" data-key="R" title="Death Stab [Atalho: R / 3] - Estocada Perfurante Letal" style="cursor: pointer;">
                   <div class="idle-skill-icon">⚡</div>
                   <span class="idle-skill-label">Death Stab</span>
                   <div class="idle-cooldown-overlay" id="idle-cd-deathstab"></div>
-                  <span class="idle-skill-status" id="idle-status-deathstab">PRONTO</span>
+                  <span class="idle-skill-status" id="idle-status-deathstab">[R / 3]</span>
                 </div>
-                <div class="idle-skill-slot" id="slot-skill-weapon" title="Auto-Attack: Golpe Primário da Lâmina">
+                <div class="idle-skill-slot action-slot" id="slot-skill-weapon" data-key="LMB" title="Ataque Primário da Lâmina [Atalho: Botão Esquerdo]" style="cursor: pointer;">
                   <div class="idle-skill-icon">⚔️</div>
-                  <span class="idle-skill-label">Golpe de Arma</span>
-                  <span class="idle-skill-status active-auto">AUTO</span>
+                  <span class="idle-skill-label">Golpe DK</span>
+                  <span class="idle-skill-status active-auto">[LMB]</span>
                 </div>
-                <div class="idle-skill-slot" id="slot-potion-hp" title="Auto-Potion: Bebe Poção de Vida se HP < 65%">
+                <div class="idle-skill-slot action-slot" id="slot-dodge" data-key="SPACE" title="Esquiva Ágil [Atalho: Espaço]" style="cursor: pointer;">
+                  <div class="idle-skill-icon">💨</div>
+                  <span class="idle-skill-label">Esquiva</span>
+                  <span class="idle-skill-status active-auto">[ESPAÇO]</span>
+                </div>
+                <div class="idle-skill-slot action-slot" id="slot-potion-hp" data-key="Q" title="Poção de Vida [Atalho: Q / 1]" style="cursor: pointer;">
                   <div class="idle-skill-icon">🧪</div>
-                  <span class="idle-skill-label">Auto-Vida (65%)</span>
+                  <span class="idle-skill-label">Poção Vida</span>
                   <div class="idle-cooldown-overlay" id="idle-cd-hp"></div>
-                  <span class="idle-skill-status active-auto">ATIVO</span>
+                  <span class="idle-skill-status active-auto">[Q / 1]</span>
                 </div>
-                <div class="idle-skill-slot" id="slot-potion-mp" title="Auto-Potion: Bebe Poção de Mana se MP < 40%">
+                <div class="idle-skill-slot action-slot" id="slot-potion-mp" data-key="W" title="Poção de Mana [Atalho: W]" style="cursor: pointer;">
                   <div class="idle-skill-icon">💧</div>
-                  <span class="idle-skill-label">Auto-Mana (40%)</span>
+                  <span class="idle-skill-label">Poção Mana</span>
                   <div class="idle-cooldown-overlay" id="idle-cd-mp"></div>
-                  <span class="idle-skill-status active-auto">ATIVO</span>
+                  <span class="idle-skill-status active-auto">[W]</span>
                 </div>
-                <div class="idle-skill-slot" id="slot-auto-loot" title="Auto-Loot: Radar Permanente de Joias e Zen">
+                <div class="idle-skill-slot action-slot" id="slot-auto-loot" data-key="F" title="Coletar Drops no Solo [Atalho: F]" style="cursor: pointer;">
                   <div class="idle-skill-icon">🧲</div>
-                  <span class="idle-skill-label">Auto-Loot</span>
-                  <span class="idle-skill-status active-auto">RADAR</span>
+                  <span class="idle-skill-label">Coletar</span>
+                  <span class="idle-skill-status active-auto">[F]</span>
                 </div>
               </div>
             </div>
@@ -331,7 +353,7 @@
     </section>
 
     <!-- 3D NATIVE FEATURE VIEWER (Three.js WebGL Core & PBR Action RPG) -->
-    <section class="panel-box dasi-3d-panel" id="dasi-3d-panel" style="display: flex;">
+    <section class="panel-box dasi-3d-panel" id="dasi-3d-panel" style="display: none;">
       <div class="panel-header">
         <div class="title-with-badge">
           <span class="panel-title">VISUALIZADOR 3D NATIVO EM TEMPO REAL</span>
@@ -524,6 +546,16 @@
               <button class="btn-sub-entity" data-cat="MONSTER" data-id="GOLDEN_TANTALOS" style="border-color: #f59e0b; color: #fde68a;">⚒️ Golden Tantalos</button>
               <button class="btn-sub-entity" data-cat="MONSTER" data-id="GOLDEN_DRAGON" style="border-color: #eab308; color: #fef3c7;">🐉 Great Golden Dragon</button>
               <button class="btn-sub-entity" data-cat="MONSTER" data-id="GOLDEN_TITAN" style="border-color: #f59e0b; color: #fde68a;">🌟 Golden Titan (Invasão)</button>
+              <button class="btn-sub-entity" data-cat="MONSTER" data-id="DEATH_KNIGHT" style="border-color: #94a3b8; color: #f1f5f9;">💀 Death Knight (Lost Tower)</button>
+              <button class="btn-sub-entity" data-cat="MONSTER" data-id="HOUND" style="border-color: #e2e8f0; color: #cbd5e1;">🐺 Hound (Lorencia)</button>
+              <button class="btn-sub-entity" data-cat="MONSTER" data-id="LICH" style="border-color: #c084fc; color: #e9d5ff;">🧙 Lich (Dungeon)</button>
+              <button class="btn-sub-entity" data-cat="MONSTER" data-id="DEMON" style="border-color: #f87171; color: #fca5a5;">👹 Demon (Animado)</button>
+              <button class="btn-sub-entity" data-cat="MONSTER" data-id="DRAGON" style="border-color: #ef4444; color: #fca5a5;">🐉 Red Dragon (Animado)</button>
+              <button class="btn-sub-entity" data-cat="MONSTER" data-id="GHOST" style="border-color: #38bdf8; color: #bae6fd;">👻 Ghost (Animado)</button>
+              <button class="btn-sub-entity" data-cat="MONSTER" data-id="ORC" style="border-color: #4ade80; color: #bbf7d0;">🧌 Orc (Animado)</button>
+              <button class="btn-sub-entity" data-cat="MONSTER" data-id="SKELETON_WARRIOR" style="border-color: #e2e8f0; color: #f8fafc;">⚔️ Skeleton Warrior</button>
+              <button class="btn-sub-entity" data-cat="MONSTER" data-id="YETI" style="border-color: #67e8f9; color: #cffafe;">❄️ Yeti (Devias)</button>
+              <button class="btn-sub-entity" data-cat="MONSTER" data-id="FOX" style="border-color: #fb923c; color: #fed7aa;">🦊 Silver Fox (Fauna)</button>
             </div>
           </div>
 
