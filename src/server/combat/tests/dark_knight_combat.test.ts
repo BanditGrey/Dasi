@@ -36,7 +36,7 @@ describe('Dark Knight (Blade Knight) Combat Engine - Skills, Formulas & AoE', ()
     session.maxMp = 300;
 
     const mobs = spawner.getAllMonsters();
-    const targetMob = mobs[0];
+    const targetMob = mobs.find((m) => m.maxHp >= 100) || mobs[0];
     assert.ok(targetMob);
 
     const initialMp = session.currentMp;
@@ -113,7 +113,7 @@ describe('Dark Knight (Blade Knight) Combat Engine - Skills, Formulas & AoE', ()
     session.currentMp = 300;
 
     const mobs = spawner.getAllMonsters();
-    const targetMob = mobs[0];
+    const targetMob = mobs.find((m) => m.maxHp >= 100) || mobs[0];
 
     const initialMp = session.currentMp;
 
