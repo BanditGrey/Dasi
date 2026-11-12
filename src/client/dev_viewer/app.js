@@ -2682,10 +2682,10 @@ class DevClientApp {
     // Inicia loop de regeneração e animação de cooldowns
     this.startHudVitalsLoop();
 
-    // Inicia de acordo com parâmetros de URL ou padrão 'scenery' de forma segura
+    // Inicia de acordo com parâmetros de URL ou padrão 'combat' (Arena Lorencia 3D Jogável)
     try {
       const urlParams = new URLSearchParams(window.location.search);
-      const initialTab = urlParams.get('tab') || 'scenery';
+      const initialTab = urlParams.get('tab') || 'combat';
       setMode(initialTab);
 
       if (urlParams.get('cat')) {
@@ -3727,13 +3727,13 @@ class DevClientApp {
   }
 
   handleShortcut(code, e) {
-    if (code === 'KeyQ') {
+    if (code === 'KeyQ' || (code === 'Digit1' && (this.viewMode === 'combat' || this.viewMode === 'split'))) {
       this.useHealthPotion();
     } else if (code === 'KeyW') {
       this.useManaPotion();
-    } else if (code === 'KeyE') {
+    } else if (code === 'KeyE' || (code === 'Digit2' && (this.viewMode === 'combat' || this.viewMode === 'split'))) {
       this.castSkill('E', 'cyclone');
-    } else if (code === 'KeyR') {
+    } else if (code === 'KeyR' || (code === 'Digit3' && (this.viewMode === 'combat' || this.viewMode === 'split'))) {
       this.castSkill('R', 'death_stab');
     } else if (code === 'Space') {
       if (e) e.preventDefault();

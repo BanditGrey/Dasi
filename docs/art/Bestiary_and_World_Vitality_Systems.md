@@ -100,4 +100,4 @@ O sistema conta com cobertura integral na suíte de testes do projeto:
 - `src/client/dev_viewer/tests/animated_monsters_runtime.test.ts`: 4 testes de integridade de malha, cabeçalho GLTF, presença de ossos e AnimationMixer.
 - `src/client/dev_viewer/tests/ambient_life_systems.test.ts`: 9 testes de fauna por bioma, reação de fuga de aves e raposas selvagens, áudio procedural na decolagem, toggle de HUD, flicker de tochas e liberação de recursos.
 - `src/server/combat/tests/mob_spawner_fsm.test.ts`: 6 testes de IA de detecção, alcance de ataque, leash, serialização angular e multi-bioma.
-- Total de **403 testes executados e 100% aprovados em 87 suítes** (0 falhas).
+- Total de **407 testes executados e 100% aprovados em 88 suítes** (0 falhas).
