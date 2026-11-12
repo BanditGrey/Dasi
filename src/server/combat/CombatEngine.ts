@@ -13,6 +13,7 @@ import type { ClientSession } from '../network/SessionManager.ts';
 import type { ItemInstance } from '../inventory/types.ts';
 import { CanonicalFormulas, CharacterClassId, type CharacterAttributes } from './CanonicalFormulas.ts';
 import { DropManager, type HitDamageEntry } from './DropManager.ts';
+import { ComboSkillEngine } from './ComboSkillEngine.ts';
 
 export type DamageType = 'NORMAL' | 'SKILL' | 'CRITICAL' | 'EXCELLENT' | 'IGNORE_DEFENSE' | 'MISS';
 
