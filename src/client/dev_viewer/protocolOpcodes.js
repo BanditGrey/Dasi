@@ -54,6 +54,10 @@ export const OPCODES = Object.freeze({
   CHAOS_CASTLE_UPDATE_RES: { opcode: 0x81, subcode: 0x0a },
   DUEL_ACTION_REQ: { opcode: 0x81, subcode: 0x0b },
   DUEL_UPDATE_RES: { opcode: 0x81, subcode: 0x0c },
+  KALIMA_PORTAL_SPAWN_REQ: { opcode: 0x81, subcode: 0x0d },
+  KALIMA_PORTAL_SPAWN_RES: { opcode: 0x81, subcode: 0x0e },
+  KALIMA_ENTER_REQ: { opcode: 0x81, subcode: 0x0f },
+  KALIMA_ENTER_RES: { opcode: 0x81, subcode: 0x10 },
 
   DUNGEON_ENTER_REQ: { opcode: 0x82, subcode: 0x01 },
   DUNGEON_ENTER_RES: { opcode: 0x82, subcode: 0x02 },
