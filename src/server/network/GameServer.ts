@@ -96,6 +96,7 @@ export interface GameServerConfig {
   staticDir?: string;
   heartbeatIntervalMs?: number;
   enableDevControls?: boolean;
+  dbPath?: string;
 }
 
 export class GameServer {
@@ -153,7 +154,7 @@ export class GameServer {
     this.gensSystem = new GensSystem();
     this.socketItemSystem = new SocketItemSystem();
     this.harmonySystem = new HarmonyAnd380System();
-    this.characterRepository = new CharacterRepository();
+    this.characterRepository = new CharacterRepository(config.dbPath);
   }
 
   /**

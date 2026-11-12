@@ -363,6 +363,7 @@ class DevClientApp {
     this.character = null;
     this.definitions = {};
     this.inventoryState = { cols: 8, rows: 8, items: [], equipped: [] };
+    this.lastKalimaPortalId = null;
 
     // Estado do mouse / Drag & Drop
     this.draggedItem = null;
@@ -849,8 +850,9 @@ class DevClientApp {
     // 30b. Kalima Portal & Entrada (0x81:0x0e e 0x81:0x10)
     if (opcode === OPCODES.KALIMA_PORTAL_SPAWN_RES.opcode && subcode === OPCODES.KALIMA_PORTAL_SPAWN_RES.subcode) {
       if (payload.success) {
+        this.lastKalimaPortalId = payload.portalId;
         if (this.sfx) this.sfx.playPortalWarpSound();
-        this.log(`🌌 [Kalima Portal] Portal para Kalima ${payload.kalimaLevel} aberto por ${payload.durationSeconds}s! Coordenadas: (${payload.x}, ${payload.y}).`, 'success');
+        this.log(`🌌 [Kalima Portal] Portal para Kalima ${payload.kalimaLevel} aberto por ${payload.durationSeconds}s! ID: ${payload.portalId} em (${payload.x}, ${payload.y}).`, 'success');
       } else {
         if (this.sfx) this.sfx.playFailureSound();
         this.log(`❌ [Kalima Portal] Falha ao abrir portal: ${payload.error}`, 'warning');
@@ -2144,6 +2146,38 @@ class DevClientApp {
 
       document.getElementById('btn-orch-trade-cancel')?.addEventListener('click', () => {
         this.sendTradeCancel();
+      });
+
+      document.getElementById('btn-orch-kalima-spawn')?.addEventListener('click', () => {
+        const x = Math.round(this.playerX || 143);
+        const y = Math.round(this.playerY || 128);
+        this.sendKalimaSpawn('lost_map_7', x, y);
+      });
+
+      document.getElementById('btn-orch-kalima-enter')?.addEventListener('click', () => {
+        if (this.lastKalimaPortalId) {
+          this.sendKalimaEnter(this.lastKalimaPortalId);
+        } else {
+          this.log('⚠️ Nenhum portal de Kalima ativo registrado localmente. Abra um portal com Lost Map primeiro!', 'warning');
+        }
+      });
+
+      document.getElementById('btn-orch-harmony-smelt')?.addEventListener('click', () => {
+        const firstItem = this.inventoryState && this.inventoryState.items && this.inventoryState.items[0];
+        if (firstItem) {
+          this.sendHarmonySmelt(firstItem.uuid || firstItem.id);
+        } else {
+          this.log('⚠️ Nenhum item encontrado no inventário para refino com Jewel of Harmony!', 'warning');
+        }
+      });
+
+      document.getElementById('btn-orch-harmony-restore')?.addEventListener('click', () => {
+        const firstItem = this.inventoryState && this.inventoryState.items && this.inventoryState.items[0];
+        if (firstItem) {
+          this.sendHarmonyRestore(firstItem.uuid || firstItem.id);
+        } else {
+          this.log('⚠️ Nenhum item selecionado para remoção de propriedades de Harmony!', 'warning');
+        }
       });
     }
 

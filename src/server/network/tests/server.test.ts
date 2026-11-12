@@ -29,7 +29,7 @@ describe('Servidor de Jogo Dasi (WebSocket / HTTP Dev Server)', () => {
   let server: GameServer;
 
   before(async () => {
-    server = new GameServer({ port: TEST_PORT, enableDevControls: true });
+    server = new GameServer({ port: TEST_PORT, enableDevControls: true, dbPath: ':memory:' });
     await server.start();
   });
 
