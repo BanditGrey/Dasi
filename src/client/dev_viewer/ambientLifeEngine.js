@@ -364,8 +364,343 @@ export class AmbientLifeEngine {
   }
 
   // =========================================================================
-  // CICLO DE ATUALIZAÇÃO POR FRAME (60 FPS)
+  // 6. CIDADÃOS E HABITANTES DAS CIDADES (NPCS 3D INTERATIVOS)
   // =========================================================================
+  initNpcs(scenarioId) {
+    const sId = String(scenarioId || '').toLowerCase();
+    if (sId.includes('lorencia')) {
+      this.spawnBlacksmithNpc({ x: -6.5, y: 0, z: -2.0, name: 'Ferreiro Han' });
+      this.spawnPotionGirlNpc({ x: 6.5, y: 0, z: -2.0, name: 'Pupa Alquimista' });
+      this.spawnSentinelNpc({ x: 0.0, y: 0, z: 12.0, name: 'Sentinela de Lorencia' });
+    } else if (sId.includes('noria')) {
+      this.spawnChaosGoblinNpc({ x: 5.5, y: 0, z: 2.0, name: 'Duende do Caos' });
+      this.spawnPotionGirlNpc({ x: -5.5, y: 0, z: 2.0, name: 'Fada das Essências' });
+    } else if (sId.includes('devias')) {
+      this.spawnBlacksmithNpc({ x: -7.0, y: 0, z: -3.0, name: 'Armeiro Boreal' });
+      this.spawnPotionGirlNpc({ x: 7.0, y: 0, z: -3.0, name: 'Alquimista do Gelo' });
+    }
+  }
+
+  spawnBlacksmithNpc(cfg) {
+    const group = new THREE.Group();
+    group.name = `NPC_BLACKSMITH_${cfg.name}`;
+    group.position.set(cfg.x, cfg.y, cfg.z);
+
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.85 });
+    const ironMat = new THREE.MeshStandardMaterial({ color: 0x52525b, metalness: 0.85, roughness: 0.25 });
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.9 });
+
+    // Tronco e cabeça
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.9, 0.45), bodyMat);
+    torso.position.y = 0.95;
+    group.add(torso);
+
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.35), new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.6 }));
+    head.position.y = 1.55;
+    group.add(head);
+
+    // Bigorna e Toco de Carvalho
+    const stump = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.5, 0.65, 8), woodMat);
+    stump.position.set(0.65, 0.32, 0);
+    group.add(stump);
+
+    const anvil = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.25, 0.28), ironMat);
+    anvil.position.set(0.65, 0.77, 0);
+    group.add(anvil);
+
+    // Braço direito com martelo em pivô de ombro
+    const hammerArmPivot = new THREE.Group();
+    hammerArmPivot.position.set(0.42, 1.35, 0);
+
+    const hammerHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.65, 6), woodMat);
+    hammerHandle.position.set(0, -0.25, 0);
+    hammerArmPivot.add(hammerHandle);
+
+    const hammerHead = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.14, 0.14), ironMat);
+    hammerHead.position.set(0, -0.55, 0);
+    hammerArmPivot.add(hammerHead);
+
+    group.add(hammerArmPivot);
+
+    // Emitter de faíscas da bigorna
+    const sparkGeo = new THREE.BufferGeometry();
+    const sparkPositions = new Float32Array(8 * 3);
+    for (let i = 0; i < 8; i++) {
+      sparkPositions[i * 3 + 0] = 0.65 + (Math.random() - 0.5) * 0.15;
+      sparkPositions[i * 3 + 1] = 0.92;
+      sparkPositions[i * 3 + 2] = (Math.random() - 0.5) * 0.15;
+    }
+    sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPositions, 3));
+    const sparkMat = new THREE.PointsMaterial({
+      color: 0xf59e0b,
+      size: 0.08,
+      transparent: true,
+      opacity: 0.0,
+      blending: THREE.AdditiveBlending,
+    });
+    const sparkPoints = new THREE.Points(sparkGeo, sparkMat);
+    group.add(sparkPoints);
+
+    // Billboard de Nome e Ofício
+    const nameSprite = createNpcBillboardSprite('🔨 ' + cfg.name, 'Forja, Armas & Reparos', '#fbbf24', THREE);
+    nameSprite.position.set(0, 2.05, 0);
+    group.add(nameSprite);
+
+    const npcData = {
+      group,
+      npcId: 'han_blacksmith',
+      name: cfg.name,
+      hammerArmPivot,
+      sparkPoints,
+      sparkTimer: 0,
+    };
+
+    group.userData = { isNpc: true, npcId: 'han_blacksmith', name: cfg.name };
+    group.traverse((c) => { c.userData = group.userData; });
+
+    this.npcs.push(npcData);
+    this.containerGroup.add(group);
+  }
+
+  spawnPotionGirlNpc(cfg) {
+    const group = new THREE.Group();
+    group.name = `NPC_POTION_${cfg.name}`;
+    group.position.set(cfg.x, cfg.y, cfg.z);
+
+    const robeMat = new THREE.MeshStandardMaterial({ color: 0x059669, roughness: 0.7 });
+    const copperMat = new THREE.MeshStandardMaterial({ color: 0xb45309, metalness: 0.8, roughness: 0.3 });
+    const liquidMat = new THREE.MeshBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.85 });
+
+    // Corpo de túnica esmeralda
+    const robe = new THREE.Mesh(new THREE.ConeGeometry(0.42, 1.4, 8), robeMat);
+    robe.position.y = 0.7;
+    group.add(robe);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), new THREE.MeshStandardMaterial({ color: 0xfbcfe8, roughness: 0.6 }));
+    head.position.y = 1.48;
+    group.add(head);
+
+    // Caldeirão de Cobre com Poção Borbulhante
+    const cauldron = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.3, 0.45, 12), copperMat);
+    cauldron.position.set(0.65, 0.22, 0);
+    group.add(cauldron);
+
+    const potionSurface = new THREE.Mesh(new THREE.CircleGeometry(0.36, 12), liquidMat);
+    potionSurface.rotation.x = -Math.PI / 2;
+    potionSurface.position.set(0.65, 0.44, 0);
+    group.add(potionSurface);
+
+    // Bolhas de vapor da poção
+    const bubbleGeo = new THREE.BufferGeometry();
+    const bubblePositions = new Float32Array(6 * 3);
+    for (let i = 0; i < 6; i++) {
+      bubblePositions[i * 3 + 0] = 0.65 + (Math.random() - 0.5) * 0.25;
+      bubblePositions[i * 3 + 1] = 0.45 + Math.random() * 0.4;
+      bubblePositions[i * 3 + 2] = (Math.random() - 0.5) * 0.25;
+    }
+    bubbleGeo.setAttribute('position', new THREE.BufferAttribute(bubblePositions, 3));
+    const bubbleMat = new THREE.PointsMaterial({
+      color: 0x34d399,
+      size: 0.09,
+      transparent: true,
+      opacity: 0.85,
+      blending: THREE.AdditiveBlending,
+    });
+    const bubblePoints = new THREE.Points(bubbleGeo, bubbleMat);
+    group.add(bubblePoints);
+
+    // Billboard de Nome e Ofício
+    const nameSprite = createNpcBillboardSprite('🧪 ' + cfg.name, 'Poções de Vida & Mana', '#34d399', THREE);
+    nameSprite.position.set(0, 1.95, 0);
+    group.add(nameSprite);
+
+    const npcData = {
+      group,
+      npcId: 'pupa_potion_girl',
+      name: cfg.name,
+      bubblePoints,
+    };
+
+    group.userData = { isNpc: true, npcId: 'pupa_potion_girl', name: cfg.name };
+    group.traverse((c) => { c.userData = group.userData; });
+
+    this.npcs.push(npcData);
+    this.containerGroup.add(group);
+  }
+
+  spawnSentinelNpc(cfg) {
+    const group = new THREE.Group();
+    group.name = `NPC_SENTINEL_${cfg.name}`;
+    group.position.set(cfg.x, cfg.y, cfg.z);
+
+    const plateMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.85, roughness: 0.25 });
+    const cloakMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.8 });
+
+    // Armadura de Cavaleiro Imperial
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.95, 0.4), plateMat);
+    torso.position.y = 1.0;
+    group.add(torso);
+
+    const cape = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 1.1), cloakMat);
+    cape.position.set(0, 0.95, -0.22);
+    group.add(cape);
+
+    const helm = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.4, 0.35), plateMat);
+    helm.position.y = 1.62;
+    group.add(helm);
+
+    // Alabarda Imperial em posição de guarda
+    const spearPivot = new THREE.Group();
+    spearPivot.position.set(0.4, 1.0, 0.1);
+
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 2.3, 6), plateMat);
+    shaft.position.y = 0.5;
+    spearPivot.add(shaft);
+
+    const blade = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.4, 4), plateMat);
+    blade.position.y = 1.7;
+    spearPivot.add(blade);
+
+    group.add(spearPivot);
+
+    // Billboard de Nome e Guarda
+    const nameSprite = createNpcBillboardSprite('🛡️ ' + cfg.name, 'Guarda Imperial da Cidadela', '#93c5fd', THREE);
+    nameSprite.position.set(0, 2.15, 0);
+    group.add(nameSprite);
+
+    const npcData = {
+      group,
+      npcId: 'sentinel_guard',
+      name: cfg.name,
+      spearPivot,
+    };
+
+    group.userData = { isNpc: true, npcId: 'sentinel_guard', name: cfg.name };
+    group.traverse((c) => { c.userData = group.userData; });
+
+    this.npcs.push(npcData);
+    this.containerGroup.add(group);
+  }
+
+  spawnChaosGoblinNpc(cfg) {
+    const group = new THREE.Group();
+    group.name = `NPC_CHAOS_${cfg.name}`;
+    group.position.set(cfg.x, cfg.y, cfg.z);
+
+    const goblinSkin = new THREE.MeshStandardMaterial({ color: 0x65a30d, roughness: 0.6 });
+    const brassMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.85, roughness: 0.25 });
+
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 8), goblinSkin);
+    body.position.y = 0.5;
+    group.add(body);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 8, 8), goblinSkin);
+    head.position.y = 0.9;
+    group.add(head);
+
+    const goggles = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.28, 8), brassMat);
+    goggles.rotation.z = Math.PI / 2;
+    goggles.position.set(0, 0.95, 0.18);
+    group.add(goggles);
+
+    // Billboard de Nome e Altar
+    const nameSprite = createNpcBillboardSprite('⚡ ' + cfg.name, 'Combinações da Chaos Machine', '#f59e0b', THREE);
+    nameSprite.position.set(0, 1.5, 0);
+    group.add(nameSprite);
+
+    const npcData = {
+      group,
+      npcId: 'chaos_goblin',
+      name: cfg.name,
+    };
+
+    group.userData = { isNpc: true, npcId: 'chaos_goblin', name: cfg.name };
+    group.traverse((c) => { c.userData = group.userData; });
+
+    this.npcs.push(npcData);
+    this.containerGroup.add(group);
+  }
+
+  // =========================================================================
+  // 7. SISTEMA CLIMÁTICO E ATMOSFERA AMBIENTAL
+  // =========================================================================
+  initWeather(scenarioId) {
+    const sId = String(scenarioId || '').toLowerCase();
+    let particleCount = 180;
+    let color = 0x93c5fd;
+    let size = 0.08;
+    let spreadX = 36;
+    let spreadZ = 36;
+    let spreadY = 12;
+    let fallSpeed = 3.5;
+    let windSpeed = 0.4;
+    let kind = 'rain';
+
+    if (sId.includes('devias')) {
+      kind = 'snow';
+      color = 0xf8fafc;
+      particleCount = 240;
+      size = 0.10;
+      fallSpeed = 2.2;
+      windSpeed = 2.8;
+    } else if (sId.includes('noria')) {
+      kind = 'fireflies';
+      color = 0xfacc15;
+      particleCount = 75;
+      size = 0.12;
+      fallSpeed = 0.3;
+      windSpeed = 0.2;
+    } else if (sId.includes('atlans')) {
+      kind = 'bubbles';
+      color = 0x38bdf8;
+      particleCount = 120;
+      size = 0.10;
+      fallSpeed = -1.8;
+      windSpeed = 0.3;
+    } else if (sId.includes('lost_tower')) {
+      kind = 'embers';
+      color = 0xf97316;
+      particleCount = 140;
+      size = 0.09;
+      fallSpeed = -0.8;
+      windSpeed = 0.5;
+    } else if (!sId.includes('lorencia')) {
+      return;
+    }
+
+    const geom = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount; i++) {
+      positions[i * 3 + 0] = (Math.random() - 0.5) * spreadX;
+      positions[i * 3 + 1] = Math.random() * spreadY;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * spreadZ;
+    }
+    geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+    const mat = new THREE.PointsMaterial({
+      color,
+      size,
+      transparent: true,
+      opacity: 0.75,
+      blending: kind === 'fireflies' || kind === 'embers' ? THREE.AdditiveBlending : THREE.NormalBlending,
+      depthWrite: false,
+    });
+
+    const points = new THREE.Points(geom, mat);
+    points.name = `DASI_WEATHER_${kind.toUpperCase()}`;
+    this.containerGroup.add(points);
+
+    this.weatherParticles = {
+      points,
+      positions,
+      kind,
+      spreadX,
+      spreadY,
+      spreadZ,
+      fallSpeed,
+      windSpeed,
+    };
+  }
   update(delta, playerPos) {
     if (!this.enabled || !this.containerGroup.visible) return;
     const elapsed = this.clock.getElapsedTime();
