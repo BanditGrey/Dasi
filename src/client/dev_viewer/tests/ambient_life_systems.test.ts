@@ -93,5 +93,61 @@ describe('2. Sistema de Vida Ambiental & Fauna Dinâmica (AmbientLifeEngine)', (
     assert.strictEqual(engine.containerGroup.children.length, 0);
     assert.strictEqual(engine.birds.length, 0);
     assert.strictEqual(engine.torches.length, 0);
+    assert.strictEqual(engine.critters.length, 0);
+  });
+
+  it('inicializa fauna terrestre (raposas) em Lorencia e reage com fuga rápida ao herói', () => {
+    const scene = new THREE.Scene();
+    const engine = new AmbientLifeEngine(scene, 'lorencia_citadel');
+
+    assert.ok(engine.critters.length >= 3, 'Deve conter pelo menos 3 critters/raposas em Lorencia');
+    const firstFox = engine.critters[0];
+    assert.strictEqual(firstFox.kind, 'fox');
+    assert.strictEqual(firstFox.state, 'GRAZING');
+
+    // Posiciona herói a menos de 4m da raposa
+    const foxPos = firstFox.group.position;
+    const playerPos = new THREE.Vector3(foxPos.x + 1.2, 0, foxPos.z + 1.2);
+
+    engine.update(0.016, playerPos);
+
+    assert.strictEqual(firstFox.state, 'FLEEING', 'A raposa deve entrar em estado de fuga ao detectar o herói');
+    assert.strictEqual(firstFox.speed, 4.2, 'A velocidade deve acelerar para galope de fuga');
+    assert.ok(firstFox.fleeDirection.lengthSq() > 0, 'Direção de fuga deve estar normalizada');
+  });
+
+  it('conecta síntese de áudio procedural na decolagem de aves', () => {
+    const soundCalls: string[] = [];
+    const mockAudio = {
+      playWildlifeSound(kind: string) {
+        soundCalls.push(kind);
+      },
+    };
+
+    const scene = new THREE.Scene();
+    const engine = new AmbientLifeEngine(scene, 'lorencia_citadel', mockAudio);
+    const firstBird = engine.birds[0];
+    const birdPos = firstBird.mesh.position;
+    const nearbyPlayer = new THREE.Vector3(birdPos.x + 1.0, 0, birdPos.z + 1.0);
+
+    engine.update(0.016, nearbyPlayer);
+
+    assert.ok(soundCalls.includes('wings'), 'Deve disparar áudio procedural de revoada de asas');
+  });
+
+  it('toggleAmbient alterna visibilidade e execução da vitalidade ambiental', () => {
+    const scene = new THREE.Scene();
+    const engine = new AmbientLifeEngine(scene, 'lorencia_citadel');
+
+    assert.strictEqual(engine.enabled, true);
+    assert.strictEqual(engine.containerGroup.visible, true);
+
+    const isNowOff = engine.toggleAmbient(false);
+    assert.strictEqual(isNowOff, false);
+    assert.strictEqual(engine.containerGroup.visible, false);
+
+    const isNowOn = engine.toggleAmbient(true);
+    assert.strictEqual(isNowOn, true);
+    assert.strictEqual(engine.containerGroup.visible, true);
   });
 });
