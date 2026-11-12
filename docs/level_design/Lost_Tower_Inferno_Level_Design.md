@@ -3,7 +3,7 @@
 > **Projeto:** Dasi (Continent of Legend Reimagined)  
 > **Status:** Especificação Técnica & Artística de Level Design (v1.0)  
 > **Ambiente:** A Fortaleza Vertical de Obsidiana & Magma (*Lost Tower*)  
-> **Concept Art Oficial:** [`docs/art/scenery/lost_tower_concept_art.jpg`](file:///d:/Dasi/docs/art/scenery/lost_tower_concept_art.jpg)  
+> **Material Canônico de Estudo:** `reference/mu_roxgaming_5.2/client/Data/World5/` (EncTerrain5.att, EncTerrain5.obj)  
 > **Modelo 3D GLB:** [`prototypes/3d_scenery/lost_tower_abyss.glb`](file:///d:/Dasi/prototypes/3d_scenery/lost_tower_abyss.glb)  
 > **Público-Alvo:** Level Designers, Environment Artists, Lighting Artists, Technical Shaders e Programadores de Combate  
 

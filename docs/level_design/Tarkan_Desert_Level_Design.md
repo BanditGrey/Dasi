@@ -3,7 +3,7 @@
 > **Projeto:** Dasi (Continent of Legend Reimagined)  
 > **Status:** Especificação Técnica & Artística de Level Design (v1.0)  
 > **Ambiente:** O Deserto Escaldante de Cinzas & Ossadas Fossilizadas (*Tarkan*)  
-> **Concept Art Oficial:** [`docs/art/scenery/tarkan_concept_art.jpg`](file:///d:/Dasi/docs/art/scenery/tarkan_concept_art.jpg)  
+> **Material Canônico de Estudo:** `reference/mu_roxgaming_5.2/client/Data/World9/` (EncTerrain9.att, EncTerrain9.obj)  
 > **Modelo 3D GLB:** [`prototypes/3d_scenery/tarkan_desert.glb`](file:///d:/Dasi/prototypes/3d_scenery/tarkan_desert.glb)  
 > **Público-Alvo:** Level Designers, Environment Artists, Lighting Artists, Technical Shaders e Programadores de IA de Monstros  
 

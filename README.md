@@ -26,9 +26,9 @@ Dasi/
 │   ├── Bestiary_and_Bosses.md            # Chefes de Múltiplas Fases e Invasões Douradas
 │   ├── Economy_and_Crafting.md           # Economia das Joias e Máquina do Caos
 │   ├── PVP_and_Castle_Siege.md           # Sistema Moral de PK e Batalha pelo Castelo
-│   ├── art/                              # Galeria de Arte Conceitual Oficial
-│   │   ├── Scenery_Art_Gallery.md        # Galeria histórica de referências
-│   │   └── scenery/                      # Referências de cenários
+│   ├── technical/                        # Protocolos Técnicos de Engenharia Reversa
+│   │   ├── Canonical_Classes_Asset_Extraction_Protocol.md # Mapeamento e Decodificação Canônica 1:1
+│   │   └── Network_Protocol.md           # Protocolo Binário de Pacotes e Opcodes Canônicos
 │   ├── level_design/
 │   │   ├── All_56_Scenarios_Master_Index.md  # Índice Geral dos 56 Cenários Canônicos
 │   │   ├── Lorencia_Level_Design.md      # Castelo de Loren & Cidadela de Lorencia
@@ -80,8 +80,7 @@ Dasi/
 │   │   │   ├── dasi3dRealtimeArena.js    # Motor 3D Three.js com Câmera e Partículas GPU
 │   │   │   ├── dasi3dContent.js          # Geradores procedurais e carregamento de GLB
 │   │   │   ├── dasiCollisionEngine.js    # Motor de Colisão Física com Deslizamento
-│   │   │   ├── models/                   # GLBs existentes, blockouts e módulos experimentais
-│   │   │   └── art/                      # Referências e concepts
+│   │   │   └── models/                   # GLBs existentes, blockouts e modelos canônicos 3D
 │   │   └── gameplay/                     # Sistemas de Combate Client-Side (TypeScript)
 │   │
 │   ├── server/                           # Protótipo de servidor Node.js / TypeScript
@@ -95,7 +94,20 @@ Dasi/
 │   │
 │   └── shaders/                          # Shaders HLSL e GLSL
 │
-└── tools/
+├── reference/                            # Base Canônica de Estudo e Engenharia Reversa
+│   └── mu_roxgaming_5.2/                 # MU Online Season 5.2 (60 FPS Update)
+│       ├── _archives/                    # Zips originais protegidos (.gitignore)
+│       ├── client/                       # Client legível: Data/ (World*, Player, Monster, Item...)
+│       ├── server/                       # MuServer (Data/Monster, Data/Item, Eventos, configs)
+│       ├── source/                       # Código C++ (ConnectServer, GameServer, FPS 60 fix)
+│       └── notes/                        # Fórmulas de cálculo e mapeamento de protocolo
+│
+├── conversions/                          # Pipeline de Conversão de Assets Legados
+│   ├── converters/                       # Utilitários especializados (BMD->GLB, OZJ->PNG, ATT->NavMesh)
+│   └── output/                           # Assets convertidos prontos para integração no Dasi
+│
+└── tools/                                # Ferramentas e Utilitários de Build
+    ├── README.md                         # Catálogo completo e instruções de uso de cada script
     ├── blender_dasi_world_builder.py     # Gerador de biomas e Valley/Blood Castle (Blender 5.2 LTS)
     ├── event_arena_models.mjs            # Cenas PBR estáticas dedicadas de EVT_02..EVT_04
     ├── export_event_arenas.mjs           # Exportação/sincronização dos GLBs de evento
@@ -108,11 +120,22 @@ Dasi/
 
 ## 🚀 Como Iniciar o Servidor e Visualizar os Mundos 3D
 
+### Opção 1: Inicializador Nativo Windows em EXE (Recomendado - 1 Clique)
+
+Dê um duplo clique diretamente em **`Dasi.exe`** na raiz do projeto (ou execute `Iniciar_Dasi.bat`).
+- **Dashboard completo:** gerencia o GameServer Node.js e/ou o servidor auxiliar PHP com 1 clique.
+- **Janela Imersiva (App Mode):** abre a interface do jogo sem poluição de abas ou barras de navegação.
+- **Console em tempo real:** monitora logs, conexões, comandos de GM (`DASI_DEV_CONTROLS=1`) e portas sem precisar de terminais abertos.
+
+### Opção 2: Linha de Comando (Terminal)
+
 ```bash
 # Requer Node.js 22.18+ e npm
 npm ci
 # Iniciar o Servidor de Jogo e Dev Viewer Web (somente localhost)
 npm start
+# Ou via servidor auxiliar PHP:
+npm run serve:php
 ```
 
 Para regenerar os GLBs estáticos de arenas e bestiário (Node.js/Three.js):

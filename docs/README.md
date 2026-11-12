@@ -3,7 +3,7 @@
 > **Servidor Autoritativo:** Node.js / TypeScript (`ws://localhost:8080` & `http://localhost:8080`)  
 > **Cliente WebGL 3D:** Three.js PBR (`src/client/dev_viewer/`)  
 > **Cliente Desktop AAA:** Unreal Engine 5.5 C++ (`src/client/ue5_project/`)  
-> **Status dos Testes:** 🟢 **222 / 222 testes aprovados em 54 suítes (100% green)** + `npm run typecheck` sem erros
+> **Status dos Testes:** 🟢 **365 / 365 testes aprovados em 81 suítes (100% green)** + `npm run typecheck` sem erros
 
 ---
 
@@ -25,10 +25,11 @@
 - [`Devias_Boreal_Level_Design.md`](file:///d:/Dasi/docs/level_design/Devias_Boreal_Level_Design.md): Fortaleza glacial ártica, tempestades de neve e monstros de gelo.
 - [`Atlans_Thalassa_Level_Design.md`](file:///d:/Dasi/docs/level_design/Atlans_Thalassa_Level_Design.md): Cidade submersa abissal, física subaquática e reflexos cáusticos.
 - [`Icarus_Aethel_Level_Design.md`](file:///d:/Dasi/docs/level_design/Icarus_Aethel_Level_Design.md): Reino celeste nas nuvens, aerodinâmica de asas e pontes etéreas.
-- [`Scenery_Art_Gallery.md`](file:///d:/Dasi/docs/art/Scenery_Art_Gallery.md): Galeria com artes conceituais de alta definição de todos os biomas.
+- [`Canonical_Classes_Asset_Extraction_Protocol.md`](file:///d:/Dasi/docs/technical/Canonical_Classes_Asset_Extraction_Protocol.md): Protocolo de extração de assets e engenharia reversa das classes e terrenos canônicos a partir de `reference/mu_roxgaming_5.2/`.
 - [`Modelos 3D (.glb) em models/`](file:///d:/Dasi/src/client/dev_viewer/models/): Biomas principais, GLBs estáticos de arenas de evento (`models/events/`) e doze protótipos de bestiário (`models/bestiary/`), exportados com Three.js. Os arquivos estáticos não incluem colisões, rig, animações nem efeitos dinâmicos; esses pertencem ao `CollisionSystem` e ao runtime.
 
 ### 1.3 Arquitetura Técnica & Engenharia de Sistemas
+- [`Server_Master_Orchestration_and_Functions_Bible.md`](file:///d:/Dasi/docs/technical/Server_Master_Orchestration_and_Functions_Bible.md): Bíblia de Orquestração Máxima e Especificação de Funções do GameServer, detalhando os 16 subsistemas autoritativos, composições de classes, FSMs de evolução (Classes, Quests Sebina/Marlon/Devin, Resets e Master Skill Tree), matriz de protocolo (Opcodes `0x01` a `0xB2`) e integração autoritativa zero-trust.
 - [`Network_Protocol.md`](file:///d:/Dasi/docs/technical/Network_Protocol.md): Especificação completa do protocolo de rede binário multiplexado (Opcodes `0x01` a `0x75`).
 - [`CollisionSystem.ts`](file:///d:/Dasi/src/server/world/CollisionSystem.ts) & [`dasiCollisionEngine.js`](file:///d:/Dasi/src/client/dev_viewer/dasiCollisionEngine.js): Motor físico de colisão elástica com deslizamento contínuo, limites externos e wireframes de debug.
 - [`dasi3dScenarios.js`](file:///d:/Dasi/src/client/dev_viewer/dasi3dScenarios.js): Modelagem 3D procedural e partículas GPU dinâmicas a 60 FPS para os **56 cenários** (8 biomas + Castle Siege + Event Arenas).
@@ -92,7 +93,7 @@ d:\Dasi\
 
 ## ⚡ 3. COMO INICIALIZAR E TESTAR
 
-### 3.1 Executar a Suíte de Testes Automatizados (222 testes em 54 suítes)
+### 3.1 Executar a Suíte de Testes Automatizados (365 testes em 81 suítes)
 ```powershell
 npm test
 npm run typecheck   # tsc --noEmit (strict) — 0 erros

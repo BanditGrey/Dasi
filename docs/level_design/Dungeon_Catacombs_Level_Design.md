@@ -3,7 +3,7 @@
 > **Projeto:** Dasi (Continent of Legend Reimagined)  
 > **Status:** Especificação Técnica & Artística de Level Design (v1.0)  
 > **Ambiente:** As Catacumbas Subterrâneas do Abismo Esquecido (*Dungeon*)  
-> **Concept Art Oficial:** [`docs/art/scenery/dungeon_concept_art.jpg`](file:///d:/Dasi/docs/art/scenery/dungeon_concept_art.jpg)  
+> **Material Canônico de Estudo:** `reference/mu_roxgaming_5.2/client/Data/World2/` (EncTerrain2.att, EncTerrain2.obj)  
 > **Modelo 3D GLB:** [`prototypes/3d_scenery/dungeon_catacombs.glb`](file:///d:/Dasi/prototypes/3d_scenery/dungeon_catacombs.glb)  
 > **Público-Alvo:** Level Designers, Environment Artists, Lighting Artists, Technical Shaders e Programadores de Colisão  
 

@@ -3,7 +3,7 @@
 > **Projeto:** Dasi (Continent of Legend Reimagined)  
 > **Status:** Especificação Técnica & Artística de Level Design (v1.0)  
 > **Ambiente:** A Fortaleza de Guerra & O Vale de Loren (*Castle Siege*)  
-> **Concept Art Oficial:** [`docs/art/scenery/valley_of_loren_concept_art.jpg`](file:///d:/Dasi/docs/art/scenery/valley_of_loren_concept_art.jpg)  
+> **Material Canônico de Estudo:** `reference/mu_roxgaming_5.2/client/Data/World31/` (EncTerrain31.att, EncTerrain31.obj)  
 > **Público-Alvo:** Level Designers, Environment Artists, Lighting Artists, Engenheiros de Rede e Gameplay Designers de PvP  
 
 ---

@@ -3,7 +3,7 @@
 > **Projeto:** Dasi (Continent of Legend Reimagined)  
 > **Status:** Especificação Técnica & Artística de Level Design (v1.0)  
 > **Ambiente:** Arenas Clássicas de Evento com Hora Marcada & Coliseu de Duelo  
-> **Concept Art Oficial:** [`docs/art/scenery/blood_castle_concept_art.jpg`](file:///d:/Dasi/docs/art/scenery/blood_castle_concept_art.jpg)  
+> **Material Canônico de Estudo:** `reference/mu_roxgaming_5.2/client/Data/World10, World12, World19/`  
 > **Público-Alvo:** Level Designers, Environment Artists, Lighting Artists, Engenheiros de Redes e Gameplay Programmers  
 
 ---
