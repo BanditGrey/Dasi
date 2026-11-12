@@ -648,6 +648,24 @@ export class Dasi3DRealtimeArena {
     } else if (npcId === 'sentinel_guard') {
       this.harmonicAudio?.playDodgeSound();
       this.app?.log('🛡️ [SENTINELA DA CIDADELA] "Mantenha a guarda alta além dos portões. Criaturas sanguinárias assolam as planícies!"', 'info');
+    } else if (npcId === 'sebina_priest') {
+      const modalOrch = document.getElementById('modal-server-orchestration');
+      if (modalOrch) modalOrch.style.display = 'flex';
+      this.harmonicAudio?.playLevelUpSound();
+      this.app?.log('✨ [SACERDOTISA SEBINA] "Guerreiro de nível 150+, entregue-me o Scroll of the Emperor e alcance sua 2ª classe sagrada!"', 'success');
+    } else if (npcId === 'lumen_tavern') {
+      this.harmonicAudio?.playPotionSound('health');
+      this.app?.log('🍺 [LUMEN DA TABERNA] "Tome uma boa caneca de Ale de Lorencia! Vigor e ânimo renovados para enfrentar os monstros!"', 'info');
+    } else if (npcId === 'lala_elf') {
+      if (this.app) {
+        if (typeof this.app.renderNpcShopCatalog === 'function') {
+          this.app.renderNpcShopCatalog('pupa_potion_girl');
+        }
+        const modalShop = document.getElementById('modal-npc-shop');
+        if (modalShop) modalShop.style.display = 'flex';
+        this.harmonicAudio?.playItemPickupSound();
+        this.app?.log('🏹 [LALA ELFA] "Os segredos arcanos de Noria e os elixires da floresta sagrada estão à sua disposição, herói."', 'info');
+      }
     }
   }
 

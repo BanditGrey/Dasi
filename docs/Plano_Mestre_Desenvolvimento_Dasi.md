@@ -4,7 +4,7 @@
 > **Status:** Documento Estratégico Executivo (v1.0)  
 > **Versão da Engine/Ecossistema:** Node.js 22+ (Backend) • Three.js WebGL (Dev Viewer) • Unreal Engine 5.4+ (Cliente AAA)  
 > **Base Canônica Homologada:** MU Online Season 5.2 (`reference/mu_roxgaming_5.2/`)  
-> **Qualidade e QA Atual:** 407/407 Testes Automatizados Aprovados em 88 suítes (100% Pass)  
+> **Qualidade e QA Atual:** 429/429 Testes Automatizados Aprovados em 97 suítes (100% Pass)  
 > **IP Canônico de Rede:** `26.32.29.60` (Radmin VPN) / `127.0.0.1` (Local Dev)
 
 ---
@@ -31,7 +31,7 @@ Com base em uma auditoria completa de todo o repositório (`D:\Dasi`), o projeto
 
 | Camada / Subsistema | O que JÁ ESTÁ PRONTO e Validado | O que FALTA para Versão Jogável Completa |
 | :--- | :--- | :--- |
-| **Servidor Autoritativo** (`src/server/`) | • Protocolo binário C1/C2 + JSON unificado.<br/>• Handshake Zero-Trust e checagem CRC16-CCITT.<br/>• Motor de colisão com física de deslizamento cilíndrico/AABB.<br/>• Sistema canônico de 5 atributos (STR, AGI, VIT, ENE, CMD).<br/>• Inventário em grade 8x8 com slots de equipamento.<br/>• Joias canônicas (Bless, Soul, Life, Chaos) e Máquina do Caos calculada.<br/>• Lógica de 4 eventos canônicos (Blood Castle, Devil Square, Chaos Castle, Coliseu).<br/>• Sistema de Guildas e Cerco ao Castelo (Castle Siege).<br/>• Sistema PK de 6 níveis morais e facções Gens (Duprian/Vanert).<br/>• **407 testes automatizados cobrindo 100% das regras.** | • Camada de persistência real (substituir o DB em memória por PostgreSQL + Redis).<br/>• Autenticação real com hashing seguro de senhas (Argon2/bcrypt) e JWT de sessão.<br/>• Rate limiting de pacotes e proteção anti-flood.<br/>• Spawner dinâmico contínuo com ciclo de respawn no mundo aberto. |
+| **Servidor Autoritativo** (`src/server/`) | • Protocolo binário C1/C2 + JSON unificado.<br/>• Handshake Zero-Trust e checagem CRC16-CCITT.<br/>• Motor de colisão com física de deslizamento cilíndrico/AABB.<br/>• Sistema canônico de 5 atributos (STR, AGI, VIT, ENE, CMD).<br/>• Inventário em grade 8x8 com slots de equipamento.<br/>• Joias canônicas (Bless, Soul, Life, Chaos) e Máquina do Caos calculada.<br/>• Lógica de 4 eventos canônicos (Blood Castle, Devil Square, Chaos Castle, Coliseu).<br/>• Sistema de Guildas e Cerco ao Castelo (Castle Siege).<br/>• Sistema PK de 6 níveis morais e facções Gens (Duprian/Vanert).<br/>• **414 testes automatizados cobrindo 100% das regras.** | • Camada de persistência real (substituir o DB em memória por PostgreSQL + Redis).<br/>• Autenticação real com hashing seguro de senhas (Argon2/bcrypt) e JWT de sessão.<br/>• Rate limiting de pacotes e proteção anti-flood.<br/>• Spawner dinâmico contínuo com ciclo de respawn no mundo aberto. |
 | **Mundo & Cenários** (`docs/level_design/` & `src/server/world/`) | • Catálogo mestre unificado dos **56 cenários canônicos**.<br/>• Paridade estrita 1:1 de IDs, bounds, spawns e colisores entre cliente e servidor.<br/>• 56 GLBs de blockout procedural gerados e inspecionáveis.<br/>• Editor de pisos modulares e exportador de pacotes ZIP com snapshots. | • Detalhamento artístico AAA dos cenários (substituir geometria blockout por props de alta fidelidade Nanite/PBR).<br/>• NavMesh para pathfinding dos monstros. |
 | **Heróis & Classes** (`docs/art/` & `src/client/dev_viewer/models/`) | • 5 classes canônicas homologadas: Dark Knight, Dark Wizard, Fairy Elf, Magic Gladiator e Dark Lord.<br/>• Modelos de base modular e 60 peças experimentais de armadura.<br/>• 5 modelos com rig canônico e **21 animações de combate, corrida e descanso**.<br/>• Suporte visual no Dev Viewer para alternar peças modulares em tempo real. | • Skinning profissional e malhas de armaduras de tier avançado (+9 a +15 com auras em tempo real).<br/>• Árvore de evolução de 2ª e 3ª classes (Blade Master, Grand Master, High Elf, Duel Master, Lord Emperor). |
 | **Bestiário & Chefes** (`src/server/bosses/` & `prototypes/3d_bestiary_animated/`) | • 12 criaturas canônicas catalogadas (6 chefes mundiais e 6 da Invasão Dourada).<br/>• GLBs estáticos e GLBs articulados com 5 clips cada (IDLE, WALK, ATTACK, HURT, DEATH).<br/>• Texturas PBR procedurais injetadas nos GLBs. | • IA de combate dos monstros com máquinas de estado (patrulha, perseguição, conjuração de habilidades, fuga). |
@@ -209,7 +209,7 @@ gantt
 │    (3D Pipeline)     │ • Refinamento de malhas de monstros e rigs           │
 │                      │ • Shaders de água cáustica em Atlans e neve em Devias│
 ├──────────────────────┼──────────────────────────────────────────────────────┤
-│ 5. QA & Balanceamento│ • Manter os 407 testes passando em 100% dos commits  │
+│ 5. QA & Balanceamento│ • Manter os 414 testes passando em 100% dos commits  │
 │    (Engenharia QA)   │ • Testes de estresse de tráfego de pacotes binários  │
 │                      │ • Calibração fina das fórmulas de defesa e combo     │
 └──────────────────────┴──────────────────────────────────────────────────────┘

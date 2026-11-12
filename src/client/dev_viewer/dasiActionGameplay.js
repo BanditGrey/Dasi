@@ -780,7 +780,173 @@ export class HarmonicAudioSynthesizer {
       gain.connect(this.masterGain);
       osc.start(now);
       osc.stop(now + 0.13);
+    } else if (kind === 'fairy') {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(1046.5, now); // C6
+      osc.frequency.exponentialRampToValueAtTime(1567.98, now + 0.2); // G6
+
+      gain.gain.setValueAtTime(0.06, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(now);
+      osc.stop(now + 0.26);
+    } else if (kind === 'water') {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.exponentialRampToValueAtTime(90, now + 0.28);
+
+      gain.gain.setValueAtTime(0.09, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(now);
+      osc.stop(now + 0.32);
     }
+  }
+
+  // 1.13 PAISAGEM SONORA AMBIENTAL PROCEDURAL (SOUNDSCAPES CONTÍNUOS)
+  startAmbientSoundscape(biome = 'lorencia') {
+    if (this.isMuted || !this.init() || !this.ctx || !this.masterGain) return;
+    this.stopAmbientSoundscape();
+
+    const now = this.ctx.currentTime;
+    const b = String(biome || '').toLowerCase();
+
+    const ambientGain = this.ctx.createGain();
+    ambientGain.gain.setValueAtTime(0.0001, now);
+    ambientGain.gain.exponentialRampToValueAtTime(0.08, now + 1.2);
+    ambientGain.connect(this.masterGain);
+
+    const activeNodes = [];
+    this.currentAmbientSoundscape = {
+      biome: b,
+      gain: ambientGain,
+      nodes: activeNodes,
+    };
+
+    if (b.includes('devias')) {
+      // Vento Ártico Uivante com ruído branco filtrado e modulação lenta
+      if (typeof this.ctx.createBuffer === 'function') {
+        const bufferSize = Math.max(1, Math.floor(this.ctx.sampleRate * 2));
+        const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = Math.random() * 2 - 1;
+        }
+        const whiteNoise = this.ctx.createBufferSource();
+        whiteNoise.buffer = noiseBuffer;
+        whiteNoise.loop = true;
+
+        const bandpass = this.ctx.createBiquadFilter();
+        bandpass.type = 'bandpass';
+        bandpass.frequency.setValueAtTime(450, now);
+        bandpass.Q.setValueAtTime(2.5, now);
+
+        const lfo = this.ctx.createOscillator();
+        lfo.frequency.setValueAtTime(0.2, now);
+        const lfoGain = this.ctx.createGain();
+        lfoGain.gain.setValueAtTime(220, now);
+
+        lfo.connect(lfoGain);
+        lfoGain.connect(bandpass.frequency);
+
+        whiteNoise.connect(bandpass);
+        bandpass.connect(ambientGain);
+
+        whiteNoise.start(now);
+        lfo.start(now);
+        activeNodes.push(whiteNoise, lfo, lfoGain, bandpass);
+      }
+    } else if (b.includes('atlans')) {
+      // Ressonância Subaquática Abissal
+      const osc = this.ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(62, now);
+
+      const lowpass = this.ctx.createBiquadFilter();
+      lowpass.type = 'lowpass';
+      lowpass.frequency.setValueAtTime(130, now);
+
+      osc.connect(lowpass);
+      lowpass.connect(ambientGain);
+      osc.start(now);
+      activeNodes.push(osc, lowpass);
+    } else if (b.includes('noria')) {
+      // Murmúrio Etéreo de Floresta Élfica
+      const osc1 = this.ctx.createOscillator();
+      const osc2 = this.ctx.createOscillator();
+      osc1.type = 'sine';
+      osc2.type = 'sine';
+      osc1.frequency.setValueAtTime(523.25, now); // C5
+      osc2.frequency.setValueAtTime(659.25, now); // E5
+
+      const chordGain = this.ctx.createGain();
+      chordGain.gain.setValueAtTime(0.03, now);
+
+      osc1.connect(chordGain);
+      osc2.connect(chordGain);
+      chordGain.connect(ambientGain);
+      osc1.start(now);
+      osc2.start(now);
+      activeNodes.push(osc1, osc2, chordGain);
+    } else {
+      // Lorencia: Chuva Suave e Vento Noturno
+      if (typeof this.ctx.createBuffer === 'function') {
+        const bufferSize = Math.max(1, Math.floor(this.ctx.sampleRate * 2));
+        const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        let b0 = 0, b1 = 0, b2 = 0;
+        for (let i = 0; i < bufferSize; i++) {
+          const white = Math.random() * 2 - 1;
+          b0 = 0.99886 * b0 + white * 0.0555179;
+          b1 = 0.99332 * b1 + white * 0.0750759;
+          b2 = 0.96900 * b2 + white * 0.1538520;
+          output[i] = (b0 + b1 + b2) * 0.14;
+        }
+        const pinkNoise = this.ctx.createBufferSource();
+        pinkNoise.buffer = noiseBuffer;
+        pinkNoise.loop = true;
+
+        const lowpass = this.ctx.createBiquadFilter();
+        lowpass.type = 'lowpass';
+        lowpass.frequency.setValueAtTime(750, now);
+
+        pinkNoise.connect(lowpass);
+        lowpass.connect(ambientGain);
+        pinkNoise.start(now);
+        activeNodes.push(pinkNoise, lowpass);
+      }
+    }
+  }
+
+  stopAmbientSoundscape() {
+    if (!this.currentAmbientSoundscape || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const amb = this.currentAmbientSoundscape;
+    this.currentAmbientSoundscape = null;
+
+    try {
+      if (amb.gain) {
+        amb.gain.gain.setValueAtTime(amb.gain.gain.value, now);
+        amb.gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
+      }
+      setTimeout(() => {
+        for (const n of amb.nodes) {
+          try {
+            if (typeof n.stop === 'function') n.stop();
+            if (typeof n.disconnect === 'function') n.disconnect();
+          } catch {}
+        }
+        try { amb.gain.disconnect(); } catch {}
+      }, 500);
+    } catch {}
   }
 }
 

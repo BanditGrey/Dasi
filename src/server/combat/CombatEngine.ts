@@ -14,6 +14,8 @@ import type { ItemInstance } from '../inventory/types.ts';
 import { CanonicalFormulas, CharacterClassId, type CharacterAttributes } from './CanonicalFormulas.ts';
 import { DropManager, type HitDamageEntry } from './DropManager.ts';
 import { ComboSkillEngine } from './ComboSkillEngine.ts';
+import { SkillCatalog } from './SkillCatalog.ts';
+import { EffectId } from './EffectManager.ts';
 
 export type DamageType = 'NORMAL' | 'SKILL' | 'CRITICAL' | 'EXCELLENT' | 'IGNORE_DEFENSE' | 'MISS';
 
@@ -66,6 +68,49 @@ export interface AttackResult {
   };
   dropsGenerated: GroundDropItem[];
   xpGained: number;
+  error?: string;
+}
+
+export interface MonsterAttackResult {
+  success: boolean;
+  mobId: string;
+  targetId: string;
+  isMiss: boolean;
+  damage: number;
+  damageType: DamageType;
+  colorHex: string;
+  playerHp: number;
+  playerMaxHp: number;
+  playerSd: number;
+  playerMaxSd: number;
+  isDead: boolean;
+  staggered: boolean;
+}
+
+export interface SupportSkillResult {
+  success: boolean;
+  skillId: string;
+  casterId: string;
+  targetId: string;
+  buffType?: string;
+  buffValue?: number;
+  durationSeconds?: number;
+  hpHealed?: number;
+  currentHp?: number;
+  maxHp?: number;
+  currentMp?: number;
+  error?: string;
+}
+
+export interface PotionResult {
+  success: boolean;
+  potionType: string;
+  hpRestored: number;
+  mpRestored: number;
+  currentHp: number;
+  maxHp: number;
+  currentMp: number;
+  maxMp: number;
   error?: string;
 }
 
@@ -186,7 +231,21 @@ export class CombatEngine {
     let hasExcellentDmgOption = false;
     let isTwoHanded = false;
 
-    if (primaryWeapon) {
+    // Se a habilidade for feitiço mágico ou o jogador utilizar poder arcano
+    const isMagicSpell = ['evil', 'spirit', 'lightning', 'fireball', 'ice', 'energy_ball', 'meteorite', 'decay', 'nova'].some((sp) => sId.includes(sp));
+    if (isMagicSpell && canonicalAtk.minMagicDamage !== undefined && canonicalAtk.maxMagicDamage !== undefined) {
+      minAttack = canonicalAtk.minMagicDamage;
+      maxAttack = canonicalAtk.maxMagicDamage;
+      if (primaryWeapon) {
+        const staffBonus = Math.floor(primaryWeapon.level * 3) + 5;
+        minAttack += staffBonus;
+        maxAttack += staffBonus;
+        attackRate += primaryWeapon.level * 4;
+        hasLuck = primaryWeapon.luck;
+        hasSkill = primaryWeapon.skill;
+        hasExcellentDmgOption = Item.hasExcellentOption(primaryWeapon, WeaponExcellentOption.EXCELLENT_DAMAGE_10_PCT);
+      }
+    } else if (primaryWeapon) {
       const dmg = Item.calculateDamage(primaryWeapon);
       minAttack += dmg.min;
       maxAttack += dmg.max;
@@ -209,9 +268,10 @@ export class CombatEngine {
     }
 
     // 2. Cálculo de Hit / Miss
-    // Chance de acerto baseada na taxa de ataque do atacante vs taxa de defesa do monstro
+    // Chance de acerto baseada na taxa de ataque vs taxa de defesa (habilidades ativas e magias possuem acerto aprimorado de 99%)
+    const isUsingActiveSkill = Boolean(skillId || hasSkill || isMagicSpell);
     const totalRate = attackRate + mob.defenseRate;
-    const hitChance = totalRate > 0 ? Math.min(0.96, Math.max(0.10, attackRate / totalRate)) : 0.85;
+    const hitChance = isUsingActiveSkill ? 0.99 : (totalRate > 0 ? Math.min(0.96, Math.max(0.10, attackRate / totalRate)) : 0.85);
     const isHit = Math.random() <= hitChance;
 
     if (!isHit) {
@@ -252,10 +312,38 @@ export class CombatEngine {
     let poiseDamage = 15;
     let knockbackDistance = isTwoHanded ? 30 : 18;
 
-    const isUsingSkill = Boolean(skillId || hasSkill);
+    const skillDef = skillId ? SkillCatalog.findSkill(skillId) : undefined;
+    const isUsingSkill = Boolean(skillDef || skillId || hasSkill);
     let skillMultiplier = 1.0;
     if (isUsingSkill) {
-      if (sId.includes('death') || sId.includes('stab')) {
+      if (skillDef) {
+        // Validação autoritativa de Mana
+        if (session.currentMp !== undefined && session.currentMp < skillDef.manaCost) {
+          return {
+            success: false,
+            attackerId: session.sessionId,
+            targetId: mob.id,
+            isMiss: true,
+            damage: 0,
+            damageType: 'MISS',
+            colorHex: DAMAGE_COLORS.MISS.colorHex,
+            targetHp: mob.currentHp,
+            targetMaxHp: mob.maxHp,
+            isDead: false,
+            staggered: false,
+            hitStopMs: 0,
+            knockback: { x: 0, y: 0 },
+            dropsGenerated: [],
+            xpGained: 0,
+          };
+        }
+        if (session.currentMp !== undefined) {
+          session.currentMp = Math.max(0, session.currentMp - skillDef.manaCost);
+        }
+        skillMultiplier = skillDef.calculateDamageMultiplier(charAttrs);
+        if (skillDef.poiseDamage) poiseDamage = skillDef.poiseDamage;
+        if (skillDef.knockbackDistance) knockbackDistance = skillDef.knockbackDistance;
+      } else if (sId.includes('death') || sId.includes('stab')) {
         // Death Stab do Blade Knight: Fator 250% + (Energy / 10)%
         const rawMult = (ComboSkillEngine.calculateDKSkillMultiplier(session.character.energy) + 50) / 100;
         skillMultiplier = Math.max(2.5, rawMult);
@@ -269,6 +357,44 @@ export class CombatEngine {
         poiseDamage = 30;
         knockbackDistance = 16;
         if (session.currentMp !== undefined) session.currentMp = Math.max(0, session.currentMp - 10);
+      } else if (sId.includes('evil') || sId.includes('spirit')) {
+        // Evil Spirits do Dark Wizard / Soul Master: Fator 220% + (Energy / 20)%
+        const rawMult = 2.2 + (session.character.energy / 2000);
+        skillMultiplier = Math.max(2.2, rawMult);
+        poiseDamage = 25;
+        knockbackDistance = 12;
+        if (session.currentMp !== undefined) session.currentMp = Math.max(0, session.currentMp - 30);
+      } else if (sId.includes('lightning')) {
+        // Lightning do Dark Wizard: Fator 160%, alto empurrão
+        skillMultiplier = 1.6;
+        poiseDamage = 35;
+        knockbackDistance = 32;
+        if (session.currentMp !== undefined) session.currentMp = Math.max(0, session.currentMp - 15);
+      } else if (sId.includes('fireball') || sId.includes('fire_ball')) {
+        // Fireball do Dark Wizard: Fator 180%
+        skillMultiplier = 1.8;
+        poiseDamage = 30;
+        knockbackDistance = 18;
+        if (session.currentMp !== undefined) session.currentMp = Math.max(0, session.currentMp - 8);
+      } else if (sId.includes('energy_ball') || sId.includes('energyball')) {
+        // Energy Ball: Fator 120%, magia básica inicial
+        skillMultiplier = 1.2;
+        poiseDamage = 15;
+        knockbackDistance = 10;
+        if (session.currentMp !== undefined) session.currentMp = Math.max(0, session.currentMp - 1);
+      } else if (sId.includes('mana_shield') || sId.includes('soul_barrier')) {
+        // Mana Shield / Soul Barrier do Soul Master
+        if (!session.activeBuffs) session.activeBuffs = new Map();
+        const absorbPct = Math.min(50, 10 + Math.floor(session.character.energy / 50) + Math.floor(session.character.agility / 200));
+        session.activeBuffs.set('MANA_SHIELD', {
+          value: absorbPct,
+          durationMs: 60000,
+          expiresAt: Date.now() + 60000,
+        });
+        if (session.currentMp !== undefined) session.currentMp = Math.max(0, session.currentMp - 70);
+        skillMultiplier = 1.0;
+        poiseDamage = 0;
+        knockbackDistance = 0;
       } else {
         const rawMult = ComboSkillEngine.calculateDKSkillMultiplier(session.character.energy) / 100;
         skillMultiplier = Math.max(1.8, rawMult);
@@ -277,7 +403,10 @@ export class CombatEngine {
       }
     }
 
-    if (Math.random() <= ignoreDefChance) {
+    const isPenetration = sId.includes('penetrat') || sId.includes('perfur');
+    const effectiveMobDef = isPenetration ? Math.floor(mob.defense / 2) : mob.defense;
+
+    if (Math.random() <= ignoreDefChance || (isPenetration && Math.random() <= 0.35)) {
       damageType = 'IGNORE_DEFENSE';
       const baseDmg = Math.floor(minAttack + Math.random() * (maxAttack - minAttack + 1));
       finalDamage = isUsingSkill ? Math.floor(baseDmg * skillMultiplier) : baseDmg;
@@ -286,23 +415,23 @@ export class CombatEngine {
     } else if (roll <= excellentChance) {
       damageType = 'EXCELLENT';
       const baseDmg = Math.floor(maxAttack * 1.20) + (primaryWeapon ? primaryWeapon.level * 4 : 5);
-      finalDamage = (isUsingSkill ? Math.floor(baseDmg * skillMultiplier) : baseDmg) - mob.defense;
+      finalDamage = (isUsingSkill ? Math.floor(baseDmg * skillMultiplier) : baseDmg) - effectiveMobDef;
       poiseDamage = 35;
       knockbackDistance += 12;
     } else if (roll <= excellentChance + criticalChance) {
       damageType = 'CRITICAL';
       const baseDmg = maxAttack + (primaryWeapon ? primaryWeapon.level * 3 : 3);
-      finalDamage = (isUsingSkill ? Math.floor(baseDmg * skillMultiplier) : baseDmg) - mob.defense;
+      finalDamage = (isUsingSkill ? Math.floor(baseDmg * skillMultiplier) : baseDmg) - effectiveMobDef;
       poiseDamage = 30;
       knockbackDistance += 8;
     } else if (isUsingSkill) {
       damageType = 'SKILL';
       const baseDmg = Math.floor(minAttack + Math.random() * (maxAttack - minAttack + 1));
-      finalDamage = Math.floor(baseDmg * skillMultiplier) - mob.defense;
+      finalDamage = Math.floor(baseDmg * skillMultiplier) - effectiveMobDef;
     } else {
       damageType = 'NORMAL';
       const baseDmg = Math.floor(minAttack + Math.random() * (maxAttack - minAttack + 1));
-      finalDamage = baseDmg - mob.defense;
+      finalDamage = baseDmg - effectiveMobDef;
     }
 
     finalDamage = Math.max(1, finalDamage);
@@ -346,14 +475,20 @@ export class CombatEngine {
       }
     }
 
-    // Se for Twisting Slash (área 360°), aplica dano colateral aos demais monstros adjacentes no raio
+    // Processamento de dano em área (AoE) e vórtices autoritativos (Twisting Slash & Evil Spirits)
+    const isEvilSpirits = sId.includes('evil') || sId.includes('spirit');
     const isTwisting = sId.includes('twist') || sId.includes('cyclone') || sId.includes('spin');
-    if (isTwisting) {
-      const aoeRadius = 180;
+    const aoeRadius = skillDef?.aoeRadius ?? (isTwisting ? 180 : (isEvilSpirits ? 260 : 0));
+    const maxAoeTargets = skillDef?.maxAoeTargets ?? (isEvilSpirits ? 8 : 6);
+
+    if (aoeRadius > 0) {
+      let hitCount = 0;
       for (const otherMob of this.spawner.getAllMonsters()) {
+        if (hitCount >= maxAoeTargets) break;
         if (otherMob.id !== mob.id && !otherMob.isDead) {
           const dist = Math.hypot(otherMob.x - playerX, otherMob.y - playerY);
           if (dist <= aoeRadius) {
+            hitCount++;
             const aoeDmg = Math.max(1, Math.floor(finalDamage * 0.85));
             const aoeResult = otherMob.takeDamage(aoeDmg, 25, 12, otherMob.x - playerX, otherMob.y - playerY);
             if (aoeResult.isDead) {
@@ -367,6 +502,25 @@ export class CombatEngine {
           }
         }
       }
+    }
+
+    // Aplicação de efeitos autoritativos de controle de grupo no monstro alvo
+    if (skillDef?.effectId === EffectId.STERN) {
+      mob.staggerUntil = Date.now() + 1500;
+      mob.state = 'STAGGERED';
+    } else if (skillDef?.effectId === EffectId.ICE || skillDef?.effectId === EffectId.ICE_ARROW) {
+      mob.moveSpeed = Math.floor(mob.moveSpeed * 0.5);
+    }
+
+    // Aplicação de buffs autoritativos no jogador (Mana Shield / Soul Barrier)
+    if (skillDef?.effectId === EffectId.MANA_SHIELD || sId.includes('mana_shield') || sId.includes('soul_barrier')) {
+      if (!session.activeBuffs) session.activeBuffs = new Map();
+      const absorbPct = Math.min(50, 10 + Math.floor(session.character.energy / 50) + Math.floor(session.character.agility / 200));
+      session.activeBuffs.set('MANA_SHIELD', {
+        value: absorbPct,
+        durationMs: 60000,
+        expiresAt: Date.now() + 60000,
+      });
     }
 
     const colorConfig = DAMAGE_COLORS[damageType];
@@ -956,6 +1110,138 @@ export class CombatEngine {
   }
 
   /**
+   * Processa ataque autoritativo desferido por um monstro contra um jogador
+   */
+  public processMonsterAttack(mobId: string, session: ClientSession): MonsterAttackResult {
+    const mob = this.spawner.getMonster(mobId);
+    if (!mob || mob.isDead) {
+      return {
+        success: false,
+        mobId,
+        targetId: session.sessionId,
+        isMiss: true,
+        damage: 0,
+        damageType: 'MISS',
+        colorHex: DAMAGE_COLORS.MISS.colorHex,
+        playerHp: session.currentHp ?? 1000,
+        playerMaxHp: session.maxHp ?? 1000,
+        playerSd: session.currentSd ?? 500,
+        playerMaxSd: session.maxSd ?? 500,
+        isDead: false,
+        staggered: false,
+      };
+    }
+
+    // 1. Defesa e Evasão do Jogador (Atributos + Equipamentos)
+    const classId = CanonicalFormulas.getClassId(session.character.characterClass);
+    const charAttrs: CharacterAttributes = {
+      classId,
+      level: session.character.level,
+      strength: session.character.strength,
+      agility: session.character.agility,
+      vitality: session.character.vitality,
+      energy: session.character.energy,
+      leadership: session.character.command,
+      currentHp: session.currentHp ?? 1000,
+      maxHp: session.maxHp ?? 1000,
+      currentSd: session.currentSd ?? 500,
+      maxSd: session.maxSd ?? 500,
+      currentMp: session.currentMp ?? 300,
+      maxMp: session.maxMp ?? 300,
+      currentBp: 100,
+      maxBp: 100,
+    };
+
+    const defStats = CanonicalFormulas.calculateDefenseAndRates(charAttrs);
+    let totalDefense = defStats.defense;
+
+    const armorSlots = [
+      EquipmentSlot.HELM,
+      EquipmentSlot.ARMOR,
+      EquipmentSlot.PANTS,
+      EquipmentSlot.GLOVES,
+      EquipmentSlot.BOOTS,
+      EquipmentSlot.WEAPON_LEFT, // Escudos
+    ];
+    for (const slot of armorSlots) {
+      const eq = session.inventory?.getEquippedItem(slot);
+      if (eq) {
+        totalDefense += Item.calculateDefense(eq);
+      }
+    }
+
+    // 2. Taxa de Acerto do Monstro vs Evasão do Jogador
+    const totalRate = mob.attackRate + defStats.defenseRatePvE;
+    const hitChance = totalRate > 0 ? Math.min(0.95, Math.max(0.10, mob.attackRate / totalRate)) : 0.85;
+    const isHit = Math.random() <= hitChance;
+
+    if (!isHit) {
+      return {
+        success: true,
+        mobId,
+        targetId: session.sessionId,
+        isMiss: true,
+        damage: 0,
+        damageType: 'MISS',
+        colorHex: DAMAGE_COLORS.MISS.colorHex,
+        playerHp: session.currentHp ?? 1000,
+        playerMaxHp: session.maxHp ?? 1000,
+        playerSd: session.currentSd ?? 500,
+        playerMaxSd: session.maxSd ?? 500,
+        isDead: false,
+        staggered: false,
+      };
+    }
+
+    // 3. Cálculo de Dano do Monstro
+    const baseDamage = Math.floor(mob.attackMin + Math.random() * (mob.attackMax - mob.attackMin + 1));
+    let rawDamage = Math.max(1, baseDamage - Math.floor(totalDefense / 2));
+
+    // 4. Absorção do Mana Shield (Soul Barrier do Dark Wizard)
+    const manaShieldBuff = session.activeBuffs?.get('MANA_SHIELD');
+    if (manaShieldBuff && manaShieldBuff.expiresAt > Date.now()) {
+      const absorbPct = Math.min(50, Math.max(10, manaShieldBuff.value));
+      rawDamage = Math.max(1, Math.floor(rawDamage * (1 - absorbPct / 100)));
+    }
+
+    // 5. Absorção de Asas (se equipadas)
+    const wings = session.inventory?.getEquippedItem(EquipmentSlot.WINGS);
+    if (wings) {
+      const wingAbsorb = Math.min(40, 12 + wings.level * 2);
+      rawDamage = Math.max(1, Math.floor(rawDamage * (1 - wingAbsorb / 100)));
+    }
+
+    // 6. Distribuição Canônica no SD e HP (90% SD / 10% HP)
+    const curSd = session.currentSd ?? 500;
+    const curHp = session.currentHp ?? 1000;
+    const distribution = CanonicalFormulas.applySdAbsorption(rawDamage, curSd, curHp);
+
+    session.currentSd = distribution.remainingSd;
+    session.currentHp = distribution.remainingHp;
+
+    const isDead = session.currentHp <= 0;
+    if (isDead) {
+      session.currentHp = 0;
+    }
+
+    return {
+      success: true,
+      mobId,
+      targetId: session.sessionId,
+      isMiss: false,
+      damage: rawDamage,
+      damageType: 'NORMAL',
+      colorHex: '#EF4444',
+      playerHp: session.currentHp,
+      playerMaxHp: session.maxHp ?? 1000,
+      playerSd: session.currentSd,
+      playerMaxSd: session.maxSd ?? 500,
+      isDead,
+      staggered: rawDamage > 40,
+    };
+  }
+
+  /**
    * Atualização de ciclo de jogo (IA de monstros e limpeza de drops expirados)
    */
   public update(deltaTimeSec: number, players: { id: string; x: number; y: number }[] = []): {
@@ -980,6 +1266,252 @@ export class CombatEngine {
     return {
       ...spawnerResult,
       expiredDropIds,
+    };
+  }
+
+  /**
+   * Conjuração autoritativa de habilidades de suporte, cura e bênçãos (Buffs)
+   */
+  public castSupportSkill(
+    session: ClientSession,
+    skillId: string,
+    targetSession?: ClientSession
+  ): SupportSkillResult {
+    const sId = String(skillId || '').toLowerCase();
+    const target = targetSession || session;
+    const energy = session.character.energy;
+
+    if (!session.activeBuffs) session.activeBuffs = new Map();
+    if (!target.activeBuffs) target.activeBuffs = new Map();
+
+    if (session.currentMp === undefined) session.currentMp = 300;
+    if (target.currentHp === undefined) target.currentHp = 1000;
+    if (target.maxHp === undefined) target.maxHp = 1000;
+
+    // 1. HEAL (Fairy Elf / Muse Elf)
+    if (sId.includes('heal') || sId.includes('cura')) {
+      const mpCost = 20;
+      if (session.currentMp < mpCost) {
+        return { success: false, skillId, casterId: session.sessionId, targetId: target.sessionId, error: 'Mana insuficiente' };
+      }
+      session.currentMp -= mpCost;
+      const healAmount = CanonicalFormulas.calculateHeal(energy);
+      const prevHp = target.currentHp;
+      target.currentHp = Math.min(target.maxHp, target.currentHp + healAmount);
+      const hpHealed = target.currentHp - prevHp;
+
+      return {
+        success: true,
+        skillId: 'heal',
+        casterId: session.sessionId,
+        targetId: target.sessionId,
+        hpHealed,
+        currentHp: target.currentHp,
+        maxHp: target.maxHp,
+        currentMp: session.currentMp,
+      };
+    }
+
+    // 2. GREATER_DEFENSE (Fairy Elf)
+    if (sId.includes('greater_defense') || sId.includes('greater_def') || sId.includes('defense_buff') || sId.includes('def_buff')) {
+      const mpCost = 30;
+      if (session.currentMp < mpCost) {
+        return { success: false, skillId, casterId: session.sessionId, targetId: target.sessionId, error: 'Mana insuficiente' };
+      }
+      session.currentMp -= mpCost;
+      const defBonus = CanonicalFormulas.calculateGreaterDefense(energy);
+      const durationSeconds = 60;
+      target.activeBuffs.set('GREATER_DEFENSE', {
+        value: defBonus,
+        durationMs: durationSeconds * 1000,
+        expiresAt: Date.now() + durationSeconds * 1000,
+      });
+
+      return {
+        success: true,
+        skillId: 'greater_defense',
+        casterId: session.sessionId,
+        targetId: target.sessionId,
+        buffType: 'GREATER_DEFENSE',
+        buffValue: defBonus,
+        durationSeconds,
+        currentMp: session.currentMp,
+      };
+    }
+
+    // 3. GREATER_DAMAGE (Fairy Elf)
+    if (sId.includes('greater_damage') || sId.includes('greater_dmg') || sId.includes('damage_buff') || sId.includes('atk_buff')) {
+      const mpCost = 30;
+      if (session.currentMp < mpCost) {
+        return { success: false, skillId, casterId: session.sessionId, targetId: target.sessionId, error: 'Mana insuficiente' };
+      }
+      session.currentMp -= mpCost;
+      const dmgBonus = CanonicalFormulas.calculateGreaterDamage(energy);
+      const durationSeconds = 60;
+      target.activeBuffs.set('GREATER_DAMAGE', {
+        value: dmgBonus,
+        durationMs: durationSeconds * 1000,
+        expiresAt: Date.now() + durationSeconds * 1000,
+      });
+
+      return {
+        success: true,
+        skillId: 'greater_damage',
+        casterId: session.sessionId,
+        targetId: target.sessionId,
+        buffType: 'GREATER_DAMAGE',
+        buffValue: dmgBonus,
+        durationSeconds,
+        currentMp: session.currentMp,
+      };
+    }
+
+    // 4. MANA_SHIELD (Soul Master)
+    if (sId.includes('mana_shield') || sId.includes('soul_barrier') || sId.includes('shield')) {
+      const mpCost = 70;
+      if (session.currentMp < mpCost) {
+        return { success: false, skillId, casterId: session.sessionId, targetId: target.sessionId, error: 'Mana insuficiente' };
+      }
+      session.currentMp -= mpCost;
+      const { absorptionPercent, durationSeconds } = CanonicalFormulas.calculateManaShield(session.character.agility, energy);
+      target.activeBuffs.set('MANA_SHIELD', {
+        value: absorptionPercent,
+        durationMs: durationSeconds * 1000,
+        expiresAt: Date.now() + durationSeconds * 1000,
+      });
+
+      return {
+        success: true,
+        skillId: 'mana_shield',
+        casterId: session.sessionId,
+        targetId: target.sessionId,
+        buffType: 'MANA_SHIELD',
+        buffValue: absorptionPercent,
+        durationSeconds,
+        currentMp: session.currentMp,
+      };
+    }
+
+    // 5. GREATER_FORTITUDE (Blade Knight)
+    if (sId.includes('fortitude') || sId.includes('swell_life') || sId.includes('life_buff')) {
+      const mpCost = 50;
+      if (session.currentMp < mpCost) {
+        return { success: false, skillId, casterId: session.sessionId, targetId: target.sessionId, error: 'Mana insuficiente' };
+      }
+      session.currentMp -= mpCost;
+      const { hpBonusPercent, durationSeconds } = CanonicalFormulas.calculateGreaterFortitude(session.character.vitality, energy);
+      target.activeBuffs.set('GREATER_FORTITUDE', {
+        value: hpBonusPercent,
+        durationMs: durationSeconds * 1000,
+        expiresAt: Date.now() + durationSeconds * 1000,
+      });
+
+      const oldMax = target.maxHp;
+      target.maxHp = Math.floor(oldMax * (1 + hpBonusPercent / 100));
+      target.currentHp = Math.min(target.maxHp, target.currentHp + Math.floor(oldMax * (hpBonusPercent / 100)));
+
+      return {
+        success: true,
+        skillId: 'greater_fortitude',
+        casterId: session.sessionId,
+        targetId: target.sessionId,
+        buffType: 'GREATER_FORTITUDE',
+        buffValue: hpBonusPercent,
+        durationSeconds,
+        currentHp: target.currentHp,
+        maxHp: target.maxHp,
+        currentMp: session.currentMp,
+      };
+    }
+
+    return {
+      success: false,
+      skillId,
+      casterId: session.sessionId,
+      targetId: target.sessionId,
+      error: `Habilidade de suporte desconhecida: ${skillId}`,
+    };
+  }
+
+  /**
+   * Consumo autoritativo de poções de Vida e Mana
+   */
+  public usePotion(
+    session: ClientSession,
+    potionType: string
+  ): PotionResult {
+    if (session.currentHp === undefined) session.currentHp = 1000;
+    if (session.maxHp === undefined) session.maxHp = 1000;
+    if (session.currentMp === undefined) session.currentMp = 300;
+    if (session.maxMp === undefined) session.maxMp = 300;
+
+    const pType = String(potionType || '').toLowerCase();
+    let hpRestored = 0;
+    let mpRestored = 0;
+
+    if (pType.includes('heal') || pType.includes('hp') || pType.includes('vida')) {
+      if (session.currentHp >= session.maxHp) {
+        return {
+          success: false,
+          potionType,
+          hpRestored: 0,
+          mpRestored: 0,
+          currentHp: session.currentHp,
+          maxHp: session.maxHp,
+          currentMp: session.currentMp,
+          maxMp: session.maxMp,
+          error: 'HP já está no máximo',
+        };
+      }
+      let restoreFactor = 0.25;
+      if (pType.includes('small')) restoreFactor = 0.15;
+      else if (pType.includes('large')) restoreFactor = 0.35;
+
+      hpRestored = Math.floor(session.maxHp * restoreFactor);
+      session.currentHp = Math.min(session.maxHp, session.currentHp + hpRestored);
+    } else if (pType.includes('mana') || pType.includes('mp')) {
+      if (session.currentMp >= session.maxMp) {
+        return {
+          success: false,
+          potionType,
+          hpRestored: 0,
+          mpRestored: 0,
+          currentHp: session.currentHp,
+          maxHp: session.maxHp,
+          currentMp: session.currentMp,
+          maxMp: session.maxMp,
+          error: 'MP já está no máximo',
+        };
+      }
+      let restoreFactor = 0.30;
+      if (pType.includes('small')) restoreFactor = 0.20;
+      else if (pType.includes('large')) restoreFactor = 0.40;
+
+      mpRestored = Math.floor(session.maxMp * restoreFactor);
+      session.currentMp = Math.min(session.maxMp, session.currentMp + mpRestored);
+    } else {
+      return {
+        success: false,
+        potionType,
+        hpRestored: 0,
+        mpRestored: 0,
+        currentHp: session.currentHp,
+        maxHp: session.maxHp,
+        currentMp: session.currentMp,
+        maxMp: session.maxMp,
+        error: `Tipo de poção desconhecido: ${potionType}`,
+      };
+    }
+
+    return {
+      success: true,
+      potionType,
+      hpRestored,
+      mpRestored,
+      currentHp: session.currentHp,
+      maxHp: session.maxHp,
+      currentMp: session.currentMp,
+      maxMp: session.maxMp,
     };
   }
 }

@@ -597,6 +597,37 @@ class DevClientApp {
       return;
     }
 
+    // 3.5 Sincronização de Vitais do Jogador & Respawn (0x10:0x01)
+    if (opcode === 0x10 && subcode === 0x01) {
+      if (payload.currentHp !== undefined) this.playerHp = payload.currentHp;
+      if (payload.maxHp !== undefined) this.playerMaxHp = payload.maxHp;
+      if (payload.currentMp !== undefined) this.playerMp = payload.currentMp;
+      if (payload.maxMp !== undefined) this.playerMaxMp = payload.maxMp;
+      if (payload.currentSd !== undefined) this.playerSd = payload.currentSd;
+      if (payload.maxSd !== undefined) this.playerMaxSd = payload.maxSd;
+      if (payload.x !== undefined && payload.y !== undefined) {
+        this.playerX = payload.x;
+        this.playerY = payload.y;
+        this.playerTargetX = payload.x;
+        this.playerTargetY = payload.y;
+        if (this.arena3D) {
+          const c3d = this.arena3D.to3DCoords(payload.x, payload.y);
+          this.arena3D.playerGroup.position.set(c3d.x, 0, c3d.z);
+          this.arena3D.playerTargetPos.set(c3d.x, 0, c3d.z);
+          if (this.arena3D.keyboardController) {
+            this.arena3D.keyboardController.teleportTo(c3d.x, c3d.z);
+          }
+        }
+      }
+      this.update3DHud();
+      if (payload.respawned) {
+        this.log('✨ Você renasceu revigorado na praça de Lorencia!', 'success');
+        const banner = document.getElementById('levelup-celebration-banner');
+        if (banner) banner.classList.remove('show');
+      }
+      return;
+    }
+
     // 4. Sincronização Completa de Inventário
     if (opcode === OPCODES.INVENTORY_SYNC_ALL.opcode && subcode === OPCODES.INVENTORY_SYNC_ALL.subcode) {
       if (payload.definitions) this.definitions = payload.definitions;
@@ -1332,7 +1363,40 @@ class DevClientApp {
 
   // Resultado de Ataque & Dano Colorido
   handleCombatAttackResult(payload) {
-    const { targetId, damage, damageType, colorHex, isMiss, isDead, staggered, targetHp, targetMaxHp, xpGained } = payload;
+    const { targetId, damage, damageType, colorHex, isMiss, isDead, staggered, targetHp, targetMaxHp, xpGained, isPlayerTarget } = payload;
+
+    // Se o ataque for desferido por monstro contra o próprio jogador
+    if (isPlayerTarget || targetId === this.sessionId) {
+      if (!isMiss && damage > 0) {
+        this.playerHp = targetHp;
+        if (payload.targetSd !== undefined) this.playerSd = payload.targetSd;
+        this.update3DHud();
+
+        if (this.arena3D) {
+          this.arena3D.spawnDamageText(this.playerX, this.playerY, damage, '#ef4444');
+        }
+
+        if (isDead) {
+          this.log('☠️ [DERROTA] Você foi abatido em combate! Renascendo na praça de Lorencia...', 'warning');
+          const banner = document.getElementById('levelup-celebration-banner');
+          const title = banner?.querySelector('.levelup-banner-title');
+          const sub = document.getElementById('levelup-banner-sub');
+          if (banner && title && sub) {
+            title.textContent = '☠️ VOCÊ FOI DERROTADO ☠️';
+            title.style.color = '#ef4444';
+            sub.textContent = 'Renascendo no centro sagrado de Lorencia...';
+            banner.classList.add('show');
+            setTimeout(() => {
+              title.textContent = '⭐ LEVEL UP! ⭐';
+              title.style.color = '';
+              banner.classList.remove('show');
+            }, 2500);
+          }
+        }
+      }
+      return;
+    }
+
     const mob = this.monsters.get(targetId);
     const boss = this.activeBosses.get(targetId);
 

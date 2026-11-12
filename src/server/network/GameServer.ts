@@ -816,6 +816,18 @@ export class GameServer {
       return;
     }
 
+    // 7.1 Execução de Habilidade de Ação / Suporte (0x51:0x01)
+    if (opcode === Opcodes.MSG_ACTION_EXECUTE_REQ.opcode && subcode === Opcodes.MSG_ACTION_EXECUTE_REQ.subcode) {
+      this.handleActionExecuteReq(session, payload as any);
+      return;
+    }
+
+    // 7.2 Consumo de Poções (0x51:0x03)
+    if (opcode === Opcodes.MSG_POTION_USE_REQ.opcode && subcode === Opcodes.MSG_POTION_USE_REQ.subcode) {
+      this.handlePotionUseReq(session, payload as any);
+      return;
+    }
+
     // 8. Coleta de Drop do Chão (0x16:0x02)
     if (opcode === Opcodes.MSG_GROUND_ITEM_PICKUP_REQ.opcode && subcode === Opcodes.MSG_GROUND_ITEM_PICKUP_REQ.subcode) {
       this.handleGroundItemPickupReq(session, payload as GroundItemPickupReqPayload);
@@ -1602,6 +1614,63 @@ export class GameServer {
   }
 
   /**
+   * Processa execução de habilidades de suporte, cura e buffs autoritativos (0x51:0x01)
+   */
+  private handleActionExecuteReq(session: ClientSession, payload: { skillId: string; targetSessionId?: string }): void {
+    const target = payload?.targetSessionId ? this.sessionManager.getSession(payload.targetSessionId) : session;
+    const result = this.combatEngine.castSupportSkill(session, payload?.skillId, target ?? session);
+
+    // Envia resposta para o conjurador
+    this.sendPacket(
+      session,
+      Opcodes.MSG_ACTION_COOLDOWN_RES.opcode,
+      Opcodes.MSG_ACTION_COOLDOWN_RES.subcode,
+      result
+    );
+
+    // Se a habilidade teve sucesso e afetou atributos/vitais, transmite status
+    if (result.success) {
+      const tgt = target ?? session;
+      this.broadcastPacket(
+        Opcodes.MSG_PLAYER_STATUS_VITALS.opcode,
+        Opcodes.MSG_PLAYER_STATUS_VITALS.subcode,
+        {
+          sessionId: tgt.sessionId,
+          currentHp: tgt.currentHp,
+          maxHp: tgt.maxHp,
+          currentMp: tgt.currentMp,
+          maxMp: tgt.maxMp,
+          currentSd: tgt.currentSd,
+          maxSd: tgt.maxSd,
+          buffType: result.buffType,
+          buffValue: result.buffValue,
+        }
+      );
+    }
+  }
+
+  /**
+   * Processa consumo de poções de Vida e Mana (0x51:0x03)
+   */
+  private handlePotionUseReq(session: ClientSession, payload: { potionType: string }): void {
+    const result = this.combatEngine.usePotion(session, payload?.potionType);
+
+    this.sendPacket(
+      session,
+      Opcodes.MSG_PLAYER_STATUS_VITALS.opcode,
+      Opcodes.MSG_PLAYER_STATUS_VITALS.subcode,
+      {
+        sessionId: session.sessionId,
+        currentHp: result.currentHp,
+        maxHp: result.maxHp,
+        currentMp: result.currentMp,
+        maxMp: result.maxMp,
+        potionResult: result,
+      }
+    );
+  }
+
+  /**
    * Processa requisição de coleta de itens / Zen do chão
    */
   private handleGroundItemPickupReq(session: ClientSession, req: GroundItemPickupReqPayload): void {
@@ -1781,6 +1850,21 @@ export class GameServer {
     session.character[stat] += points;
     session.character.statPoints -= points;
 
+    // Recalcula vitais dinâmicos baseados no novo valor de atributos
+    const isDw = session.character.characterClass === 'DW' || session.character.characterClass === 'SOUL_MASTER';
+    if (stat === 'vitality') {
+      const hpPerVit = isDw ? 1 : 2;
+      session.maxHp = (session.maxHp ?? 1000) + points * hpPerVit;
+      session.currentHp = Math.min(session.maxHp, (session.currentHp ?? 1000) + points * hpPerVit);
+    } else if (stat === 'energy') {
+      const mpPerEne = isDw ? 2 : 1;
+      session.maxMp = (session.maxMp ?? 300) + points * mpPerEne;
+      session.currentMp = Math.min(session.maxMp, (session.currentMp ?? 300) + points * mpPerEne);
+    }
+
+    // Persiste imediatamente a nova distribuição de atributos no SQLite
+    this.characterRepository.saveFromSession(session).catch(() => {});
+
     this.sendPacket(
       session,
       Opcodes.MSG_STAT_POINT_ALLOC_RES.opcode,
@@ -1791,6 +1875,10 @@ export class GameServer {
         pointsAllocated: points,
         pointsRemaining: session.character.statPoints,
         character: session.character,
+        maxHp: session.maxHp,
+        maxMp: session.maxMp,
+        currentHp: session.currentHp,
+        currentMp: session.currentMp,
         message: `Atributo ${stat} elevado com sucesso para ${session.character[stat]}! Pontos restantes: ${session.character.statPoints}.`,
       }
     );
@@ -3244,6 +3332,62 @@ export class GameServer {
         .map((s) => ({ id: s.sessionId, x: s.x!, y: s.y! }));
 
       const updateResult = this.combatEngine.update(0.1, activePlayers);
+
+      // Processa ataques autoritativos dos monstros contra jogadores
+      if (updateResult.attacks && updateResult.attacks.length > 0) {
+        for (const atk of updateResult.attacks) {
+          const targetSession = this.sessionManager.getSession(atk.targetId);
+          if (targetSession && targetSession.state === 'AUTHENTICATED' && targetSession.character) {
+            const res = this.combatEngine.processMonsterAttack(atk.mobId, targetSession);
+            if (res.success) {
+              this.broadcastPacket(
+                Opcodes.MSG_COMBAT_ATTACK_RES.opcode,
+                Opcodes.MSG_COMBAT_ATTACK_RES.subcode,
+                {
+                  attackerId: atk.mobId,
+                  targetId: targetSession.sessionId,
+                  isPlayerTarget: true,
+                  damage: res.damage,
+                  damageType: res.damageType,
+                  colorHex: res.colorHex,
+                  targetHp: res.playerHp,
+                  targetMaxHp: res.playerMaxHp,
+                  targetSd: res.playerSd,
+                  targetMaxSd: res.playerMaxSd,
+                  isDead: res.isDead,
+                  staggered: res.staggered,
+                }
+              );
+
+              if (res.isDead) {
+                // Jogador derrotado! Agenda respawn seguro em Lorencia Town
+                setTimeout(() => {
+                  targetSession.currentHp = targetSession.maxHp ?? 1000;
+                  targetSession.currentSd = targetSession.maxSd ?? 500;
+                  targetSession.x = 143;
+                  targetSession.y = 134;
+                  this.sendPacket(
+                    targetSession,
+                    Opcodes.MSG_PLAYER_STATUS_VITALS.opcode,
+                    Opcodes.MSG_PLAYER_STATUS_VITALS.subcode,
+                    {
+                      currentHp: targetSession.currentHp,
+                      maxHp: targetSession.maxHp,
+                      currentMp: targetSession.currentMp,
+                      maxMp: targetSession.maxMp,
+                      currentSd: targetSession.currentSd,
+                      maxSd: targetSession.maxSd,
+                      x: targetSession.x,
+                      y: targetSession.y,
+                      respawned: true,
+                    }
+                  );
+                }, 2500);
+              }
+            }
+          }
+        }
+      }
 
       if (updateResult.hasMoved || updateResult.respawned.length > 0 || updateResult.despawnedIds.length > 0 || (updateResult.attacks && updateResult.attacks.length > 0)) {
         this.broadcastMonstersState();
