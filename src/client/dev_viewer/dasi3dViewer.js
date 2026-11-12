@@ -12,7 +12,7 @@
 
 import * as THREE from './libs/three.module.js';
 import { OrbitControls } from './libs/OrbitControls.js';
-import { createHero, createMonster, createEnvironment, loadBestiaryCreatureGLB } from './dasi3dContent.js';
+import { createHero, createMonster, createEnvironment, loadBestiaryCreatureGLB, loadBestiaryCreatureAnimatedGLB, GLTF_BESTIARY_ANIMATED_MAP } from './dasi3dContent.js';
 import { createModularHero } from './modularHero.js';
 import { buildArmoryShowcase, ARMORY_METADATA } from './dasi3dArmory.js';
 import { DasiCollisionEngine } from './dasiCollisionEngine.js';
@@ -326,14 +326,26 @@ export class Dasi3DFeatureViewer {
       const monster = createMonster(id, THREE);
       this.activeEntity = monster;
       this.scene.add(monster.group);
-      loadBestiaryCreatureGLB(id, monster.group, THREE, (glbModel) => {
+      const onBestiaryGlb = (glbModel, controller) => {
         monster.parts.realGLB = glbModel;
+        monster.parts.animController = controller ?? null;
         const statusBadge = document.getElementById('lbl-real-scenery-status');
-        if (statusBadge) {
+        if (!statusBadge) return;
+        if (controller) {
+          statusBadge.textContent = `🦴 Bestiário: GLB articulado — ${controller.clips.length} clips (${controller.locomotion})`;
+          statusBadge.style.color = '#4ade80';
+        } else {
           statusBadge.textContent = '📦 Bestiário: protótipo GLB estático';
           statusBadge.style.color = '#fbbf24';
         }
-      }, [monster.parts.groundRing]);
+      };
+      // Criaturas com GLB articulado entram com clips reais; as demais mantêm o
+      // protótipo estático ou a geração procedural existente.
+      if (GLTF_BESTIARY_ANIMATED_MAP[id]) {
+        loadBestiaryCreatureAnimatedGLB(id, monster.group, THREE, onBestiaryGlb, [monster.parts.groundRing]);
+      } else {
+        loadBestiaryCreatureGLB(id, monster.group, THREE, onBestiaryGlb, [monster.parts.groundRing]);
+      }
 
       if (id === 'SPIDER') {
         this.controls.target.set(0, 0.55, 0);
@@ -582,6 +594,25 @@ export class Dasi3DFeatureViewer {
     }
   }
 
+  /** Informa se a criatura possui GLB articulado com clips de animação. */
+  hasAnimatedBestiary(creatureId) {
+    return !!GLTF_BESTIARY_ANIMATED_MAP[String(creatureId ?? '').trim().toUpperCase()];
+  }
+
+  /**
+   * Controla os clips do bestiário articulado: IDLE e MOVE são estados
+   * persistentes; ATTACK, HURT e DEATH são disparos únicos (DEATH é terminal).
+   */
+  triggerBestiaryAnimation(state) {
+    const controller = this.activeEntity?.parts?.animController;
+    if (!controller) return false;
+    const key = String(state ?? '').trim().toUpperCase();
+    if (key === 'DEATH') return controller.die();
+    if (key === 'ATTACK' || key === 'HURT') return controller.trigger(key);
+    if (key === 'MOVE' || key === 'WALK' || key === 'RUN') return controller.setBaseState('MOVE');
+    return controller.setBaseState('IDLE');
+  }
+
   setCameraPreset(preset) {
     if (!this.controls || !this.camera) return;
 
@@ -626,6 +657,10 @@ export class Dasi3DFeatureViewer {
     if (this.activeEntity && typeof this.activeEntity.updateAnim === 'function') {
       this.activeEntity.updateAnim(this.currentAnim, elapsed, delta);
     }
+
+    // 1b. Clips GLTF do bestiário articulado (AnimationMixer + máquina de estados)
+    const bestiaryController = this.activeEntity?.parts?.animController;
+    if (bestiaryController) bestiaryController.update(delta);
 
     // 2. Animação da Máquina do Caos (quando ativa)
     if (this.currentCategory === 'CHAOS_MACHINE') {

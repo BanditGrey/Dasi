@@ -53,6 +53,8 @@ import {
   type HarmonyRestoreReqPayload,
   type SocketMountReqPayload,
   type SocketUnmountReqPayload,
+  type KalimaPortalSpawnReqPayload,
+  type KalimaEnterReqPayload,
   LocationType,
 } from './protocol.ts';
 import { SessionManager, type ClientSession } from './SessionManager.ts';
@@ -60,6 +62,8 @@ import { CombatEngine } from '../combat/CombatEngine.ts';
 import { BossManager } from '../bosses/BossManager.ts';
 import { BoxOfKundun } from '../bosses/BoxOfKundun.ts';
 import { EventManager } from '../events/EventManager.ts';
+import { KalimaInstance } from '../events/KalimaInstance.ts';
+import { CharacterRepository } from '../database/CharacterRepository.ts';
 import { DungeonManager } from '../dungeons/DungeonManager.ts';
 import { GuildSystem, TERRITORIAL_TAX_BY_BIOME } from '../guilds/GuildSystem.ts';
 import { CastleSiegeManager } from '../siege/CastleSiegeManager.ts';
@@ -120,6 +124,9 @@ export class GameServer {
   public readonly gensSystem: GensSystem;
   public readonly socketItemSystem: SocketItemSystem;
   public readonly harmonySystem: HarmonyAnd380System;
+  public readonly characterRepository: CharacterRepository;
+  public readonly activeKalimaPortals = new Map<string, { portalId: string; ownerId: string; partyId: string | null; kalimaLevel: number; x: number; y: number; expiresAt: number; }>();
+  private lastAutoSaveTime = 0;
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private gameLoopTimer: NodeJS.Timeout | null = null;
   private isRunning = false;
@@ -146,6 +153,7 @@ export class GameServer {
     this.gensSystem = new GensSystem();
     this.socketItemSystem = new SocketItemSystem();
     this.harmonySystem = new HarmonyAnd380System();
+    this.characterRepository = new CharacterRepository();
   }
 
   /**
@@ -681,6 +689,9 @@ export class GameServer {
 
     ws.on('close', (code, reason) => {
       console.log(`[GameServer] Sessão desconectada: Session=${session.sessionId} Code=${code} Motivo=${reason}`);
+      if (session.state === 'AUTHENTICATED') {
+        this.characterRepository.saveFromSession(session).catch(() => {});
+      }
       this.castleSiege.releasePedestal(session.sessionId);
       if (this.castleSiege.crownSeal.masterSessionId === session.sessionId) this.castleSiege.interruptCrownSeal('jogador desconectado');
       this.lastSiegeAttack.delete(session.sessionId);
@@ -883,6 +894,18 @@ export class GameServer {
     // 20. Arenas de Evento: Duelo 1v1 (0x81:0x0b)
     if (opcode === Opcodes.MSG_DUEL_ACTION_REQ.opcode && subcode === Opcodes.MSG_DUEL_ACTION_REQ.subcode) {
       this.handleDuelActionReq(session, payload as any);
+      return;
+    }
+
+    // 20b. Arenas de Evento: Spawn de Portal de Kalima (0x81:0x0d)
+    if (opcode === Opcodes.MSG_KALIMA_PORTAL_SPAWN_REQ.opcode && subcode === Opcodes.MSG_KALIMA_PORTAL_SPAWN_REQ.subcode) {
+      this.handleKalimaPortalSpawnReq(session, payload as KalimaPortalSpawnReqPayload);
+      return;
+    }
+
+    // 20c. Arenas de Evento: Entrada em Kalima (0x81:0x0f)
+    if (opcode === Opcodes.MSG_KALIMA_ENTER_REQ.opcode && subcode === Opcodes.MSG_KALIMA_ENTER_REQ.subcode) {
+      this.handleKalimaEnterReq(session, payload as KalimaEnterReqPayload);
       return;
     }
 
@@ -1959,6 +1982,103 @@ export class GameServer {
         ...killRes,
       });
     }
+  }
+
+  private handleKalimaPortalSpawnReq(session: ClientSession, payload: KalimaPortalSpawnReqPayload): void {
+    if (session.state !== 'AUTHENTICATED') return;
+
+    const defId = payload.lostMapDefId || '';
+    const match = defId.match(/lost_map_(\d+)/);
+    const kalimaLevel = match ? parseInt(match[1], 10) : 1;
+
+    if (!session.inventory.hasItem(defId)) {
+      this.sendPacket(session, Opcodes.MSG_KALIMA_PORTAL_SPAWN_RES.opcode, Opcodes.MSG_KALIMA_PORTAL_SPAWN_RES.subcode, {
+        success: false,
+        error: `Item [${defId}] não encontrado no inventário!`,
+      });
+      return;
+    }
+
+    const isSpecialClass = session.character.class === 'MG' || session.character.class === 'DL';
+    const canEnter = KalimaInstance.canEnterKalima(kalimaLevel, session.character.level, isSpecialClass);
+    if (!canEnter) {
+      this.sendPacket(session, Opcodes.MSG_KALIMA_PORTAL_SPAWN_RES.opcode, Opcodes.MSG_KALIMA_PORTAL_SPAWN_RES.subcode, {
+        success: false,
+        error: `Nível ${session.character.level} incompatível com Kalima ${kalimaLevel}!`,
+      });
+      return;
+    }
+
+    session.inventory.removeItemByDefId(defId);
+    const party = this.partyManager.getPartyBySession(session.sessionId);
+    const portal = KalimaInstance.spawnKalimaPortal(
+      session.sessionId,
+      party?.id ?? null,
+      kalimaLevel,
+      payload.x ?? session.character.x ?? 125,
+      payload.y ?? session.character.y ?? 125
+    );
+
+    this.activeKalimaPortals.set(portal.portalId, {
+      ...portal,
+      expiresAt: Date.now() + portal.durationSeconds * 1000,
+    });
+
+    this.sendPacket(session, Opcodes.MSG_KALIMA_PORTAL_SPAWN_RES.opcode, Opcodes.MSG_KALIMA_PORTAL_SPAWN_RES.subcode, {
+      success: true,
+      portalId: portal.portalId,
+      kalimaLevel: portal.kalimaLevel,
+      durationSeconds: portal.durationSeconds,
+      x: portal.x,
+      y: portal.y,
+    });
+  }
+
+  private handleKalimaEnterReq(session: ClientSession, payload: KalimaEnterReqPayload): void {
+    if (session.state !== 'AUTHENTICATED') return;
+
+    const portal = this.activeKalimaPortals.get(payload.portalId);
+    if (!portal || Date.now() > portal.expiresAt) {
+      this.sendPacket(session, Opcodes.MSG_KALIMA_ENTER_RES.opcode, Opcodes.MSG_KALIMA_ENTER_RES.subcode, {
+        success: false,
+        error: 'Portal de Kalima expirou ou não existe!',
+      });
+      return;
+    }
+
+    const party = this.partyManager.getPartyBySession(session.sessionId);
+    const isOwner = portal.ownerId === session.sessionId;
+    const isPartyMember = Boolean(portal.partyId && party && portal.partyId === party.id);
+
+    if (!isOwner && !isPartyMember) {
+      this.sendPacket(session, Opcodes.MSG_KALIMA_ENTER_RES.opcode, Opcodes.MSG_KALIMA_ENTER_RES.subcode, {
+        success: false,
+        error: 'Apenas o invocador ou membros do grupo podem entrar neste portal!',
+      });
+      return;
+    }
+
+    const isSpecialClass = session.character.class === 'MG' || session.character.class === 'DL';
+    const canEnter = KalimaInstance.canEnterKalima(portal.kalimaLevel, session.character.level, isSpecialClass);
+    if (!canEnter) {
+      this.sendPacket(session, Opcodes.MSG_KALIMA_ENTER_RES.opcode, Opcodes.MSG_KALIMA_ENTER_RES.subcode, {
+        success: false,
+        error: `Nível ${session.character.level} insuficiente ou acima do teto para Kalima ${portal.kalimaLevel}!`,
+      });
+      return;
+    }
+
+    session.currentMap = `KALIMA_${portal.kalimaLevel}`;
+    session.character.x = 20;
+    session.character.y = 20;
+
+    this.sendPacket(session, Opcodes.MSG_KALIMA_ENTER_RES.opcode, Opcodes.MSG_KALIMA_ENTER_RES.subcode, {
+      success: true,
+      kalimaLevel: portal.kalimaLevel,
+      targetMap: session.currentMap,
+      x: 20,
+      y: 20,
+    });
   }
 
   private handleDungeonEnterReq(session: ClientSession): void {
@@ -3151,6 +3271,23 @@ export class GameServer {
       for (const session of this.sessionManager.getAllSessions()) {
         if (session.state === 'AUTHENTICATED' && session.effectManager) {
           session.effectManager.tick(0.1);
+        }
+      }
+
+      // Ciclo dos Portais de Kalima (expiração de 180s)
+      for (const [id, portal] of this.activeKalimaPortals.entries()) {
+        if (now > portal.expiresAt) {
+          this.activeKalimaPortals.delete(id);
+        }
+      }
+
+      // Auto-save periódico de personagens (a cada 60 segundos)
+      if (now - this.lastAutoSaveTime > 60000) {
+        this.lastAutoSaveTime = now;
+        for (const session of this.sessionManager.getAllSessions()) {
+          if (session.state === 'AUTHENTICATED') {
+            this.characterRepository.saveFromSession(session).catch(() => {});
+          }
         }
       }
     }, 100);

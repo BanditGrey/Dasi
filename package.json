@@ -23,9 +23,11 @@
     "test:watch": "node --experimental-strip-types --test --watch src/server/inventory/tests/inventory.test.ts",
     "test:parity": "node --experimental-strip-types --test src/server/world/tests/scenario_parity.test.ts",
     "typecheck": "tsc -p tsconfig.json",
-    "test:3d": "node --experimental-strip-types --test src/server/world/tests/scenario_3d_coverage.test.ts src/server/world/tests/bestiary_glb_coverage.test.ts",
+    "test:3d": "node --experimental-strip-types --test src/server/world/tests/scenario_3d_coverage.test.ts src/server/world/tests/bestiary_glb_coverage.test.ts src/server/world/tests/bestiary_animated_coverage.test.ts src/server/world/tests/bestiary_texture_coverage.test.ts",
+    "test:rig": "node --experimental-strip-types --test src/client/dev_viewer/tests/bestiary_rig.test.ts",
     "build:event-glb": "node tools/export_event_arenas.mjs ALL",
     "build:bestiary-glb": "node tools/export_bestiary_glbs.mjs ALL",
+    "build:bestiary-animated-glb": "node tools/export_bestiary_animated.mjs ALL",
     "launcher": "cmd /c start Dasi.exe",
     "serve:php": "php -S 127.0.0.1:8080 tools/php_server/router.php",
     "build:launcher": "tools\\build_launcher.bat"

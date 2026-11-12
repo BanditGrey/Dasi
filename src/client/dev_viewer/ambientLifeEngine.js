@@ -7,6 +7,49 @@
 import * as THREE from './libs/three.module.js';
 import { loadAnimatedCreatureGLB } from './dasi3dContent.js';
 
+/**
+ * Cria sprite de identificação flutuante (billboard 3D) para NPCs Cidadãos
+ */
+export function createNpcBillboardSprite(title, subtitle, accentColor = '#fbbf24', THREE_INSTANCE = THREE) {
+  if (typeof document === 'undefined' || typeof document.createElement !== 'function') {
+    return new THREE_INSTANCE.Group();
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    ctx.fillStyle = 'rgba(10, 15, 26, 0.88)';
+    if (typeof ctx.roundRect === 'function') {
+      ctx.roundRect(4, 4, 248, 56, 8);
+    } else {
+      ctx.fillRect(4, 4, 248, 56);
+    }
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = accentColor;
+    ctx.stroke();
+
+    ctx.font = 'bold 18px "Rajdhani", sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(title, 128, 22);
+
+    if (subtitle) {
+      ctx.font = '12px "Rajdhani", sans-serif';
+      ctx.fillStyle = accentColor;
+      ctx.fillText(subtitle, 128, 44);
+    }
+  }
+
+  const texture = new THREE_INSTANCE.CanvasTexture(canvas);
+  const mat = new THREE_INSTANCE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
+  const sprite = new THREE_INSTANCE.Sprite(mat);
+  sprite.scale.set(2.4, 0.6, 1.0);
+  return sprite;
+}
+
 export class AmbientLifeEngine {
   constructor(scene, currentScenarioId = 'lorencia_citadel', audioSynthesizer = null) {
     this.scene = scene;
@@ -22,6 +65,8 @@ export class AmbientLifeEngine {
     this.fishes = [];
     this.torches = [];
     this.critters = [];
+    this.npcs = [];
+    this.weatherParticles = null;
     this.clock = new THREE.Clock();
 
     this.initBiomeFauna(currentScenarioId);
@@ -54,6 +99,8 @@ export class AmbientLifeEngine {
     this.fishes = [];
     this.torches = [];
     this.critters = [];
+    this.npcs = [];
+    this.weatherParticles = null;
   }
 
   /**
@@ -95,6 +142,10 @@ export class AmbientLifeEngine {
         { x: 5, y: 2.4, z: -5, color: 0xef4444, intensity: 3.2, dist: 16 },
       ]);
     }
+
+    // Inicialização de Cidadãos / Habitantes (NPCs 3D) e Clima Atmosférico
+    this.initNpcs(scenarioId);
+    this.initWeather(scenarioId);
   }
 
   // =========================================================================

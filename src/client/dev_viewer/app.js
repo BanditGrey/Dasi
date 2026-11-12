@@ -846,6 +846,28 @@ class DevClientApp {
       return;
     }
 
+    // 30b. Kalima Portal & Entrada (0x81:0x0e e 0x81:0x10)
+    if (opcode === OPCODES.KALIMA_PORTAL_SPAWN_RES.opcode && subcode === OPCODES.KALIMA_PORTAL_SPAWN_RES.subcode) {
+      if (payload.success) {
+        if (this.sfx) this.sfx.playPortalWarpSound();
+        this.log(`🌌 [Kalima Portal] Portal para Kalima ${payload.kalimaLevel} aberto por ${payload.durationSeconds}s! Coordenadas: (${payload.x}, ${payload.y}).`, 'success');
+      } else {
+        if (this.sfx) this.sfx.playFailureSound();
+        this.log(`❌ [Kalima Portal] Falha ao abrir portal: ${payload.error}`, 'warning');
+      }
+      return;
+    }
+    if (opcode === OPCODES.KALIMA_ENTER_RES.opcode && subcode === OPCODES.KALIMA_ENTER_RES.subcode) {
+      if (payload.success) {
+        if (this.sfx) this.sfx.playPortalWarpSound();
+        this.log(`🌊 [Kalima] Você adentrou as profundezas de Kalima ${payload.kalimaLevel}! Prepare-se para enfrentar Lord Kundun!`, 'success');
+      } else {
+        if (this.sfx) this.sfx.playFailureSound();
+        this.log(`❌ [Kalima] Entrada rejeitada: ${payload.error}`, 'warning');
+      }
+      return;
+    }
+
     // 31. Social Party (0xB2)
     if (opcode === OPCODES.PARTY_INVITE_RES.opcode && subcode === OPCODES.PARTY_INVITE_RES.subcode) {
       this.log(payload.success ? `🤝 [Party] Convite enviado para sessão ${payload.targetSessionId}!` : `❌ [Party] Convite falhou: ${payload.error}`, payload.success ? 'info' : 'warning');
@@ -2679,6 +2701,7 @@ class DevClientApp {
     const rangeRefine = document.getElementById('range-3d-refinement');
     const groupRefine = document.getElementById('group-3d-refinement');
     const groupAnims = document.getElementById('group-3d-animations');
+    const groupBestiaryAnims = document.getElementById('group-3d-bestiary-anims');
 
     const subHeroes = document.getElementById('sub-group-heroes');
     const subMonsters = document.getElementById('sub-group-monsters');
@@ -2870,6 +2893,11 @@ class DevClientApp {
 
     const updateAnimButtons = (category, id) => {
       const btnSkill1 = document.getElementById('btn-anim-skill1');
+      // O painel de clips só aparece para criaturas com GLB articulado.
+      if (groupBestiaryAnims) {
+        const articulated = category === 'MONSTER' && !!this.viewer3DInstance?.hasAnimatedBestiary?.(id);
+        groupBestiaryAnims.style.display = articulated ? 'flex' : 'none';
+      }
       const btnSkill2 = document.getElementById('btn-anim-skill2');
       const btnRoll = document.getElementById('btn-anim-roll');
 
@@ -3010,6 +3038,7 @@ class DevClientApp {
         if (subArmory) subArmory.style.display = currentCategory === 'ARMORY' ? 'flex' : 'none';
         if (groupRefine) groupRefine.style.display = (currentCategory === 'HERO' || currentCategory === 'CHAOS_MACHINE' || currentCategory === 'ARMORY') ? 'flex' : 'none';
         if (groupAnims) groupAnims.style.display = (currentCategory === 'HERO' || currentCategory === 'MONSTER') ? 'flex' : 'none';
+        if (groupBestiaryAnims) groupBestiaryAnims.style.display = 'none';
 
         if (currentCategory === 'HERO') {
           this.viewer3DInstance.selectEntity('HERO', currentHero, { setTier: currentSetTier });
@@ -3240,6 +3269,16 @@ class DevClientApp {
         btn.classList.add('active');
         const anim = btn.dataset.anim;
         if (this.viewer3DInstance) this.viewer3DInstance.triggerAnimation(anim);
+      });
+    });
+
+    // 6b. Botões de Clips do Bestiário Articulado (IDLE/MOVE/ATTACK/HURT/DEATH)
+    const bestiaryAnimButtons = document.querySelectorAll('.btn-3d-bestiary-anim');
+    bestiaryAnimButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        bestiaryAnimButtons.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (this.viewer3DInstance) this.viewer3DInstance.triggerBestiaryAnimation(btn.dataset.bestiaryAnim);
       });
     });
 

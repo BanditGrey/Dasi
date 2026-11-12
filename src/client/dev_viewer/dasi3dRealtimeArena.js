@@ -25,6 +25,8 @@ import {
   createProceduralCanvasTexture,
   loadBestiaryCreatureGLB,
   loadAnimatedCreatureGLB,
+  loadBestiaryCreatureAnimatedGLB,
+  GLTF_BESTIARY_ANIMATED_MAP,
 } from './dasi3dContent.js';
 import { resolveBestiaryRuntimeModel } from './bestiaryRuntimeMap.js';
 import { DasiCollisionEngine } from './dasiCollisionEngine.js';
@@ -748,10 +750,16 @@ export class Dasi3DRealtimeArena {
         entity.parts.realGLB = glbModel;
       }, preserved);
     } else if (visual?.modelId) {
-      loadBestiaryCreatureGLB(visual.modelId, entity.group, THREE, (glbModel) => {
-        synchronizedEntity.glbModel = glbModel;
-        entity.parts.realGLB = glbModel;
-      }, preserved);
+      const onModel = (model, controller) => {
+        synchronizedEntity.glbModel = model;
+        synchronizedEntity.animController = controller ?? null;
+        entity.parts.realGLB = model;
+      };
+      if (GLTF_BESTIARY_ANIMATED_MAP && GLTF_BESTIARY_ANIMATED_MAP[visual.modelId]) {
+        loadBestiaryCreatureAnimatedGLB(visual.modelId, entity.group, THREE, onModel, preserved);
+      } else {
+        loadBestiaryCreatureGLB(visual.modelId, entity.group, THREE, onModel, preserved);
+      }
     }
 
     return synchronizedEntity;
@@ -780,6 +788,13 @@ export class Dasi3DRealtimeArena {
         ctx.fillRect(2, 2, Math.round(156 * shieldPct), 8);
       }
       synchronizedEntity.hpTex.needsUpdate = true;
+    }
+
+    // Reação de dano: o clip HURT toca quando o HP cai sem a entidade morrer.
+    const previousHp = synchronizedEntity.lastHp ?? null;
+    synchronizedEntity.lastHp = currentHp;
+    if (previousHp !== null && currentHp < previousHp && !synchronizedEntity.isDead) {
+      synchronizedEntity.animController?.trigger?.('HURT');
     }
 
     if (entityData.isDead && !synchronizedEntity.isDead) {
@@ -815,6 +830,8 @@ export class Dasi3DRealtimeArena {
 
     for (const [entityId, synchronizedEntity] of renderEntities.entries()) {
       if (!activeIds.has(entityId)) {
+        synchronizedEntity.animController?.dispose?.();
+        synchronizedEntity.animController = null;
         this.scene.remove(synchronizedEntity.group);
         renderEntities.delete(entityId);
       }
@@ -830,10 +847,13 @@ export class Dasi3DRealtimeArena {
   }
 
   animateMonsterDeath(mob3D) {
-    if (mob3D.animController) {
-      mob3D.animController.playAction('death');
+    const controller = mob3D.animController ?? null;
+    if (controller) {
+      if (typeof controller.die === 'function') controller.die();
+      else if (typeof controller.playAction === 'function') controller.playAction('death');
     }
-    const delayBeforeSink = mob3D.animController ? 900 : 80;
+    const deathClip = controller?.clips?.find((clip) => clip.name === 'DEATH');
+    const delayMs = controller ? (deathClip ? Math.round((deathClip.duration ?? 2) * 700) : 900) : 80;
     setTimeout(() => {
       let fade = 1.0;
       const sink = () => {
@@ -848,11 +868,13 @@ export class Dasi3DRealtimeArena {
         if (fade > 0) {
           requestAnimationFrame(sink);
         } else {
+          controller?.dispose?.();
+          mob3D.animController = null;
           this.scene.remove(mob3D.group);
         }
       };
       sink();
-    }, delayBeforeSink);
+    }, delayMs);
   }
 
   onEntityDamaged(entityId, isDead, staggered, monsterType = 'spider') {
@@ -868,13 +890,17 @@ export class Dasi3DRealtimeArena {
     } else {
       this.harmonicAudio?.playMonsterHitSound(monsterType);
       if (entity3D.animController) {
-        entity3D.animController.playAction('hit', 0.1);
-        setTimeout(() => {
-          if (!entity3D.isDead && entity3D.animController) {
-            const moveDist = entity3D.group.position.distanceTo(entity3D.targetPos);
-            entity3D.animController.playAction(moveDist > 0.08 ? 'walk' : 'idle', 0.2);
-          }
-        }, 300);
+        if (typeof entity3D.animController.trigger === 'function') {
+          entity3D.animController.trigger('HURT');
+        } else if (typeof entity3D.animController.playAction === 'function') {
+          entity3D.animController.playAction('hit', 0.1);
+          setTimeout(() => {
+            if (!entity3D.isDead && entity3D.animController) {
+              const moveDist = entity3D.group.position.distanceTo(entity3D.targetPos);
+              entity3D.animController.playAction(moveDist > 0.08 ? 'walk' : 'idle', 0.2);
+            }
+          }, 300);
+        }
       }
 
       // Flash vermelho/alaranjado na malha 3D
@@ -1153,20 +1179,35 @@ export class Dasi3DRealtimeArena {
             entity3D.group.rotation.y += diff * Math.min(1.0, 10.0 * delta);
           }
 
-          // Atualização de animação esquelética PBR ou procedural
-          if (entity3D.animController) {
-            if (entity3D.state === 'ATTACKING') {
-              entity3D.animController.playAction('attack');
-            } else if (entity3D.state === 'STAGGERED') {
-              entity3D.animController.playAction('hit');
-            } else if (moveDist > 0.08) {
-              entity3D.animController.playAction('walk');
-            } else {
-              entity3D.animController.playAction('idle');
+          const controller = entity3D.animController;
+          if (controller) {
+            controller.update(delta);
+            if (typeof controller.setBaseState === 'function') {
+              entity3D.attackCooldown = Math.max(0, (entity3D.attackCooldown ?? 0) - delta);
+              const reach = entity3D.isBoss ? 4.6 : 3.0;
+              const distanceToPlayer = entity3D.group.position.distanceTo(this.playerGroup.position);
+              const busy = controller.state === 'ATTACK' || controller.state === 'HURT';
+              if (!busy && distanceToPlayer < reach && entity3D.attackCooldown <= 0) {
+                controller.trigger('ATTACK');
+                entity3D.attackCooldown = entity3D.isBoss ? 2.4 : 1.7;
+              } else {
+                controller.setBaseState(moveDist > 0.35 ? 'MOVE' : 'IDLE');
+              }
+            } else if (typeof controller.playAction === 'function') {
+              if (entity3D.state === 'ATTACKING') {
+                controller.playAction('attack');
+              } else if (entity3D.state === 'STAGGERED') {
+                controller.playAction('hit');
+              } else if (moveDist > 0.08) {
+                controller.playAction('walk');
+              } else {
+                controller.playAction('idle');
+              }
             }
-            entity3D.animController.update(delta);
-          } else if (entity3D.entity && entity3D.entity.updateAnim) {
-            entity3D.entity.updateAnim('WALK', elapsed, delta);
+          }
+
+          if (entity3D.entity && entity3D.entity.updateAnim) {
+            entity3D.entity.updateAnim(moveDist > 0.1 ? 'WALK' : 'IDLE', elapsed, delta);
           }
         } else if (entity3D.animController) {
           entity3D.animController.update(delta);

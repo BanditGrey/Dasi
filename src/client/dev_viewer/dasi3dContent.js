@@ -15,6 +15,7 @@
 import { buildScenario3D } from './dasi3dScenarios.js';
 import { createTiledFloor, createTiledBoxTop, createTiledRoundTop, createTiledSlabGrid, loadTileEdits } from './tileFloor.js';
 import { GLTFLoader } from './libs/GLTFLoader.js';
+import { createBestiaryAnimationController } from './bestiaryRig.js';
 
 // ============================================================================
 // MAPA DE MODELOS 3D GLB REAIS COMPILADOS VIA BLENDER 5.2 LTS
@@ -92,6 +93,98 @@ export const GLTF_BESTIARY_MAP = Object.freeze({
   DEATH_KNIGHT: 'models/bestiary/death_knight.glb',
   BUDGE_DRAGON: 'models/bestiary/golden_budge_dragon.glb',
 });
+
+/**
+ * Bestiário articulado: os mesmos protótipos com pivôs rígidos e cinco clips
+ * GLTF embutidos (IDLE, locomocão do arquétipo, ATTACK, HURT, DEATH).
+ * Gerados por `node tools/export_bestiary_animated.mjs ALL`.
+ */
+export const GLTF_BESTIARY_ANIMATED_MAP = Object.freeze({
+  ICE_QUEEN: 'models/bestiary_animated/ice_queen.glb',
+  GORGON: 'models/bestiary_animated/gorgon.glb',
+  HYDRA: 'models/bestiary_animated/hydra.glb',
+  BALROG: 'models/bestiary_animated/balrog.glb',
+  ZAIKAN: 'models/bestiary_animated/zaikan.glb',
+  KUNDUN: 'models/bestiary_animated/kundun.glb',
+  GOLDEN_TITAN: 'models/bestiary_animated/golden_titan.glb',
+  GOLDEN_BUDGE_DRAGON: 'models/bestiary_animated/golden_budge_dragon.glb',
+  GOLDEN_SOLDIER: 'models/bestiary_animated/golden_soldier.glb',
+  GOLDEN_LIZARD_KING: 'models/bestiary_animated/golden_lizard_king.glb',
+  GOLDEN_TANTALOS: 'models/bestiary_animated/golden_tantalos.glb',
+  GOLDEN_DRAGON: 'models/bestiary_animated/golden_dragon.glb',
+});
+
+/**
+ * Carrega o GLB articulado da criatura e devolve o modelo com um controlador de
+ * animação em `model.userData.animController`. Se o arquivo animado não existir
+ * (build antigo, pasta ausente), recai automaticamente para o protótipo estático
+ * via `loadBestiaryCreatureGLB`, preservando o conteúdo procedural.
+ */
+export function loadBestiaryCreatureAnimatedGLB(creatureId, targetGroup, THREE, onComplete, preserve = [], options = {}) {
+  const id = String(creatureId ?? '').trim().toUpperCase();
+  const glbPath = GLTF_BESTIARY_ANIMATED_MAP[id];
+  if (!glbPath || typeof window === 'undefined' || !targetGroup) {
+    loadBestiaryCreatureGLB(id, targetGroup, THREE, onComplete, preserve);
+    return;
+  }
+
+  try {
+    const loader = new GLTFLoader();
+    loader.load(
+      glbPath,
+      (gltf) => {
+        const model = gltf.scene;
+        model.name = `GLTF_BESTIARY_ANIMATED_${id}`;
+        model.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
+        });
+
+        // A seleção pode ter mudado durante o carregamento assíncrono.
+        if (!targetGroup.parent) {
+          disposeBestiaryModel(model);
+          return;
+        }
+
+        const clips = Array.isArray(gltf.animations) ? gltf.animations : [];
+        const controller = createBestiaryAnimationController(THREE, model, clips, {
+          locomotion: model.userData?.animationLocomotion ?? options.locomotion,
+          fadeDuration: options.fadeDuration,
+        });
+        model.userData.animController = controller;
+        model.userData.animationClips = clips;
+
+        const keep = new Set(preserve.filter(Boolean));
+        for (const child of targetGroup.children) {
+          if (!keep.has(child)) child.visible = false;
+        }
+        targetGroup.add(model);
+        console.info(`[Dasi3D] Bestiário articulado carregado: ${id} (${glbPath}) — ${clips.length} clips, ${model.userData.rigJointCount ?? 0} pivôs`);
+        if (onComplete) onComplete(model, controller);
+      },
+      undefined,
+      (err) => {
+        console.warn(`[Dasi3D] GLB articulado indisponível para ${id}; recaindo para o protótipo estático:`, err?.message ?? err);
+        loadBestiaryCreatureGLB(id, targetGroup, THREE, onComplete, preserve);
+      }
+    );
+  } catch (err) {
+    console.warn(`[Dasi3D] Erro ao carregar bestiário articulado ${id}; usando estático:`, err);
+    loadBestiaryCreatureGLB(id, targetGroup, THREE, onComplete, preserve);
+  }
+}
+
+/** Libera geometrias e materiais de um modelo descartado antes de entrar em cena. */
+function disposeBestiaryModel(model) {
+  model.traverse((child) => {
+    if (!child.isMesh) return;
+    child.geometry?.dispose?.();
+    const materials = Array.isArray(child.material) ? child.material : [child.material];
+    for (const material of materials) material?.dispose?.();
+  });
+}
 
 /** Carrega um GLB estático no grupo ativo do Dev Viewer, preservando o anel de spawn opcional. */
 export function loadBestiaryCreatureGLB(creatureId, targetGroup, THREE, onComplete, preserve = []) {
