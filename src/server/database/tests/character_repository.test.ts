@@ -34,7 +34,8 @@ describe('1. Repositório de Personagens & Persistência Binária (CharacterRepo
     session.y = 128;
     session.currentMap = 0; // Lorencia
 
-    // Adiciona itens no inventário
+    // Adiciona itens no inventário limpo
+    session.inventory.clear();
     const sword = Item.create('dragon_blade');
     sword.level = 11;
     sword.luck = true;

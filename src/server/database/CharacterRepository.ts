@@ -1,14 +1,17 @@
 /**
  * Dasi MMORPG - Repositório Canônico de Personagens & Persistência Autoritativa
- * Implementação do armazenamento de personagens com serialização binária de 16 bytes
- * por item (1.728 bytes para inventário 108 slots e 3.840 bytes para Baú/Warehouse 240 slots).
+ * Implementação do armazenamento de personagens com SQLite nativo (node:sqlite) e
+ * serialização binária de 16 bytes por item (1.728 bytes para inventário 108 slots e 3.840 bytes para Baú 240 slots).
  */
 
+import { DatabaseSync } from 'node:sqlite';
+import fs from 'node:fs';
+import path from 'node:path';
 import type { ClientSession } from '../network/SessionManager.ts';
 import { BinaryItemSerializer } from './BinaryItemSerializer.ts';
 import { QuestManager, type CharacterProgressionState } from '../progression/QuestManager.ts';
 import { MasterSkillTree, type MasterSkillTreeState } from '../progression/MasterSkillTree.ts';
-import type { PlacedItem } from '../inventory/types.ts';
+import { GridInventory } from '../inventory/GridInventory.ts';
 
 export interface CharacterRecord {
   name: string;
@@ -32,6 +35,8 @@ export interface CharacterRecord {
   pkCount: number;
   inventoryBinary: Buffer; // 1.728 bytes (108 slots * 16 bytes)
   warehouseBinary: Buffer; // 3.840 bytes (240 slots * 16 bytes)
+  inventoryJson?: string;
+  warehouseJson?: string;
   progression: CharacterProgressionState;
   masterTree: MasterSkillTreeState;
   gensFamily: number | null;
@@ -41,7 +46,98 @@ export interface CharacterRecord {
 }
 
 export class CharacterRepository {
+  private db: DatabaseSync;
   private records: Map<string, CharacterRecord> = new Map();
+  public readonly dbPath: string;
+
+  constructor(dbPath?: string) {
+    this.dbPath = dbPath ?? path.resolve(process.cwd(), 'data/dasi.sqlite');
+
+    if (this.dbPath !== ':memory:') {
+      const dir = path.dirname(this.dbPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+    }
+
+    this.db = new DatabaseSync(this.dbPath);
+    this.initSchema();
+    this.loadAllFromDb();
+  }
+
+  private initSchema(): void {
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS characters (
+        name TEXT PRIMARY KEY COLLATE NOCASE,
+        account TEXT NOT NULL,
+        class TEXT NOT NULL,
+        level INTEGER NOT NULL,
+        resets INTEGER NOT NULL DEFAULT 0,
+        masterResets INTEGER NOT NULL DEFAULT 0,
+        zen INTEGER NOT NULL DEFAULT 0,
+        wCoins INTEGER NOT NULL DEFAULT 0,
+        strength INTEGER NOT NULL,
+        agility INTEGER NOT NULL,
+        vitality INTEGER NOT NULL,
+        energy INTEGER NOT NULL,
+        command INTEGER NOT NULL DEFAULT 0,
+        statPoints INTEGER NOT NULL DEFAULT 0,
+        currentMap INTEGER NOT NULL DEFAULT 0,
+        x REAL NOT NULL DEFAULT 125,
+        y REAL NOT NULL DEFAULT 125,
+        pkLevel INTEGER NOT NULL DEFAULT 3,
+        pkCount INTEGER NOT NULL DEFAULT 0,
+        inventoryBinary BLOB NOT NULL,
+        warehouseBinary BLOB NOT NULL,
+        inventoryJson TEXT,
+        warehouseJson TEXT,
+        progression TEXT NOT NULL,
+        masterTree TEXT NOT NULL,
+        gensFamily INTEGER,
+        gensContribution INTEGER NOT NULL DEFAULT 0,
+        gensRank INTEGER NOT NULL DEFAULT 0,
+        updatedAt INTEGER NOT NULL
+      );
+    `);
+  }
+
+  private loadAllFromDb(): void {
+    const rows = this.db.prepare('SELECT * FROM characters').all() as any[];
+    for (const row of rows) {
+      const record: CharacterRecord = {
+        name: row.name,
+        account: row.account,
+        class: row.class as any,
+        level: Number(row.level),
+        resets: Number(row.resets),
+        masterResets: Number(row.masterResets),
+        zen: Number(row.zen),
+        wCoins: Number(row.wCoins),
+        strength: Number(row.strength),
+        agility: Number(row.agility),
+        vitality: Number(row.vitality),
+        energy: Number(row.energy),
+        command: Number(row.command),
+        statPoints: Number(row.statPoints),
+        currentMap: Number(row.currentMap),
+        x: Number(row.x),
+        y: Number(row.y),
+        pkLevel: Number(row.pkLevel),
+        pkCount: Number(row.pkCount),
+        inventoryBinary: Buffer.from(row.inventoryBinary),
+        warehouseBinary: Buffer.from(row.warehouseBinary),
+        inventoryJson: row.inventoryJson ?? undefined,
+        warehouseJson: row.warehouseJson ?? undefined,
+        progression: JSON.parse(row.progression),
+        masterTree: JSON.parse(row.masterTree),
+        gensFamily: row.gensFamily !== null && row.gensFamily !== undefined ? Number(row.gensFamily) : null,
+        gensContribution: Number(row.gensContribution),
+        gensRank: Number(row.gensRank),
+        updatedAt: Number(row.updatedAt),
+      };
+      this.records.set(record.name.toLowerCase(), record);
+    }
+  }
 
   /**
    * Salva um registro de personagem na base de dados
@@ -49,13 +145,129 @@ export class CharacterRepository {
   public async saveCharacter(record: CharacterRecord): Promise<void> {
     record.updatedAt = Date.now();
     this.records.set(record.name.toLowerCase(), record);
+
+    const stmt = this.db.prepare(`
+      INSERT INTO characters (
+        name, account, class, level, resets, masterResets, zen, wCoins,
+        strength, agility, vitality, energy, command, statPoints,
+        currentMap, x, y, pkLevel, pkCount,
+        inventoryBinary, warehouseBinary, inventoryJson, warehouseJson,
+        progression, masterTree, gensFamily, gensContribution, gensRank, updatedAt
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?
+      )
+      ON CONFLICT(name) DO UPDATE SET
+        account=excluded.account,
+        class=excluded.class,
+        level=excluded.level,
+        resets=excluded.resets,
+        masterResets=excluded.masterResets,
+        zen=excluded.zen,
+        wCoins=excluded.wCoins,
+        strength=excluded.strength,
+        agility=excluded.agility,
+        vitality=excluded.vitality,
+        energy=excluded.energy,
+        command=excluded.command,
+        statPoints=excluded.statPoints,
+        currentMap=excluded.currentMap,
+        x=excluded.x,
+        y=excluded.y,
+        pkLevel=excluded.pkLevel,
+        pkCount=excluded.pkCount,
+        inventoryBinary=excluded.inventoryBinary,
+        warehouseBinary=excluded.warehouseBinary,
+        inventoryJson=excluded.inventoryJson,
+        warehouseJson=excluded.warehouseJson,
+        progression=excluded.progression,
+        masterTree=excluded.masterTree,
+        gensFamily=excluded.gensFamily,
+        gensContribution=excluded.gensContribution,
+        gensRank=excluded.gensRank,
+        updatedAt=excluded.updatedAt;
+    `);
+
+    stmt.run(
+      record.name,
+      record.account,
+      record.class,
+      record.level,
+      record.resets,
+      record.masterResets,
+      record.zen,
+      record.wCoins,
+      record.strength,
+      record.agility,
+      record.vitality,
+      record.energy,
+      record.command,
+      record.statPoints,
+      record.currentMap,
+      record.x,
+      record.y,
+      record.pkLevel,
+      record.pkCount,
+      record.inventoryBinary,
+      record.warehouseBinary,
+      record.inventoryJson ?? null,
+      record.warehouseJson ?? null,
+      JSON.stringify(record.progression),
+      JSON.stringify(record.masterTree),
+      record.gensFamily,
+      record.gensContribution,
+      record.gensRank,
+      record.updatedAt
+    );
   }
 
   /**
    * Carrega um registro pelo nome do personagem
    */
   public async loadCharacter(name: string): Promise<CharacterRecord | null> {
-    return this.records.get(name.toLowerCase()) ?? null;
+    const cached = this.records.get(name.toLowerCase());
+    if (cached) return cached;
+
+    const row = this.db.prepare('SELECT * FROM characters WHERE name = ? COLLATE NOCASE').get(name) as any;
+    if (!row) return null;
+
+    const record: CharacterRecord = {
+      name: row.name,
+      account: row.account,
+      class: row.class as any,
+      level: Number(row.level),
+      resets: Number(row.resets),
+      masterResets: Number(row.masterResets),
+      zen: Number(row.zen),
+      wCoins: Number(row.wCoins),
+      strength: Number(row.strength),
+      agility: Number(row.agility),
+      vitality: Number(row.vitality),
+      energy: Number(row.energy),
+      command: Number(row.command),
+      statPoints: Number(row.statPoints),
+      currentMap: Number(row.currentMap),
+      x: Number(row.x),
+      y: Number(row.y),
+      pkLevel: Number(row.pkLevel),
+      pkCount: Number(row.pkCount),
+      inventoryBinary: Buffer.from(row.inventoryBinary),
+      warehouseBinary: Buffer.from(row.warehouseBinary),
+      inventoryJson: row.inventoryJson ?? undefined,
+      warehouseJson: row.warehouseJson ?? undefined,
+      progression: JSON.parse(row.progression),
+      masterTree: JSON.parse(row.masterTree),
+      gensFamily: row.gensFamily !== null && row.gensFamily !== undefined ? Number(row.gensFamily) : null,
+      gensContribution: Number(row.gensContribution),
+      gensRank: Number(row.gensRank),
+      updatedAt: Number(row.updatedAt),
+    };
+
+    this.records.set(record.name.toLowerCase(), record);
+    return record;
   }
 
   /**
@@ -66,6 +278,7 @@ export class CharacterRepository {
     const inventoryItems = session.inventory.getAllGridItems();
     const inventoryBinary = BinaryItemSerializer.serializeInventory(inventoryItems);
     const warehouseBinary = BinaryItemSerializer.serializeWarehouse([]);
+    const inventoryJson = JSON.stringify(session.inventory.serialize());
 
     const record: CharacterRecord = {
       name: char.name,
@@ -89,6 +302,7 @@ export class CharacterRepository {
       pkCount: session.pkCount ?? 0,
       inventoryBinary,
       warehouseBinary,
+      inventoryJson,
       progression: session.progressionState
         ? { ...session.progressionState }
         : QuestManager.createDefaultState(char.name, char.name, 0, char.level),
@@ -138,16 +352,31 @@ export class CharacterRepository {
     session.progressionState = { ...record.progression };
     session.masterTreeState = { ...record.masterTree };
 
-    // Deserializa itens no inventário
-    const deserializedItems = BinaryItemSerializer.deserializeInventory(record.inventoryBinary);
+    // Restaura inventário
+    if (record.inventoryJson) {
+      try {
+        const parsed = JSON.parse(record.inventoryJson);
+        const restoredInv = GridInventory.deserialize(parsed);
+        session.inventory = restoredInv;
+      } catch (e) {
+        console.warn(`[CharacterRepository] Falha ao deserializar inventoryJson de ${name}, usando binário:`, e);
+        this.restoreInventoryFromBinary(record.inventoryBinary, session);
+      }
+    } else {
+      this.restoreInventoryFromBinary(record.inventoryBinary, session);
+    }
+
+    return true;
+  }
+
+  private restoreInventoryFromBinary(binary: Buffer, session: ClientSession): void {
+    const deserializedItems = BinaryItemSerializer.deserializeInventory(binary);
     session.inventory.clear();
     for (const placed of deserializedItems) {
       if (placed) {
         session.inventory.addItem(placed.item, placed.x, placed.y);
       }
     }
-
-    return true;
   }
 
   /**
@@ -190,6 +419,17 @@ export class CharacterRepository {
         warehouseBinary: Buffer.from(item.warehouseBinaryHex, 'hex'),
       };
       this.saveCharacter(record);
+    }
+  }
+
+  /**
+   * Encerra a conexão com o banco SQLite
+   */
+  public close(): void {
+    try {
+      this.db.close();
+    } catch {
+      // Já fechado
     }
   }
 }
