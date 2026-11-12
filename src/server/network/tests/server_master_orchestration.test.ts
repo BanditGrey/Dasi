@@ -43,7 +43,7 @@ describe('Master Server Orchestration - All Canonical Subsystems & Game Loop', (
   let server: GameServer;
 
   before(async () => {
-    server = new GameServer({ port: 8999, host: '127.0.0.1' });
+    server = new GameServer({ port: 8999, host: '127.0.0.1', dbPath: ':memory:' });
   });
 
   it('1. Garante que todos os 16 subsistemas autoritativos estão instanciados no GameServer', () => {

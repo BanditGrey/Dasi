@@ -123,7 +123,7 @@ describe('2. Orquestração de Kalima no GameServer (Kalima Portal & Lord Kundun
   });
 
   it('gerencia o ciclo de portais de Kalima no GameServer com limite temporal de 180s', () => {
-    const server = new GameServer({ port: 8290 });
+    const server = new GameServer({ port: 8290, dbPath: ':memory:' });
     const sessionManager = server.sessionManager;
 
     const dummyWs: any = {
