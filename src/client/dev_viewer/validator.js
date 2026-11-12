@@ -29,7 +29,8 @@ export const VALIDATION_CATALOG = [
     category: 'HERO',
     name: 'Dark Knight (Blade Knight)',
     subtitle: 'Guerreiro Corporal de Lorencia • Dragon Set + Dragon Blade',
-    glb: 'models/hero_dk_master_base.glb',
+    glb: 'models/animated_heroes/hero_dk_animated.glb',
+    masterGlb: 'models/hero_dk_master_base.glb',
     animatedGlb: 'models/animated_heroes/hero_dk_animated.glb',
     sourceBmd: 'HelmClass02, HelmMale02, ArmorMale02, Wing06, Sword02, Sword17.bmd',
     collision: { radius: 0.45, height: 1.85, step: 0.35 },
@@ -41,7 +42,8 @@ export const VALIDATION_CATALOG = [
     category: 'HERO',
     name: 'Dark Wizard (Soul Master)',
     subtitle: 'Mago Arcano de Lorencia • Legendary Set + Kundun Staff',
-    glb: 'models/hero_dw_master_base.glb',
+    glb: 'models/animated_heroes/hero_dw_animated.glb',
+    masterGlb: 'models/hero_dw_master_base.glb',
     animatedGlb: 'models/animated_heroes/hero_dw_animated.glb',
     sourceBmd: 'HelmClass01, HelmMale04, ArmorMale04, Wing05, Staff05.bmd',
     collision: { radius: 0.45, height: 1.80, step: 0.35 },
@@ -53,7 +55,8 @@ export const VALIDATION_CATALOG = [
     category: 'HERO',
     name: 'Fairy Elf (Muse Elf)',
     subtitle: 'Arqueira dos Bosques de Noria • Guardian Set + Celestial Bow',
-    glb: 'models/hero_elf_master_base.glb',
+    glb: 'models/animated_heroes/hero_elf_animated.glb',
+    masterGlb: 'models/hero_elf_master_base.glb',
     animatedGlb: 'models/animated_heroes/hero_elf_animated.glb',
     sourceBmd: 'HelmClass03, HelmElf05, ArmorElf05, Wing04, Bow04.bmd',
     collision: { radius: 0.42, height: 1.75, step: 0.35 },
@@ -65,7 +68,8 @@ export const VALIDATION_CATALOG = [
     category: 'HERO',
     name: 'Magic Gladiator (Duel Master)',
     subtitle: 'Guerreiro Híbrido de Lorencia • Storm Crow Set + Rune Blade',
-    glb: 'models/hero_mg_master_base.glb',
+    glb: 'models/animated_heroes/hero_mg_animated.glb',
+    masterGlb: 'models/hero_mg_master_base.glb',
     animatedGlb: 'models/animated_heroes/hero_mg_animated.glb',
     sourceBmd: 'HelmClass04, ArmorMale16, PantMale16, Wing07, Sword16, Sword10.bmd',
     collision: { radius: 0.48, height: 1.90, step: 0.35 },
@@ -77,7 +81,8 @@ export const VALIDATION_CATALOG = [
     category: 'HERO',
     name: 'Dark Lord (Lord Emperor)',
     subtitle: 'Soberano das Trevas do Vale de Loren • Dark Steel Set + Scepter',
-    glb: 'models/hero_dl_master_base.glb',
+    glb: 'models/animated_heroes/hero_dl_animated.glb',
+    masterGlb: 'models/hero_dl_master_base.glb',
     animatedGlb: 'models/animated_heroes/hero_dl_animated.glb',
     sourceBmd: 'HelmClass05, HelmMale28, ArmorMale28, DarkLordRobe02, Mace05.bmd',
     collision: { radius: 0.48, height: 1.90, step: 0.35 },
@@ -804,7 +809,7 @@ export class ValidationStudio {
 
     this.currentModel.traverse((child) => {
       if (!child.isMesh) return;
-      const n = (child.name || '').toLowerCase();
+      const n = ((child.name || '') + ' ' + (child.parent?.name || '')).toLowerCase();
 
       // 1. Corpo Base (Anatomia)
       if (n.startsWith('body_') || n.includes('body_blockout') || n.includes('base_head') ||
@@ -845,12 +850,16 @@ export class ValidationStudio {
       else if (n.startsWith('wings_') || n.includes('wings') || n.includes('cape') || n.includes('mantle')) {
         child.visible = this.layersState.wings && this.showWings;
       }
-      // 8. Arma Direita
+      // 8. Arco (Fairy Elf)
+      else if (n.includes('elf_weapon') || n.includes('bow')) {
+        child.visible = this.layersState.weapon_r || this.layersState.weapon_l;
+      }
+      // 9. Arma Direita
       else if (n.startsWith('weapon_right') || n.includes('weapon_r') || n.includes('dragon_blade') ||
                (n.includes('weapon') && !n.includes('left') && !n.includes('archangel'))) {
         child.visible = this.layersState.weapon_r;
       }
-      // 9. Arma Esquerda
+      // 10. Arma Esquerda
       else if (n.startsWith('weapon_left') || n.includes('weapon_l') || n.includes('archangel') || n.includes('shield')) {
         child.visible = this.layersState.weapon_l;
       }
