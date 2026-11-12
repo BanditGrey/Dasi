@@ -4,7 +4,7 @@
 > **Status:** Documento Estratégico Executivo (v1.0)  
 > **Versão da Engine/Ecossistema:** Node.js 22+ (Backend) • Three.js WebGL (Dev Viewer) • Unreal Engine 5.4+ (Cliente AAA)  
 > **Base Canônica Homologada:** MU Online Season 5.2 (`reference/mu_roxgaming_5.2/`)  
-> **Qualidade e QA Atual:** 449/449 Testes Automatizados Aprovados em 105 suítes (100% Pass)  
+> **Qualidade e QA Atual:** 457/457 Testes Automatizados Aprovados em 107 suítes (100% Pass)  
 > **IP Canônico de Rede:** `26.32.29.60` (Radmin VPN) / `127.0.0.1` (Local Dev)
 
 ---
@@ -31,7 +31,7 @@ Com base em uma auditoria completa de todo o repositório (`D:\Dasi`), o projeto
 
 | Camada / Subsistema | O que JÁ ESTÁ PRONTO e Validado | O que FALTA para Versão Jogável Completa |
 | :--- | :--- | :--- |
-| **Servidor Autoritativo & Persistência** (`src/server/`) | • Persistência nativa em disco com **SQLite (`node:sqlite`)** salvando personagens, nível, atributos, zen, inventário de 1.728 bytes e equipamentos equipados.<br/>• Combate autoritativo bidirecional: monstros atacam jogadores com absorção SD/HP (90/10) e respawn na cidade.<br/>• Protocolo binário C1/C2 + JSON unificado.<br/>• Handshake Zero-Trust e checagem CRC16-CCITT.<br/>• Motor de colisão com física de deslizamento cilíndrico/AABB.<br/>• Sistema canônico de 5 atributos (STR, AGI, VIT, ENE, CMD) com alocação em tempo real (+5 pts/nível).<br/>• Inventário em grade 8x8 com slots de equipamento.<br/>• Joias canônicas (Bless, Soul, Life, Chaos) e Máquina do Caos calculada.<br/>• Lógica de 4 eventos canônicos (Blood Castle, Devil Square, Chaos Castle, Coliseu).<br/>• Sistema de Guildas e Cerco ao Castelo (Castle Siege).<br/>• Sistema PK de 6 níveis morais e facções Gens (Duprian/Vanert).<br/>• **449 testes automatizados cobrindo 100% das regras (100% Pass).** | • Autenticação remota com hashing de senhas (Argon2id) para produção comercial.<br/>• Rate limiting de pacotes e proteção anti-flood.<br/>• Spawner dinâmico contínuo com ciclo de respawn no mundo aberto. |
+| **Servidor Autoritativo & Persistência** (`src/server/`) | • Persistência nativa em disco com **SQLite (`node:sqlite`)** salvando personagens, nível, atributos, zen, inventário de 1.728 bytes e equipamentos equipados.<br/>• Combate autoritativo bidirecional: monstros atacam jogadores com absorção SD/HP (90/10) e respawn na cidade.<br/>• Protocolo binário C1/C2 + JSON unificado.<br/>• Handshake Zero-Trust e checagem CRC16-CCITT.<br/>• Motor de colisão com física de deslizamento cilíndrico/AABB.<br/>• Sistema canônico de 5 atributos (STR, AGI, VIT, ENE, CMD) com alocação em tempo real (+5 pts/nível).<br/>• Inventário em grade 8x8 com slots de equipamento.<br/>• Joias canônicas (Bless, Soul, Life, Chaos) e Máquina do Caos calculada.<br/>• Lógica de 4 eventos canônicos (Blood Castle, Devil Square, Chaos Castle, Coliseu).<br/>• Sistema de Guildas e Cerco ao Castelo (Castle Siege).<br/>• Sistema PK de 6 níveis morais e facções Gens (Duprian/Vanert).<br/>• **457 testes automatizados cobrindo 100% das regras (100% Pass).** | • Autenticação remota com hashing de senhas (Argon2id) para produção comercial.<br/>• Rate limiting de pacotes e proteção anti-flood.<br/>• Spawner dinâmico contínuo com ciclo de respawn no mundo aberto. |
 | **Mundo & Cenários** (`docs/level_design/` & `src/server/world/`) | • Catálogo mestre unificado dos **56 cenários canônicos**.<br/>• Paridade estrita 1:1 de IDs, bounds, spawns e colisores entre cliente e servidor.<br/>• 56 GLBs de blockout procedural gerados e inspecionáveis.<br/>• Editor de pisos modulares e exportador de pacotes ZIP com snapshots. | • Detalhamento artístico AAA dos cenários (substituir geometria blockout por props de alta fidelidade Nanite/PBR).<br/>• NavMesh para pathfinding dos monstros. |
 | **Heróis & Classes** (`docs/art/` & `src/client/dev_viewer/models/`) | • **Dark Knight (Blade Knight)** 100% jogável com Ataque Básico, *Twisting Slash* (360° AoE) e *Death Stab*.<br/>• **Dark Wizard (Soul Master)** 100% jogável com *Energy Ball*, *Lightning* (knockback), *Fireball*, *Evil Spirits* (AoE de 260 un.) e *Mana Shield / Soul Barrier*.<br/>• 5 classes canônicas homologadas com modelos oficiais, rig e **21 animações de combate, corrida e descanso**.<br/>• Suporte visual no Dev Viewer para alternar classes e peças modulares em tempo real. | • Skinning profissional e malhas de armaduras de tier avançado (+9 a +15 com auras em tempo real).<br/>• Árvore de evolução de 2ª e 3ª classes (Blade Master, Grand Master, High Elf, Duel Master, Lord Emperor). |
 | **Bestiário & Monstros** (`src/server/combat/` & `prototypes/3d_bestiary_animated/`) | • 4 monstros canônicos de Lorencia com spawn ativo (Spider, Hound, Bull Fighter, Skeleton) com GLBs articulados oficiais.<br/>• IA autoritativa com aggro, perseguição e ataques melee/ranged.<br/>• 12 criaturas canônicas catalogadas (6 chefes mundiais e 6 da Invasão Dourada).<br/>• GLBs articulados com 5 clips cada (IDLE, WALK, ATTACK, HURT, DEATH). | • Spawns contínuos nas zonas de Noria, Devias, Lost Tower e Dungeon. |
@@ -209,7 +209,7 @@ gantt
 │    (3D Pipeline)     │ • Refinamento de malhas de monstros e rigs           │
 │                      │ • Shaders de água cáustica em Atlans e neve em Devias│
 ├──────────────────────┼──────────────────────────────────────────────────────┤
-│ 5. QA & Balanceamento│ • Manter os 449 testes passando em 100% dos commits  │
+│ 5. QA & Balanceamento│ • Manter os 457 testes passando em 100% dos commits  │
 │    (Engenharia QA)   │ • Testes de estresse de tráfego de pacotes binários  │
 │                      │ • Calibração fina das fórmulas de defesa e combo     │
 └──────────────────────┴──────────────────────────────────────────────────────┘
@@ -217,7 +217,21 @@ gantt
 
 ---
 
-## 6. Decisões Estratégicas para Iniciar Imediatamente
+## 6. Registro de Entregas & Passos Concluídos (Progresso Atual)
+
+- **Passo 1 (Plataforma do Primeiro Ciclo Jogável):** Lorencia jogável em WebGL (Three.js Dev Viewer / Gameplay Client) com colisão, monstros com IA ativa, drops físicos de joias com feixes de luz vertical e som harmônico, inventário 8x8 interativo.
+- **Passo 2 (Camada de Persistência):** Banco de dados SQLite nativo (`node:sqlite` / `DatabaseSync`) salvando personagens, atributos, zen e inventário binário de 1.728 bytes em `data/dasi.sqlite`.
+- **Passo 3 (Primeira Classe Piloto - Dark Knight):** Ataque básico, Twisting Slash (360° AoE, 180 un.), Death Stab (estocada perfurante com dash, alto knockback) e modelo 3D com 21 animações.
+- **Passo 4 (Combate Bidirecional & Sobrevivência):** IA dos monstros ataca o jogador com divisão 90/10 no SD e HP, redução via Mana Shield e Asas, detecção de morte e respawn seguro na fonte de Lorencia.
+- **Passo 5 (Segunda Classe Canônica - Dark Wizard / Soul Master):** Energy Ball, Fireball, Lightning, Evil Spirits (dano mágico AoE de 260 unidades em múltiplos monstros) e Mana Shield (Soul Barrier com até 50% de absorção por 60s).
+- **Passo 6 (Sistema Autoritativo de Atributos & Ficha do Herói):** Alocação de pontos em tempo real (+5 pontos/nível) em STR, AGI, VIT, ENE via `MSG_STAT_POINT_ALLOC_REQ`, com recálculo de vitais e persistência imediata em disco.
+- **Passo 7 (Terceira Classe Canônica - Fairy Elf / Musa Elfa):** Disparo de arco com fórmulas canônicas, *Triple Shot* (disparo triplo convergente em cone com multiplicador de agilidade e dano em até 2 monstros adjacentes), *Heal* (cura direta autoritativa baseada em Energia), *Greater Defense* (aumento autoritativo de defesa contra ataques de monstros por 60s) e *Greater Damage* (bênção de ampliação de dano por 60s), acompanhados de efeitos visuais 3D (flechas e anel de cura verde esmeralda no Three.js).
+- **Passo 8 (Economia & Lojas de NPCs em Lorencia):** Enriquecimento do catálogo de mercadores de Lorencia (Han the Blacksmith com arcos, cajados, flechas e virotes; Pupa e Lumen com linha completa de poções de Vida e Mana), suporte a compras com débito autoritativo de Zen e nova aba de venda (Sell) no modal da loja, permitindo vender itens da bolsa 8x8 com crédito imediato de Zen e persistência no banco SQLite.
+- **Passo 9 (NavMesh & Pathfinding de Monstros com Contorno de Obstáculos):** Sistema de detecção de colisão autoritativo na locomoção dos monstros (`CollisionSystem`); quando em perseguição (`CHASE`) encontram caixas AABB (tendas/muros) ou cilindros (fonte central do arcanjo), projetam raios de desvio angular lateral ($\pm 45^\circ$, $\pm 90^\circ$, $\pm 135^\circ$) para contornar suavemente as quinas e obstáculos sem travar.
+
+---
+
+## 7. Decisões Estratégicas para Iniciar Imediatamente
 
 Para começarmos a execução prática de forma cirúrgica, precisamos deliberar sobre **3 escolhas fundamentais de escopo inicial**:
 

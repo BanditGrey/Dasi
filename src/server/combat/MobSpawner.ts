@@ -22,6 +22,7 @@ export class MobSpawner {
   private mobToZone: Map<string, string> = new Map();
   private pendingRespawns: { zoneId: string; respawnAt: number }[] = [];
   private wanderTimer = 0;
+  public scenarioId: string = 'LOR_01';
 
   constructor() {
     this.initLorenciaDefaultZones();
@@ -357,7 +358,7 @@ export class MobSpawner {
     for (const mob of this.monsters.values()) {
       const oldX = mob.x;
       const oldY = mob.y;
-      mob.update(deltaTimeSec);
+      mob.update(deltaTimeSec, this.scenarioId);
       if (Math.abs(mob.x - oldX) > 0.01 || Math.abs(mob.y - oldY) > 0.01) {
         hasMoved = true;
       }

@@ -1209,9 +1209,18 @@ class DevClientApp {
   updateActionBarForClass(className) {
     const isDw = className === 'DW' || className === 'SOUL_MASTER';
     const isElf = className === 'ELF' || className === 'FAIRY_ELF' || className === 'MUSE_ELF';
+    const isMg = className === 'MG' || className === 'DUEL_MASTER';
+    const isDl = className === 'DL' || className === 'LORD_EMPEROR';
+    const isSu = className === 'SU' || className === 'DIMENSION_MASTER';
+    const isRf = className === 'RF' || className === 'FIST_MASTER';
+
     const slotCyclone = document.getElementById('slot-skill-cyclone');
     const slotDeathstab = document.getElementById('slot-skill-deathstab');
     const slotWeapon = document.getElementById('slot-skill-weapon');
+    const hintTitle = document.getElementById('hint-class-title');
+    if (hintTitle) {
+      hintTitle.textContent = `GUIA DE COMANDOS CANÔNICOS (${className})`;
+    }
 
     if (isDw) {
       if (slotCyclone) {
@@ -1264,6 +1273,110 @@ class DevClientApp {
         if (icon) icon.textContent = '🏹';
         if (lbl) lbl.textContent = 'Flecha Élfica';
         slotWeapon.title = 'Disparo com Arco e Aljava [Atalho: Botão Esquerdo]';
+      }
+    } else if (isMg) {
+      if (slotCyclone) {
+        const icon = slotCyclone.querySelector('.idle-skill-icon');
+        const lbl = slotCyclone.querySelector('.idle-skill-label');
+        const status = slotCyclone.querySelector('.idle-skill-status');
+        if (icon) icon.textContent = '🔥';
+        if (lbl) lbl.textContent = 'Fire Slash';
+        if (status) status.textContent = '[E / 2]';
+        slotCyclone.title = 'Fire Slash [Atalho: E / 2] - Golpe Igneo Cortante';
+      }
+      if (slotDeathstab) {
+        const icon = slotDeathstab.querySelector('.idle-skill-icon');
+        const lbl = slotDeathstab.querySelector('.idle-skill-label');
+        const status = slotDeathstab.querySelector('.idle-skill-status');
+        if (icon) icon.textContent = '⚡';
+        if (lbl) lbl.textContent = 'Power Slash';
+        if (status) status.textContent = '[R / 3 / RMB]';
+        slotDeathstab.title = 'Power Slash [Atalho: R / 3 ou Botão Direito] - Lâmina de Energia em Arco';
+      }
+      if (slotWeapon) {
+        const icon = slotWeapon.querySelector('.idle-skill-icon');
+        const lbl = slotWeapon.querySelector('.idle-skill-label');
+        if (icon) icon.textContent = '⚔️';
+        if (lbl) lbl.textContent = 'Golpe MG';
+        slotWeapon.title = 'Lâmina Rúnica Mágica [Atalho: Botão Esquerdo]';
+      }
+    } else if (isDl) {
+      if (slotCyclone) {
+        const icon = slotCyclone.querySelector('.idle-skill-icon');
+        const lbl = slotCyclone.querySelector('.idle-skill-label');
+        const status = slotCyclone.querySelector('.idle-skill-status');
+        if (icon) icon.textContent = '💥';
+        if (lbl) lbl.textContent = 'Fire Burst';
+        if (status) status.textContent = '[E / 2 / RMB]';
+        slotCyclone.title = 'Fire Burst [Atalho: E / 2 ou Botão Direito] - Detonação Ígnea em Cadeia';
+      }
+      if (slotDeathstab) {
+        const icon = slotDeathstab.querySelector('.idle-skill-icon');
+        const lbl = slotDeathstab.querySelector('.idle-skill-label');
+        const status = slotDeathstab.querySelector('.idle-skill-status');
+        if (icon) icon.textContent = '🌋';
+        if (lbl) lbl.textContent = 'Earthquake';
+        if (status) status.textContent = '[R / 3]';
+        slotDeathstab.title = 'Earthquake [Atalho: R / 3] - Impacto Sísmico 360° do Dark Horse';
+      }
+      if (slotWeapon) {
+        const icon = slotWeapon.querySelector('.idle-skill-icon');
+        const lbl = slotWeapon.querySelector('.idle-skill-label');
+        if (icon) icon.textContent = '🔱';
+        if (lbl) lbl.textContent = 'Golpe do Cetro';
+        slotWeapon.title = 'Ataque do Cetro Imperial [Atalho: Botão Esquerdo]';
+      }
+    } else if (isSu) {
+      if (slotCyclone) {
+        const icon = slotCyclone.querySelector('.idle-skill-icon');
+        const lbl = slotCyclone.querySelector('.idle-skill-label');
+        const status = slotCyclone.querySelector('.idle-skill-status');
+        if (icon) icon.textContent = '⚡';
+        if (lbl) lbl.textContent = 'Lightning Shock';
+        if (status) status.textContent = '[E / 2]';
+        slotCyclone.title = 'Lightning Shock [Atalho: E / 2] - Choque Elétrico Dimensional';
+      }
+      if (slotDeathstab) {
+        const icon = slotDeathstab.querySelector('.idle-skill-icon');
+        const lbl = slotDeathstab.querySelector('.idle-skill-label');
+        const status = slotDeathstab.querySelector('.idle-skill-status');
+        if (icon) icon.textContent = '🪞';
+        if (lbl) lbl.textContent = 'Damage Reflect';
+        if (status) status.textContent = '[R / 3 / RMB]';
+        slotDeathstab.title = 'Damage Reflect [Atalho: R / 3 ou Botão Direito] - Espelho de Reflexão de Dano';
+      }
+      if (slotWeapon) {
+        const icon = slotWeapon.querySelector('.idle-skill-icon');
+        const lbl = slotWeapon.querySelector('.idle-skill-label');
+        if (icon) icon.textContent = '🔮';
+        if (lbl) lbl.textContent = 'Orbe Invocador';
+        slotWeapon.title = 'Ataque Místico da Invocadora [Atalho: Botão Esquerdo]';
+      }
+    } else if (isRf) {
+      if (slotCyclone) {
+        const icon = slotCyclone.querySelector('.idle-skill-icon');
+        const lbl = slotCyclone.querySelector('.idle-skill-label');
+        const status = slotCyclone.querySelector('.idle-skill-status');
+        if (icon) icon.textContent = '🐉';
+        if (lbl) lbl.textContent = 'Dragon Roar';
+        if (status) status.textContent = '[E / 2]';
+        slotCyclone.title = 'Dragon Roar [Atalho: E / 2] - Rugido Sônico 360°';
+      }
+      if (slotDeathstab) {
+        const icon = slotDeathstab.querySelector('.idle-skill-icon');
+        const lbl = slotDeathstab.querySelector('.idle-skill-label');
+        const status = slotDeathstab.querySelector('.idle-skill-status');
+        if (icon) icon.textContent = '👊';
+        if (lbl) lbl.textContent = 'Chain Drive';
+        if (status) status.textContent = '[R / 3 / RMB]';
+        slotDeathstab.title = 'Chain Drive [Atalho: R / 3 ou Botão Direito] - Sucessão de Socos Devastadores';
+      }
+      if (slotWeapon) {
+        const icon = slotWeapon.querySelector('.idle-skill-icon');
+        const lbl = slotWeapon.querySelector('.idle-skill-label');
+        if (icon) icon.textContent = '🥊';
+        if (lbl) lbl.textContent = 'Punho de Ferro';
+        slotWeapon.title = 'Ataque Marcial Desarmado [Atalho: Botão Esquerdo]';
       }
     } else {
       if (slotCyclone) {
@@ -2229,6 +2342,9 @@ class DevClientApp {
     const modalShop = document.getElementById('modal-npc-shop');
     if (btnOpenShop && modalShop) {
       btnOpenShop.addEventListener('click', () => {
+        this.shopMode = 'buy';
+        document.getElementById('btn-shop-mode-buy')?.classList.add('active');
+        document.getElementById('btn-shop-mode-sell')?.classList.remove('active');
         this.renderNpcShopCatalog('han_blacksmith');
         modalShop.style.display = 'flex';
       });
@@ -2237,8 +2353,26 @@ class DevClientApp {
         tab.addEventListener('click', () => {
           document.querySelectorAll('.btn-shop-tab').forEach((t) => t.classList.remove('active'));
           tab.classList.add('active');
-          this.renderNpcShopCatalog(tab.getAttribute('data-shop'));
+          if (this.shopMode === 'sell') {
+            this.renderNpcShopSellCatalog();
+          } else {
+            this.renderNpcShopCatalog(tab.getAttribute('data-shop'));
+          }
         });
+      });
+
+      document.getElementById('btn-shop-mode-buy')?.addEventListener('click', () => {
+        document.getElementById('btn-shop-mode-buy')?.classList.add('active');
+        document.getElementById('btn-shop-mode-sell')?.classList.remove('active');
+        this.shopMode = 'buy';
+        this.renderNpcShopCatalog(this.activeShopId || 'han_blacksmith');
+      });
+
+      document.getElementById('btn-shop-mode-sell')?.addEventListener('click', () => {
+        document.getElementById('btn-shop-mode-sell')?.classList.add('active');
+        document.getElementById('btn-shop-mode-buy')?.classList.remove('active');
+        this.shopMode = 'sell';
+        this.renderNpcShopSellCatalog();
       });
     }
 
@@ -2903,6 +3037,8 @@ class DevClientApp {
     const subMonsters = document.getElementById('sub-group-monsters');
     const subEnvironments = document.getElementById('sub-group-environments');
     const subArmory = document.getElementById('sub-group-armory');
+    const subNpcs = document.getElementById('sub-group-npcs');
+    const subMounts = document.getElementById('sub-group-mounts');
     const selectArmoryItem = document.getElementById('select-armory-item');
     const armoryTitle = document.getElementById('armory-info-title');
     const armoryBadge = document.getElementById('armory-info-badge');
@@ -2914,6 +3050,8 @@ class DevClientApp {
     let currentHero = initialCategory === 'HERO' ? (initialSubId || 'DK') : 'DK';
     let currentSetTier = 'DRAGON';
     let currentMonster = 'SPIDER';
+    let currentNpc = 'NPC_HANZO';
+    let currentMount = 'DARK_HORSE';
     let currentEnv = initialCategory === 'ENVIRONMENT' ? (initialSubId || 'LORENCIA') : 'LORENCIA';
     let currentArmorySub = 'WEAPON';
     let currentArmoryItem = 'DRAGON_BLADE';
@@ -3232,6 +3370,8 @@ class DevClientApp {
         if (subMonsters) subMonsters.style.display = currentCategory === 'MONSTER' ? 'flex' : 'none';
         if (subEnvironments) subEnvironments.style.display = currentCategory === 'ENVIRONMENT' ? 'flex' : 'none';
         if (subArmory) subArmory.style.display = currentCategory === 'ARMORY' ? 'flex' : 'none';
+        if (subNpcs) subNpcs.style.display = currentCategory === 'NPC' ? 'flex' : 'none';
+        if (subMounts) subMounts.style.display = currentCategory === 'MOUNT' ? 'flex' : 'none';
         if (groupRefine) groupRefine.style.display = (currentCategory === 'HERO' || currentCategory === 'CHAOS_MACHINE' || currentCategory === 'ARMORY') ? 'flex' : 'none';
         if (groupAnims) groupAnims.style.display = (currentCategory === 'HERO' || currentCategory === 'MONSTER') ? 'flex' : 'none';
         if (groupBestiaryAnims) groupBestiaryAnims.style.display = 'none';
@@ -3248,6 +3388,12 @@ class DevClientApp {
           this.viewer3DInstance.selectEntity('ENVIRONMENT', currentEnv);
           if (badgeMode) badgeMode.textContent = `MODO: CENÁRIO (${currentEnv})`;
           if (this.updateSplitArtDisplay) this.updateSplitArtDisplay(currentEnv);
+        } else if (currentCategory === 'NPC') {
+          this.viewer3DInstance.selectEntity('NPC', currentNpc);
+          if (badgeMode) badgeMode.textContent = `MODO: NPC (${currentNpc})`;
+        } else if (currentCategory === 'MOUNT') {
+          this.viewer3DInstance.selectEntity('MOUNT', currentMount);
+          if (badgeMode) badgeMode.textContent = `MODO: MONTARIA/PET (${currentMount})`;
         } else if (currentCategory === 'CHAOS_MACHINE') {
           this.viewer3DInstance.selectEntity('CHAOS_MACHINE');
           if (badgeMode) badgeMode.textContent = 'MODO: MÁQUINA DO CAOS';
@@ -3257,7 +3403,7 @@ class DevClientApp {
       });
     });
 
-    // 2. Sub-seleção de Entidades (Heróis, Monstros, Cenários)
+    // 2. Sub-seleção de Entidades (Heróis, Monstros, Cenários, NPCs, Montarias)
     const subEntityButtons = document.querySelectorAll('.btn-sub-entity');
     subEntityButtons.forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -3280,6 +3426,14 @@ class DevClientApp {
           this.viewer3DInstance.selectEntity('MONSTER', currentMonster);
           if (badgeMode) badgeMode.textContent = `MODO: MONSTRO (${currentMonster})`;
           updateAnimButtons('MONSTER', currentMonster);
+        } else if (cat === 'NPC') {
+          currentNpc = id;
+          this.viewer3DInstance.selectEntity('NPC', currentNpc);
+          if (badgeMode) badgeMode.textContent = `MODO: NPC (${currentNpc})`;
+        } else if (cat === 'MOUNT') {
+          currentMount = id;
+          this.viewer3DInstance.selectEntity('MOUNT', currentMount);
+          if (badgeMode) badgeMode.textContent = `MODO: MONTARIA/PET (${currentMount})`;
         } else if (cat === 'ENVIRONMENT') {
           currentEnv = id;
           this.viewer3DInstance.selectEntity('ENVIRONMENT', currentEnv);
@@ -3836,7 +3990,7 @@ class DevClientApp {
   }
 
   // ==========================================================================
-  // LOJA DE COMERCIANTES (NPC MERCHANTS: HAN & PUPA)
+  // LOJA DE COMERCIANTES (NPC MERCHANTS: HAN, PUPA & LUMEN)
   // ==========================================================================
   renderNpcShopCatalog(shopId) {
     this.activeShopId = shopId;
@@ -3853,12 +4007,32 @@ class DevClientApp {
       han_blacksmith: [
         { itemDefId: 'small_dagger', name: 'Small Dagger', icon: '🗡️', priceZen: 500 },
         { itemDefId: 'short_sword', name: 'Short Sword (+Skill)', icon: '⚔️', priceZen: 1500 },
+        { itemDefId: 'short_bow', name: 'Short Bow (+Skill)', icon: '🏹', priceZen: 1200 },
+        { itemDefId: 'elven_bow', name: 'Elven Bow (+Skill)', icon: '🏹', priceZen: 3500 },
+        { itemDefId: 'great_reign_crossbow', name: 'Great Reign Crossbow', icon: '🎯', priceZen: 28000 },
+        { itemDefId: 'skull_staff', name: 'Skull Staff', icon: '🔮', priceZen: 4000 },
+        { itemDefId: 'arrows', name: 'Arrows (Flechas Élficas)', icon: '🏹', priceZen: 300 },
+        { itemDefId: 'bolts', name: 'Bolts (Virotes de Besta)', icon: '🎯', priceZen: 400 },
         { itemDefId: 'dragon_gloves', name: 'Dragon Gloves', icon: '🧤', priceZen: 20000 },
         { itemDefId: 'dragon_boots', name: 'Dragon Boots', icon: '👢', priceZen: 25000 },
       ],
       pupa_potion_girl: [
-        { itemDefId: 'potion_health', name: 'Health Potion (Grande)', icon: '🧪', priceZen: 200 },
-        { itemDefId: 'potion_mana', name: 'Mana Potion (Grande)', icon: '💧', priceZen: 300 },
+        { itemDefId: 'potion_health_small', name: 'Health Potion (Pequena)', icon: '🧪', priceZen: 80 },
+        { itemDefId: 'potion_health_medium', name: 'Health Potion (Média)', icon: '🧪', priceZen: 150 },
+        { itemDefId: 'potion_health', name: 'Health Potion (Grande)', icon: '🧪', priceZen: 250 },
+        { itemDefId: 'potion_mana_small', name: 'Mana Potion (Pequena)', icon: '💧', priceZen: 100 },
+        { itemDefId: 'potion_mana_medium', name: 'Mana Potion (Média)', icon: '💧', priceZen: 200 },
+        { itemDefId: 'potion_mana', name: 'Mana Potion (Grande)', icon: '💧', priceZen: 350 },
+      ],
+      lumen_barmaid: [
+        { itemDefId: 'potion_health_small', name: 'Health Potion (Pequena)', icon: '🧪', priceZen: 80 },
+        { itemDefId: 'potion_health_medium', name: 'Health Potion (Média)', icon: '🧪', priceZen: 150 },
+        { itemDefId: 'potion_health', name: 'Health Potion (Grande)', icon: '🧪', priceZen: 250 },
+        { itemDefId: 'potion_mana_small', name: 'Mana Potion (Pequena)', icon: '💧', priceZen: 100 },
+        { itemDefId: 'potion_mana_medium', name: 'Mana Potion (Média)', icon: '💧', priceZen: 200 },
+        { itemDefId: 'potion_mana', name: 'Mana Potion (Grande)', icon: '💧', priceZen: 350 },
+        { itemDefId: 'town_portal_scroll', name: 'Pergaminho de Retorno', icon: '📜', priceZen: 1200 },
+        { itemDefId: 'ale_beer', name: 'Cerveja de Lorencia', icon: '🍺', priceZen: 800 },
       ],
     };
 
@@ -3882,6 +4056,54 @@ class DevClientApp {
           npcId: shopId,
           itemDefId: item.itemDefId,
         });
+      });
+
+      container.appendChild(card);
+    });
+  }
+
+  renderNpcShopSellCatalog() {
+    const container = document.getElementById('shop-catalog-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+    const zenEl = document.getElementById('shop-player-zen');
+    if (zenEl && this.character) {
+      zenEl.textContent = `${(this.character.zen || 1250000).toLocaleString()} Zen`;
+    }
+
+    const items = this.inventoryState?.gridItems || [];
+    if (items.length === 0) {
+      container.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 28px; color: #94a3b8; font-style: italic; background: rgba(0,0,0,0.25); border-radius: 8px;">
+          🎒 Sua bolsa de inventário está vazia.<br>Derrote monstros ou compre itens para negociar com os mercadores imperiais!
+        </div>
+      `;
+      return;
+    }
+
+    items.forEach((item) => {
+      const card = document.createElement('div');
+      card.className = 'shop-item-card';
+      const icon = item.icon || (item.defId.includes('sword') || item.defId.includes('blade') ? '⚔️' : item.defId.includes('bow') ? '🏹' : item.defId.includes('potion') ? '🧪' : item.defId.includes('jewel') ? '💎' : '🛡️');
+      const sellPrice = item.sellPrice || (item.defId.includes('jewel') ? 4500000 : 800 + (item.level || 0) * 400);
+
+      card.innerHTML = `
+        <div class="shop-item-info">
+          <div class="shop-item-icon">${icon}</div>
+          <div class="shop-item-texts">
+            <span class="shop-item-name">${item.name || item.defId} ${item.level ? '+' + item.level : ''}</span>
+            <span class="shop-item-price" style="color: #34d399;">+${sellPrice.toLocaleString()} Zen</span>
+          </div>
+        </div>
+        <button class="btn-buy-item" style="background: linear-gradient(135deg, #059669, #10b981);" data-uuid="${item.uuid}">Vender</button>
+      `;
+
+      card.querySelector('button').addEventListener('click', () => {
+        this.sendPacket(OPCODES.NPC_SHOP_SELL_REQ, {
+          itemUuid: item.uuid,
+        });
+        setTimeout(() => this.renderNpcShopSellCatalog(), 300);
       });
 
       container.appendChild(card);

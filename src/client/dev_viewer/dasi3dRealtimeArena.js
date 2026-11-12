@@ -550,15 +550,22 @@ export class Dasi3DRealtimeArena {
         }
       }
 
-      // Dispara a habilidade canônica da classe (Twisting Slash para DK, Evil Spirits para DW, Triple Shot para Elf)
-      const isDw = this.app?.character?.characterClass === 'DW' || this.app?.character?.characterClass === 'SOUL_MASTER';
-      const isElf = this.app?.character?.characterClass === 'ELF' || this.app?.character?.characterClass === 'FAIRY_ELF' || this.app?.character?.characterClass === 'MUSE_ELF';
-      const skillName = isDw ? 'evil_spirits' : isElf ? 'triple_shot' : 'cyclone';
+      // Dispara a habilidade canônica da classe:
+      // Twisting Slash para DK, Evil Spirits para DW, Triple Shot para Elf, Power Slash para MG, Fire Burst para DL
+      const charClass = this.app?.character?.characterClass || 'DK';
+      let skillName = 'cyclone';
+      if (charClass === 'DW' || charClass === 'SOUL_MASTER') skillName = 'evil_spirits';
+      else if (charClass === 'ELF' || charClass === 'FAIRY_ELF' || charClass === 'MUSE_ELF') skillName = 'triple_shot';
+      else if (charClass === 'MG' || charClass === 'DUEL_MASTER') skillName = 'power_slash';
+      else if (charClass === 'DL' || charClass === 'LORD_EMPEROR') skillName = 'fire_burst';
+
       if (this.app && typeof this.app.castSkill === 'function') {
         this.app.castSkill('E', skillName);
       } else {
-        if (isDw) this.triggerEvilSpirits();
-        else if (isElf) this.triggerArcherySkill('triple_shot');
+        if (charClass === 'DW' || charClass === 'SOUL_MASTER') this.triggerEvilSpirits();
+        else if (charClass === 'ELF' || charClass === 'FAIRY_ELF' || charClass === 'MUSE_ELF') this.triggerArcherySkill('triple_shot');
+        else if (charClass === 'MG' || charClass === 'DUEL_MASTER') this.triggerPowerSlash();
+        else if (charClass === 'DL' || charClass === 'LORD_EMPEROR') this.triggerDarkLordSkill('fire_burst');
         else this.triggerTwistingSlash();
       }
     });
@@ -700,6 +707,10 @@ export class Dasi3DRealtimeArena {
       this.triggerDeathStab();
     } else if (s.includes('evil') || s.includes('spirit')) {
       this.triggerEvilSpirits();
+    } else if (s.includes('power_slash') || s.includes('powerslash')) {
+      this.triggerPowerSlash();
+    } else if (s.includes('fire_burst') || s.includes('fireburst') || s.includes('earthquake')) {
+      this.triggerDarkLordSkill(s);
     } else if (s.includes('triple') || s.includes('shot') || s.includes('penetration') || s.includes('arrow')) {
       this.triggerArcherySkill(s);
     } else if (s.includes('fireball') || s.includes('lightning') || s.includes('energy')) {
@@ -713,6 +724,113 @@ export class Dasi3DRealtimeArena {
     } else if (s.includes('attack') || s.includes('strike')) {
       this.triggerPlayerAttackAnim();
     }
+  }
+
+  triggerDarkLordSkill(skillName = 'fire_burst') {
+    this.harmonicAudio?.playSkillSound?.('cyclone');
+    if (this.playerHero && this.playerHero.triggerAnimation) {
+      this.playerHero.triggerAnimation('ATTACK');
+    }
+    const isEarthquake = skillName.includes('earthquake');
+
+    if (isEarthquake) {
+      // Onda de Choque Sísmica Circular no Solo (Earthquake)
+      const ringGeom = new THREE.RingGeometry(0.8, 4.2, 32);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: 0xf59e0b,
+        transparent: true,
+        opacity: 0.9,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+      });
+      const quakeWave = new THREE.Mesh(ringGeom, ringMat);
+      quakeWave.rotation.x = -Math.PI / 2;
+      quakeWave.position.set(this.playerGroup.position.x, 0.05, this.playerGroup.position.z);
+      this.scene.add(quakeWave);
+
+      let step = 0;
+      const animateQuake = () => {
+        step += 0.05;
+        quakeWave.scale.multiplyScalar(1.05);
+        ringMat.opacity = Math.max(0, 0.9 - step);
+        if (ringMat.opacity > 0) {
+          requestAnimationFrame(animateQuake);
+        } else {
+          this.scene.remove(quakeWave);
+        }
+      };
+      animateQuake();
+    } else {
+      // Detonação de Fogo Comprimido Frontal (Fire Burst)
+      const burstGroup = new THREE.Group();
+      burstGroup.position.set(this.playerGroup.position.x, 1.2, this.playerGroup.position.z);
+      const burstMat = new THREE.MeshBasicMaterial({
+        color: 0xef4444,
+        transparent: true,
+        opacity: 0.95,
+        blending: THREE.AdditiveBlending,
+      });
+
+      for (let i = 0; i < 3; i++) {
+        const fireOrb = new THREE.Mesh(new THREE.SphereGeometry(0.3 + i * 0.1, 10, 10), burstMat);
+        fireOrb.position.set((i - 1) * 0.35, (Math.random() - 0.5) * 0.2, 0);
+        burstGroup.add(fireOrb);
+      }
+      this.scene.add(burstGroup);
+
+      const dir = new THREE.Vector3(0, 0, -1).applyEuler(this.playerGroup.rotation);
+      let step = 0;
+      const animateBurst = () => {
+        step++;
+        burstGroup.position.addScaledVector(dir, 0.45);
+        burstGroup.scale.multiplyScalar(1.04);
+        burstMat.opacity -= 0.05;
+        if (step < 20 && burstMat.opacity > 0) {
+          requestAnimationFrame(animateBurst);
+        } else {
+          this.scene.remove(burstGroup);
+        }
+      };
+      animateBurst();
+    }
+  }
+
+  triggerPowerSlash() {
+    this.harmonicAudio?.playSkillSound?.('cyclone');
+    if (this.playerHero && this.playerHero.triggerAnimation) {
+      this.playerHero.triggerAnimation('ATTACK');
+    }
+
+    // Lâmina de Energia Cortante em Arco (Power Slash para MG)
+    const arcGeom = new THREE.TorusGeometry(1.6, 0.08, 8, 24, Math.PI);
+    const arcMat = new THREE.MeshBasicMaterial({
+      color: 0x06b6d4, // Ciano Elétrico / Arcano
+      transparent: true,
+      opacity: 0.95,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+    });
+    const slashArc = new THREE.Mesh(arcGeom, arcMat);
+    slashArc.position.set(this.playerGroup.position.x, 1.1, this.playerGroup.position.z);
+    slashArc.rotation.copy(this.playerGroup.rotation);
+    slashArc.rotation.x = Math.PI / 2;
+    this.scene.add(slashArc);
+
+    const dir = new THREE.Vector3(0, 0, -1).applyEuler(this.playerGroup.rotation);
+    let step = 0;
+    const animateSlash = () => {
+      step++;
+      slashArc.position.addScaledVector(dir, 0.5);
+      slashArc.scale.x += 0.06;
+      slashArc.scale.y += 0.06;
+      arcMat.opacity -= 0.045;
+      if (step < 22 && arcMat.opacity > 0) {
+        requestAnimationFrame(animateSlash);
+      } else {
+        this.scene.remove(slashArc);
+      }
+    };
+    animateSlash();
   }
 
   triggerPlayerAttackAnim() {

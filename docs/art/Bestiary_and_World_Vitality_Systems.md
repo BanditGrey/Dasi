@@ -151,4 +151,5 @@ O ecossistema conta com cobertura integral na suíte de testes do projeto:
 - `src/server/combat/tests/mob_spawner_fsm.test.ts`: 6 testes de IA de detecção, alcance de ataque, leash, serialização angular e multi-bioma.
 - `src/server/combat/tests/canonical_skills.test.ts`: 7 testes de catálogo e execução autoritativa de habilidades das 5 classes.
 - `src/server/combat/tests/multibiome_spawner.test.ts`: 9 testes de orquestração multi-bioma (Noria, Devias, Dungeon, Lost Tower, Atlans, Tarkan, Icarus) e entidades canônicas expandidas.
-- Total de **441 testes executados e 100% aprovados em 101 suítes** (0 falhas) com `npm test` e tipagem estrita com `npm run typecheck`.
+- `src/server/combat/tests/monster_obstacle_avoidance.test.ts`: 3 testes de contorno de obstáculos e NavMesh dinâmico.
+- Total de **457 testes executados e 100% aprovados em 107 suítes** (0 falhas) com `npm test` e tipagem estrita com `npm run typecheck`.

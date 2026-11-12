@@ -1761,6 +1761,10 @@ export class GameServer {
       Opcodes.MSG_NPC_SHOP_BUY_RES.subcode,
       result
     );
+
+    if (result.success && this.characterRepository) {
+      this.characterRepository.saveFromSession(session);
+    }
   }
 
   /**
@@ -1783,6 +1787,9 @@ export class GameServer {
     );
 
     if (result.success) {
+      if (this.characterRepository) {
+        this.characterRepository.saveFromSession(session);
+      }
       this.sendInventorySync(session);
     }
   }

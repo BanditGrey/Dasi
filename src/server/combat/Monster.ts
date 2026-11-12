@@ -6,6 +6,7 @@
 import { Item } from '../inventory/Item.ts';
 import { WeaponExcellentOption, ArmorExcellentOption, ItemCategory } from '../inventory/types.ts';
 import type { ItemInstance } from '../inventory/types.ts';
+import { CollisionSystem } from '../world/CollisionSystem.ts';
 
 export type MonsterState = 'IDLE' | 'MOVING' | 'ATTACKING' | 'STAGGERED' | 'DEAD';
 
@@ -636,6 +637,8 @@ export class Monster {
   public targetPlayerId: string | null = null;
   public maxLeashDistance: number;
   public rotation = 0;
+  public scenarioId: string = 'LOR_01';
+  public radius: number = 0.45;
 
   constructor(type: string, x: number, y: number, customDef?: Partial<MonsterDefinition>) {
     const baseDef = MONSTER_DEFINITIONS[type] || MONSTER_DEFINITIONS.spider;
@@ -656,6 +659,8 @@ export class Monster {
     this.xpReward = def.xpReward;
     this.maxPoise = def.maxPoise;
     this.poise = def.maxPoise;
+
+    this.radius = CollisionSystem.MONSTER_COLLISIONS[type.toUpperCase()]?.radius || 0.45;
 
     this.x = x;
     this.y = y;
@@ -894,9 +899,9 @@ export class Monster {
   }
 
   /**
-   * Atualização de IA / Movimentação do monstro
+   * Atualização de IA / Movimentação do monstro com NavMesh e desvio de obstáculos
    */
-  public update(deltaTimeSec: number): void {
+  public update(deltaTimeSec: number, scenarioId?: string): void {
     if (this.isDead) return;
 
     const now = Date.now();
@@ -907,6 +912,8 @@ export class Monster {
       return;
     }
 
+    const scId = scenarioId || this.scenarioId || 'LOR_01';
+
     // Se possui destino de caminhada
     const dx = this.targetX - this.x;
     const dy = this.targetY - this.y;
@@ -914,10 +921,76 @@ export class Monster {
 
     if (dist > 3) {
       this.state = 'MOVING';
-      this.rotation = Math.atan2(dy, dx);
+      const baseAngle = Math.atan2(dy, dx);
+      this.rotation = baseAngle;
       const step = Math.min(dist, this.moveSpeed * deltaTimeSec);
-      this.x += (dx / dist) * step;
-      this.y += (dy / dist) * step;
+
+      // 1. Tenta movimento direto em linha reta até o alvo
+      const directTargetX = this.x + Math.cos(baseAngle) * step;
+      const directTargetY = this.y + Math.sin(baseAngle) * step;
+
+      const directRes = CollisionSystem.resolveMovement(
+        scId,
+        { x: this.x, z: this.y },
+        { x: directTargetX, z: directTargetY },
+        this.radius
+      );
+
+      const directStepDist = Math.hypot(directRes.x - this.x, directRes.z - this.y);
+
+      // Se não colidiu ou o movimento direto avançou satisfatoriamente sem engasgo
+      if (!directRes.collided || directStepDist >= step * 0.75) {
+        this.x = directRes.x;
+        this.y = directRes.z;
+      } else {
+        // 2. Colidiu contra obstáculo (AABB ou Cilindro): projeta raios de desvio lateral (±45°, ±90°, ±135°)
+        const deviationAngles = [
+          Math.PI / 4,        // +45°
+          -Math.PI / 4,       // -45°
+          Math.PI / 2,        // +90°
+          -Math.PI / 2,       // -90°
+          (3 * Math.PI) / 4,  // +135°
+          (-3 * Math.PI) / 4, // -135°
+        ];
+
+        let bestCand: { x: number; y: number; distToTarget: number } | null = null;
+
+        for (const dev of deviationAngles) {
+          const candAngle = baseAngle + dev;
+          const candX = this.x + Math.cos(candAngle) * step;
+          const candY = this.y + Math.sin(candAngle) * step;
+
+          const candRes = CollisionSystem.resolveMovement(
+            scId,
+            { x: this.x, z: this.y },
+            { x: candX, z: candY },
+            this.radius
+          );
+
+          const movedDist = Math.hypot(candRes.x - this.x, candRes.z - this.y);
+          // O candidato precisa conseguir se deslocar de forma desimpedida
+          if (movedDist >= step * 0.5) {
+            const distToTarget = Math.hypot(this.targetX - candRes.x, this.targetY - candRes.z);
+            if (!bestCand || distToTarget < bestCand.distToTarget) {
+              bestCand = {
+                x: candRes.x,
+                y: candRes.z,
+                distToTarget,
+              };
+            }
+          }
+        }
+
+        if (bestCand) {
+          this.x = bestCand.x;
+          this.y = bestCand.y;
+          this.rotation = Math.atan2(bestCand.y - this.y, bestCand.x - this.x);
+        } else {
+          // Fallback para resposta física de deslizamento do CollisionSystem
+          this.x = directRes.x;
+          this.y = directRes.z;
+        }
+      }
     } else {
       this.x = this.targetX;
       this.y = this.targetY;

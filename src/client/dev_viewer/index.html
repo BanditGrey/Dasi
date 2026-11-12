@@ -1546,9 +1546,15 @@
         <button class="btn-close-modal" data-close="modal-npc-shop">&times;</button>
       </div>
       <div class="dasi-modal-body">
-        <div class="shop-merchant-tabs">
+        <div class="shop-merchant-tabs" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
           <button class="btn-shop-tab active" data-shop="han_blacksmith">🛡️ Han the Blacksmith (Lorencia)</button>
           <button class="btn-shop-tab" data-shop="pupa_potion_girl">🧪 Pupa the Potion Girl (Noria)</button>
+          <button class="btn-shop-tab" data-shop="lumen_barmaid">🍺 Lumen the Barmaid (Lorencia)</button>
+        </div>
+
+        <div class="shop-mode-tabs" style="display: flex; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
+          <button class="btn-shop-mode active" id="btn-shop-mode-buy" style="padding: 6px 14px; border-radius: 6px; border: 1px solid #d97706; background: rgba(217, 119, 6, 0.25); color: #fbbf24; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">🛍️ Comprar da Loja</button>
+          <button class="btn-shop-mode" id="btn-shop-mode-sell" style="padding: 6px 14px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(16, 185, 129, 0.15); color: #34d399; cursor: pointer; font-weight: bold; font-family: 'Rajdhani', sans-serif;">💰 Vender da Bolsa (Zen)</button>
         </div>
 
         <div class="shop-catalog-grid" id="shop-catalog-container">
