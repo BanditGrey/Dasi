@@ -252,9 +252,71 @@ export class AmbientLifeEngine {
   }
 
   // =========================================================================
+  // 5. FAUNA TERRESTRE (RAPOSAS SELVAGENS & CRITTERS DE LORENCIA/NORIA)
+  // =========================================================================
+  initWildCritters(count = 3, kind = 'fox') {
+    const glbPath = 'models/critters/fox_animated.glb';
+
+    for (let i = 0; i < count; i++) {
+      const group = new THREE.Group();
+      group.name = `CRITTER_${kind.toUpperCase()}_${i}`;
+
+      const posX = (i === 0 ? -5.5 : i === 1 ? 5.5 : 0) + (Math.random() - 0.5) * 2.0;
+      const posZ = 7.0 + i * 3.5 + (Math.random() - 0.5) * 2.0;
+      group.position.set(posX, 0, posZ);
+      group.rotation.y = Math.random() * Math.PI * 2;
+
+      // Geometria leve de fallback/placeholder caso o GLB demore a carregar ou ambiente headless
+      const bodyGeo = new THREE.ConeGeometry(0.25, 0.6, 6);
+      bodyGeo.rotateX(Math.PI / 2);
+      const bodyMat = new THREE.MeshStandardMaterial({
+        color: 0xd97706,
+        roughness: 0.65,
+        metalness: 0.1,
+      });
+      const fallbackMesh = new THREE.Mesh(bodyGeo, bodyMat);
+      fallbackMesh.position.y = 0.25;
+      fallbackMesh.name = 'CRITTER_FALLBACK_BODY';
+      group.add(fallbackMesh);
+
+      const critterData = {
+        group,
+        fallbackMesh,
+        kind,
+        state: 'GRAZING', // 'GRAZING' | 'PATROL' | 'FLEEING'
+        territoryCenter: new THREE.Vector3(posX, 0, posZ),
+        targetPos: new THREE.Vector3(posX, 0, posZ),
+        fleeDirection: new THREE.Vector3(),
+        speed: 1.1,
+        stateTimer: 2.0 + Math.random() * 3.0,
+        animController: null,
+      };
+
+      if (typeof window !== 'undefined' && typeof loadAnimatedCreatureGLB === 'function') {
+        loadAnimatedCreatureGLB(
+          glbPath,
+          group,
+          THREE,
+          (model, animCtrl) => {
+            critterData.animController = animCtrl;
+            fallbackMesh.visible = false;
+            model.scale.setScalar(0.7);
+            animCtrl.playAction('idle');
+          },
+          [fallbackMesh]
+        );
+      }
+
+      this.critters.push(critterData);
+      this.containerGroup.add(group);
+    }
+  }
+
+  // =========================================================================
   // CICLO DE ATUALIZAÇÃO POR FRAME (60 FPS)
   // =========================================================================
   update(delta, playerPos) {
+    if (!this.enabled || !this.containerGroup.visible) return;
     const elapsed = this.clock.getElapsedTime();
 
     // 1. Atualiza Aves (Lorencia / Noria)
@@ -267,6 +329,9 @@ export class AmbientLifeEngine {
         if (distToPlayer < 4.2) {
           bird.state = 'TAKING_OFF';
           bird.velocity.set((bPos.x - playerPos.x) * 1.5, 3.5, (bPos.z - playerPos.z) * 1.5);
+          if (this.audioSynthesizer && typeof this.audioSynthesizer.playWildlifeSound === 'function') {
+            this.audioSynthesizer.playWildlifeSound('wings');
+          }
         } else {
           // Bate a asa sutilmente ou bica o chão
           bird.mesh.rotation.x = Math.sin(elapsed * 2 + bird.wingFlapPhase) * 0.1;
@@ -323,6 +388,11 @@ export class AmbientLifeEngine {
       bat.mesh.rotation.y = bat.angle + Math.PI / 2;
       bat.mesh.scale.x = 0.8 + Math.sin(elapsed * 18 + bat.phase) * 0.3; // Bate asas rápido
     }
+    if (this.bats.length > 0 && this.audioSynthesizer && typeof this.audioSynthesizer.playWildlifeSound === 'function') {
+      if (Math.random() < 0.003) {
+        this.audioSynthesizer.playWildlifeSound('bat');
+      }
+    }
 
     // 3. Atualiza Cardume de Peixes (Atlans)
     for (const fish of this.fishes) {
@@ -354,6 +424,75 @@ export class AmbientLifeEngine {
           }
         }
         posAttr.needsUpdate = true;
+      }
+    }
+
+    // 5. Atualiza Fauna Terrestre (Raposas Selvagens)
+    for (const critter of this.critters) {
+      const cPos = critter.group.position;
+      const distToPlayer = playerPos ? cPos.distanceTo(playerPos) : 999;
+
+      if (critter.state === 'FLEEING') {
+        // Fuga galopando em alta velocidade
+        cPos.addScaledVector(critter.fleeDirection, critter.speed * delta);
+        const targetAngle = Math.atan2(critter.fleeDirection.x, critter.fleeDirection.z);
+        critter.group.rotation.y = THREE.MathUtils.lerp(critter.group.rotation.y, targetAngle, Math.min(1.0, 10 * delta));
+
+        critter.stateTimer -= delta;
+        if (critter.stateTimer <= 0 && distToPlayer > 8.0) {
+          critter.state = 'GRAZING';
+          critter.speed = 1.1;
+          critter.stateTimer = 3.0 + Math.random() * 4.0;
+          if (critter.animController) critter.animController.playAction('idle');
+        }
+      } else {
+        // Reação ao Jogador: aproximação súbita (< 4.5m) assusta o animal
+        if (distToPlayer < 4.5 && playerPos) {
+          critter.state = 'FLEEING';
+          critter.speed = 4.2; // Galope rápido
+          critter.fleeDirection.set(cPos.x - playerPos.x, 0, cPos.z - playerPos.z).normalize();
+          if (critter.fleeDirection.lengthSq() < 0.001) {
+            critter.fleeDirection.set(1, 0, 0);
+          }
+          critter.stateTimer = 3.5 + Math.random() * 2.0;
+          if (critter.animController) critter.animController.playAction('run');
+          if (this.audioSynthesizer && typeof this.audioSynthesizer.playWildlifeSound === 'function') {
+            this.audioSynthesizer.playWildlifeSound('wings');
+          }
+        } else if (critter.state === 'PATROL') {
+          const dx = critter.targetPos.x - cPos.x;
+          const dz = critter.targetPos.z - cPos.z;
+          const distToTarget = Math.sqrt(dx * dx + dz * dz);
+
+          if (distToTarget < 0.35) {
+            critter.state = 'GRAZING';
+            critter.stateTimer = 2.5 + Math.random() * 3.5;
+            if (critter.animController) critter.animController.playAction('idle');
+          } else {
+            cPos.x += (dx / distToTarget) * critter.speed * delta;
+            cPos.z += (dz / distToTarget) * critter.speed * delta;
+            const targetAngle = Math.atan2(dx, dz);
+            critter.group.rotation.y = THREE.MathUtils.lerp(critter.group.rotation.y, targetAngle, Math.min(1.0, 8 * delta));
+          }
+        } else if (critter.state === 'GRAZING') {
+          critter.stateTimer -= delta;
+          if (critter.stateTimer <= 0) {
+            critter.state = 'PATROL';
+            critter.speed = 1.2;
+            const patrolAngle = Math.random() * Math.PI * 2;
+            const patrolDist = 1.5 + Math.random() * 3.5;
+            critter.targetPos.set(
+              critter.territoryCenter.x + Math.cos(patrolAngle) * patrolDist,
+              critter.territoryCenter.y,
+              critter.territoryCenter.z + Math.sin(patrolAngle) * patrolDist
+            );
+            if (critter.animController) critter.animController.playAction('walk');
+          }
+        }
+      }
+
+      if (critter.animController) {
+        critter.animController.update(delta);
       }
     }
   }

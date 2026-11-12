@@ -106,7 +106,7 @@ export class Dasi3DRealtimeArena {
     this.initScene();
     this.initEnvironment();
     this.initPlayer();
-    this.ambientLife = new AmbientLifeEngine(this.scene, this.currentScenarioId);
+    this.ambientLife = new AmbientLifeEngine(this.scene, this.currentScenarioId, this.harmonicAudio);
     this.buildPortals(this.currentMap);
     this.initInteractionEvents();
 
@@ -384,6 +384,14 @@ export class Dasi3DRealtimeArena {
       }
     }
     return this.showCollisionDebug;
+  }
+
+  /**
+   * Alterna a Visualização da Fauna e Efeitos de Vitalidade do Mundo
+   */
+  toggleAmbientLife(show) {
+    if (!this.ambientLife) return false;
+    return this.ambientLife.toggleAmbient(show);
   }
 
   // ==========================================================================
