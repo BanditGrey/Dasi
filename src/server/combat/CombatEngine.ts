@@ -252,29 +252,9 @@ export class CombatEngine {
     let poiseDamage = 15;
     let knockbackDistance = isTwoHanded ? 30 : 18;
 
-    if (Math.random() <= ignoreDefChance) {
-      damageType = 'IGNORE_DEFENSE';
-      const baseDmg = Math.floor(minAttack + Math.random() * (maxAttack - minAttack + 1));
-      finalDamage = baseDmg; // Defesa do alvo calculada como 0!
-      poiseDamage = 45;
-      knockbackDistance += 15;
-    } else if (roll <= excellentChance) {
-      damageType = 'EXCELLENT';
-      // Dano Excelente: Dano Máximo * 1.20 + bônus
-      finalDamage = Math.floor(maxAttack * 1.20) + (primaryWeapon ? primaryWeapon.level * 4 : 5) - mob.defense;
-      poiseDamage = 35;
-      knockbackDistance += 12;
-    } else if (roll <= excellentChance + criticalChance) {
-      damageType = 'CRITICAL';
-      // Dano Crítico: Dano Máximo garantido + bônus
-      finalDamage = maxAttack + (primaryWeapon ? primaryWeapon.level * 3 : 3) - mob.defense;
-      poiseDamage = 30;
-      knockbackDistance += 8;
-    } else if (skillId || hasSkill) {
-      damageType = 'SKILL';
-      const baseDmg = Math.floor(minAttack + Math.random() * (maxAttack - minAttack + 1));
-      
-      let skillMultiplier = 1.8;
+    const isUsingSkill = Boolean(skillId || hasSkill);
+    let skillMultiplier = 1.0;
+    if (isUsingSkill) {
       if (sId.includes('death') || sId.includes('stab')) {
         // Death Stab do Blade Knight: Fator 250% + (Energy / 10)%
         const rawMult = (ComboSkillEngine.calculateDKSkillMultiplier(session.character.energy) + 50) / 100;
@@ -295,7 +275,29 @@ export class CombatEngine {
         poiseDamage = 25;
         knockbackDistance += 6;
       }
+    }
 
+    if (Math.random() <= ignoreDefChance) {
+      damageType = 'IGNORE_DEFENSE';
+      const baseDmg = Math.floor(minAttack + Math.random() * (maxAttack - minAttack + 1));
+      finalDamage = isUsingSkill ? Math.floor(baseDmg * skillMultiplier) : baseDmg;
+      poiseDamage = 45;
+      knockbackDistance += 15;
+    } else if (roll <= excellentChance) {
+      damageType = 'EXCELLENT';
+      const baseDmg = Math.floor(maxAttack * 1.20) + (primaryWeapon ? primaryWeapon.level * 4 : 5);
+      finalDamage = (isUsingSkill ? Math.floor(baseDmg * skillMultiplier) : baseDmg) - mob.defense;
+      poiseDamage = 35;
+      knockbackDistance += 12;
+    } else if (roll <= excellentChance + criticalChance) {
+      damageType = 'CRITICAL';
+      const baseDmg = maxAttack + (primaryWeapon ? primaryWeapon.level * 3 : 3);
+      finalDamage = (isUsingSkill ? Math.floor(baseDmg * skillMultiplier) : baseDmg) - mob.defense;
+      poiseDamage = 30;
+      knockbackDistance += 8;
+    } else if (isUsingSkill) {
+      damageType = 'SKILL';
+      const baseDmg = Math.floor(minAttack + Math.random() * (maxAttack - minAttack + 1));
       finalDamage = Math.floor(baseDmg * skillMultiplier) - mob.defense;
     } else {
       damageType = 'NORMAL';
