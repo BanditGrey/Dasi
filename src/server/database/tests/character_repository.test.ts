@@ -75,7 +75,7 @@ describe('1. Repositório de Personagens & Persistência Binária (CharacterRepo
   });
 
   it('exporta e importa snapshot de base de dados em formato JSON', async () => {
-    const repo1 = new CharacterRepository();
+    const repo1 = new CharacterRepository(':memory:');
     const sessionManager = new SessionManager();
     const s1 = sessionManager.createSession({ readyState: 1, send: () => {} });
     s1.character.name = 'GrandMaster_DW';
@@ -87,7 +87,7 @@ describe('1. Repositório de Personagens & Persistência Binária (CharacterRepo
     assert.ok(json.includes('GrandMaster_DW'));
     assert.ok(json.includes('inventoryBinaryHex'));
 
-    const repo2 = new CharacterRepository();
+    const repo2 = new CharacterRepository(':memory:');
     repo2.importJson(json);
     assert.equal(repo2.count(), 1);
 
@@ -149,6 +149,7 @@ describe('2. Orquestração de Kalima no GameServer (Kalima Portal & Lord Kundun
     assert.ok(failPacket.payload.error.includes('não encontrado'));
 
     // Adiciona Lost Map +7 e spawna portal com sucesso
+    session.inventory.clear();
     const lostMap = Item.create('lost_map_7');
     session.inventory.addItem(lostMap, 0, 0);
 
