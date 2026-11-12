@@ -123,6 +123,10 @@ export const Opcodes = {
   MSG_CHAOS_CASTLE_UPDATE_RES: { opcode: 0x81, subcode: 0x0a },
   MSG_DUEL_ACTION_REQ: { opcode: 0x81, subcode: 0x0b },
   MSG_DUEL_UPDATE_RES: { opcode: 0x81, subcode: 0x0c },
+  MSG_KALIMA_PORTAL_SPAWN_REQ: { opcode: 0x81, subcode: 0x0d },
+  MSG_KALIMA_PORTAL_SPAWN_RES: { opcode: 0x81, subcode: 0x0e },
+  MSG_KALIMA_ENTER_REQ: { opcode: 0x81, subcode: 0x0f },
+  MSG_KALIMA_ENTER_RES: { opcode: 0x81, subcode: 0x10 },
 
   // Dungeon System (0x82)
   MSG_DUNGEON_ENTER_REQ: { opcode: 0x82, subcode: 0x01 },
@@ -990,3 +994,33 @@ export function decodeBinaryPacket(buf: Buffer): PacketMessage | null {
 
   return null;
 }
+
+export interface KalimaPortalSpawnReqPayload {
+  lostMapDefId: string;
+  x?: number;
+  y?: number;
+}
+
+export interface KalimaPortalSpawnResPayload {
+  success: boolean;
+  portalId?: string;
+  kalimaLevel?: number;
+  durationSeconds?: number;
+  x?: number;
+  y?: number;
+  error?: string;
+}
+
+export interface KalimaEnterReqPayload {
+  portalId: string;
+}
+
+export interface KalimaEnterResPayload {
+  success: boolean;
+  kalimaLevel?: number;
+  targetMap?: string;
+  x?: number;
+  y?: number;
+  error?: string;
+}
+
