@@ -32,6 +32,40 @@ export const EXTRA_MONSTER_GLB_MAP = Object.freeze({
   FOX: 'models/critters/fox_animated.glb',
 });
 
+export const EXTRA_NPC_GLB_MAP = Object.freeze({
+  NPC_HANZO: 'models/npcs/npc_han_blacksmith.glb',
+  NPC_PUPA: 'models/npcs/npc_pupa_pharmacist.glb',
+  NPC_GUARD: 'models/npcs/npc_sentinel_guard.glb',
+  NPC_CHAOS_GOBLIN: 'models/npcs/npc_chaos_goblin.glb',
+  NPC_SEBINA: 'models/npcs/npc_sebina_priestess.glb',
+  NPC_LUMEN: 'models/npcs/npc_lumen_barmaid.glb',
+  NPC_LALA: 'models/npcs/npc_lala_craftswoman.glb',
+  NPC_LAHAP: 'models/npcs/npc_lahap_jeweler.glb',
+  NPC_SHADOW_PHANTOM: 'models/npcs/npc_shadow_phantom.glb',
+  NPC_CHARON: 'models/npcs/npc_charon_boatman.glb',
+});
+
+export const EXTRA_MOUNT_GLB_MAP = Object.freeze({
+  DARK_HORSE: 'models/mounts/mount_dark_horse.glb',
+  FENRIR_RED: 'models/mounts/mount_fenrir_red.glb',
+  FENRIR_BLUE: 'models/mounts/mount_fenrir_blue.glb',
+  FENRIR_BLACK: 'models/mounts/mount_fenrir_black.glb',
+  FENRIR_GOLDEN: 'models/mounts/mount_fenrir_golden.glb',
+  DINORANT: 'models/mounts/mount_dinorant.glb',
+  UNIRIA: 'models/mounts/mount_uniria.glb',
+  DARK_RAVEN: 'models/mounts/pet_dark_raven.glb',
+  IMP_SATAN: 'models/mounts/pet_imp_satan.glb',
+  GUARDIAN_ANGEL: 'models/mounts/pet_guardian_angel.glb',
+});
+
+export const EXTRA_WINGS_GLB_MAP = Object.freeze({
+  WINGS_DRAGON: 'models/wings/wings_dragon_level2.glb',
+  WINGS_SOUL: 'models/wings/wings_soul_level2.glb',
+  WINGS_SPIRITS: 'models/wings/wings_spirits_level2.glb',
+  WINGS_DARKNESS: 'models/wings/wings_darkness_level2.glb',
+  CAPE_LORD: 'models/wings/cape_of_lord.glb',
+});
+
 export class Dasi3DFeatureViewer {
   constructor(canvasContainerId, initialCategory = 'ENVIRONMENT', initialSubId = null) {
     this.container = document.getElementById(canvasContainerId);
@@ -473,6 +507,50 @@ export class Dasi3DFeatureViewer {
         this.controls.target.set(0, 1.5, 0);
         this.camera.position.set(0, 2.2, 4.6);
       }
+
+    } else if (category === 'NPC' || category === 'MOUNT' || category === 'WINGS') {
+      const glbPath = category === 'NPC' ? EXTRA_NPC_GLB_MAP[id] : category === 'MOUNT' ? EXTRA_MOUNT_GLB_MAP[id] : EXTRA_WINGS_GLB_MAP[id];
+      const group = new THREE.Group();
+      group.name = `ENTITY_${category}_${id}`;
+      this.activeEntity = { group, parts: {} };
+      this.scene.add(group);
+
+      if (glbPath) {
+        const loader = new GLTFLoader();
+        loader.load(glbPath, (gltf) => {
+          const model = gltf.scene;
+          model.name = `GLTF_${category}_${id}`;
+          model.traverse((child) => {
+            if (child.isMesh) {
+              child.castShadow = true;
+              child.receiveShadow = true;
+            }
+          });
+          group.add(model);
+          if (this.activeEntity && this.activeEntity.parts) {
+            this.activeEntity.parts.realGLB = model;
+          }
+          const statusBadge = document.getElementById('lbl-real-scenery-status');
+          if (statusBadge) {
+            statusBadge.textContent = `✨ ${category}: ${id} (${glbPath})`;
+            statusBadge.style.color = '#4ade80';
+          }
+        }, undefined, (err) => {
+          console.warn(`[Dasi3D] Falha ao carregar modelo ${glbPath}:`, err);
+        });
+      }
+
+      if (category === 'MOUNT') {
+        this.controls.target.set(0, 1.2, 0);
+        this.camera.position.set(0, 2.2, 4.8);
+      } else if (category === 'WINGS') {
+        this.controls.target.set(0, 1.1, 0);
+        this.camera.position.set(0, 1.5, 3.2);
+      } else {
+        this.controls.target.set(0, 1.1, 0);
+        this.camera.position.set(0, 1.6, 3.5);
+      }
+      this.controls.update();
 
     } else if (category === 'ENVIRONMENT') {
       const env = createEnvironment(id, THREE);

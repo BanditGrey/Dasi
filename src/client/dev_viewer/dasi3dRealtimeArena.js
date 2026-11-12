@@ -550,13 +550,15 @@ export class Dasi3DRealtimeArena {
         }
       }
 
-      // Dispara a habilidade canônica da classe (Twisting Slash para DK, Evil Spirits para DW)
+      // Dispara a habilidade canônica da classe (Twisting Slash para DK, Evil Spirits para DW, Triple Shot para Elf)
       const isDw = this.app?.character?.characterClass === 'DW' || this.app?.character?.characterClass === 'SOUL_MASTER';
-      const skillName = isDw ? 'evil_spirits' : 'cyclone';
+      const isElf = this.app?.character?.characterClass === 'ELF' || this.app?.character?.characterClass === 'FAIRY_ELF' || this.app?.character?.characterClass === 'MUSE_ELF';
+      const skillName = isDw ? 'evil_spirits' : isElf ? 'triple_shot' : 'cyclone';
       if (this.app && typeof this.app.castSkill === 'function') {
         this.app.castSkill('E', skillName);
       } else {
         if (isDw) this.triggerEvilSpirits();
+        else if (isElf) this.triggerArcherySkill('triple_shot');
         else this.triggerTwistingSlash();
       }
     });
@@ -704,6 +706,8 @@ export class Dasi3DRealtimeArena {
       this.triggerSpellCast(s);
     } else if (s.includes('mana_shield') || s.includes('soul_barrier')) {
       this.triggerManaShield();
+    } else if (s.includes('heal') || s.includes('cura')) {
+      this.triggerHealVFX();
     } else if (s.includes('roll') || s.includes('dodge')) {
       this.triggerRoll();
     } else if (s.includes('attack') || s.includes('strike')) {
@@ -869,6 +873,36 @@ export class Dasi3DRealtimeArena {
       };
       fadeShield();
     }, 3000);
+  }
+
+  triggerHealVFX() {
+    this.harmonicAudio?.playLevelUpSound?.();
+    const ringGeom = new THREE.CylinderGeometry(1.2, 1.2, 0.4, 24, 1, true);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0x34d399, // Verde Esmeralda Canônico
+      transparent: true,
+      opacity: 0.85,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+    });
+    const ringMesh = new THREE.Mesh(ringGeom, ringMat);
+    ringMesh.position.set(0, 0.2, 0);
+    this.playerGroup.add(ringMesh);
+
+    let progress = 0;
+    const animateHeal = () => {
+      progress += 0.05;
+      ringMesh.position.y += 0.08;
+      ringMesh.scale.x += 0.035;
+      ringMesh.scale.z += 0.035;
+      ringMat.opacity = Math.max(0, 0.85 - progress * 0.85);
+      if (progress < 1.0) {
+        requestAnimationFrame(animateHeal);
+      } else {
+        this.playerGroup.remove(ringMesh);
+      }
+    };
+    animateHeal();
   }
 
   triggerDeathStab() {

@@ -330,13 +330,19 @@ describe('4. Integração de Rede GameServer: Combate, Monstros e Drops (Opcodes
     subcode: number,
     filter?: (payload: any) => boolean
   ): Promise<any> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        ws.off('message', handler);
+        reject(new Error(`Timeout aguardando pacote opcode=0x${opcode.toString(16)} subcode=0x${subcode.toString(16)}`));
+      }, 5000);
+
       const handler = (data: any) => {
         const text = data.toString('utf-8');
         try {
           const parsed = JSON.parse(text);
           if (parsed.opcode === opcode && parsed.subcode === subcode) {
             if (!filter || filter(parsed.payload)) {
+              clearTimeout(timeout);
               ws.off('message', handler);
               resolve(parsed.payload);
             }
@@ -449,7 +455,12 @@ describe('4. Integração de Rede GameServer: Combate, Monstros e Drops (Opcodes
 
     // Ataca até acertar e derrotar o monstro (tratando eventual esquiva de 4%)
     let dropPayload: any = null;
-    while (!dropPayload) {
+    for (let attempt = 0; attempt < 10 && !dropPayload; attempt++) {
+      mob.isDead = false;
+      mob.state = 'IDLE';
+      mob.currentHp = 1;
+      server.combatEngine.clearMobDamageLog(mob.id);
+
       const promiseDrop = waitForPacket(
         ws,
         Opcodes.MSG_GROUND_ITEM_DROP.opcode,

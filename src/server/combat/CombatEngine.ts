@@ -377,6 +377,11 @@ export class CombatEngine {
               durationMs: 60000,
               expiresAt: Date.now() + 60000,
             });
+          } else if (sId.includes('heal') || skillDef.slug === 'heal') {
+            const healAmount = CanonicalFormulas.calculateHeal(session.character.energy);
+            if (session.currentHp !== undefined && session.maxHp !== undefined) {
+              session.currentHp = Math.min(session.maxHp, session.currentHp + healAmount);
+            }
           } else if (sId.includes('critical_damage') || skillDef.slug === 'critical_damage') {
             const critBonus = Math.floor(session.character.energy / 25) + Math.floor((session.character.command || 0) / 30);
             session.activeBuffs.set('CRITICAL_DAMAGE', {
@@ -442,6 +447,23 @@ export class CombatEngine {
           expiresAt: Date.now() + 60000,
         });
         if (session.currentMp !== undefined) session.currentMp = Math.max(0, session.currentMp - 70);
+        skillMultiplier = 1.0;
+        poiseDamage = 0;
+        knockbackDistance = 0;
+      } else if (sId.includes('triple') || sId.includes('triplo')) {
+        // Triple Shot da Fairy Elf: Disparo de 3 flechas convergentes (fator de 240% com bônus de Agilidade)
+        const bonus = Math.floor(session.character.agility / 40);
+        skillMultiplier = (240 + bonus) / 100;
+        poiseDamage = 28;
+        knockbackDistance = 18;
+        if (session.currentMp !== undefined) session.currentMp = Math.max(0, session.currentMp - 5);
+      } else if (sId.includes('heal') || sId.includes('cura')) {
+        // Heal da Fairy Elf
+        const healAmount = CanonicalFormulas.calculateHeal(session.character.energy);
+        if (session.currentHp !== undefined && session.maxHp !== undefined) {
+          session.currentHp = Math.min(session.maxHp, session.currentHp + healAmount);
+        }
+        if (session.currentMp !== undefined) session.currentMp = Math.max(0, session.currentMp - 10);
         skillMultiplier = 1.0;
         poiseDamage = 0;
         knockbackDistance = 0;
@@ -525,11 +547,12 @@ export class CombatEngine {
       }
     }
 
-    // Processamento de dano em área (AoE) e vórtices autoritativos (Twisting Slash & Evil Spirits)
+    // Processamento de dano em área (AoE) e vórtices autoritativos (Twisting Slash, Evil Spirits & Triple Shot)
     const isEvilSpirits = sId.includes('evil') || sId.includes('spirit');
     const isTwisting = sId.includes('twist') || sId.includes('cyclone') || sId.includes('spin');
-    const aoeRadius = skillDef?.aoeRadius ?? (isTwisting ? 180 : (isEvilSpirits ? 260 : 0));
-    const maxAoeTargets = skillDef?.maxAoeTargets ?? (isEvilSpirits ? 8 : 6);
+    const isTripleShot = sId.includes('triple') || sId.includes('triplo');
+    const aoeRadius = skillDef?.aoeRadius ?? (isTwisting ? 180 : (isEvilSpirits ? 260 : (isTripleShot ? 180 : 0)));
+    const maxAoeTargets = skillDef?.maxAoeTargets ?? (isEvilSpirits ? 8 : (isTripleShot ? 2 : 6));
 
     if (aoeRadius > 0) {
       let hitCount = 0;
@@ -1218,6 +1241,12 @@ export class CombatEngine {
       if (eq) {
         totalDefense += Item.calculateDefense(eq);
       }
+    }
+
+    // Bônus de Greater Defense (se houver bênção ativa da Fairy Elf)
+    const greaterDefBuff = session.activeBuffs?.get('GREATER_DEFENSE');
+    if (greaterDefBuff && greaterDefBuff.expiresAt > Date.now()) {
+      totalDefense += greaterDefBuff.value;
     }
 
     // 2. Taxa de Acerto do Monstro vs Evasão do Jogador
