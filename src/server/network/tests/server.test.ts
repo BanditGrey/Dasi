@@ -930,7 +930,7 @@ describe('Servidor de Jogo Dasi (WebSocket / HTTP Dev Server)', () => {
 
 describe('Padrões seguros do sandbox', () => {
   test('rotas e comandos de desenvolvimento vêm desativados', async () => {
-    const server = new GameServer({ port: 8200 });
+    const server = new GameServer({ port: 8200, dbPath: ':memory:' });
     await server.start();
     try {
       const response = await fetch('http://127.0.0.1:8200/api/box/open', { method: 'POST', body: '{}' });

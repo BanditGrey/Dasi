@@ -359,6 +359,10 @@ stateDiagram-v2
 | `0x80` | `0x80:0x06` | `MSG_BOX_KUNDUN_OPEN_REQ`| C $\to$ S | `{ boxDefId, playerX, playerY }` |
 | `0x81` | `0x81:0x01` | `MSG_EVENT_STATUS_REQ` | C $\to$ S | `{}` |
 | `0x81` | `0x81:0x03` | `MSG_EVENT_ENTER_REQ` | C $\to$ S | `{ eventType }` |
+| `0x81` | `0x81:0x0d` | `MSG_KALIMA_PORTAL_SPAWN_REQ` | C $\to$ S | `{ lostMapDefId, x, y }` |
+| `0x81` | `0x81:0x0e` | `MSG_KALIMA_PORTAL_SPAWN_RES` | S $\to$ C | `{ success, portalId, kalimaLevel, durationSeconds, x, y }` |
+| `0x81` | `0x81:0x0f` | `MSG_KALIMA_ENTER_REQ` | C $\to$ S | `{ portalId }` |
+| `0x81` | `0x81:0x10` | `MSG_KALIMA_ENTER_RES` | S $\to$ C | `{ success, kalimaLevel, mapId, x, y }` |
 | `0x82` | `0x82:0x01` | `MSG_DUNGEON_ENTER_REQ` | C $\to$ S | `{}` |
 | `0x83` | `0x83:0x01` | `MSG_RESET_REQ` | C $\to$ S | `{}` |
 | `0x83` | `0x83:0x03` | `MSG_MASTER_RESET_REQ` | C $\to$ S | `{}` |

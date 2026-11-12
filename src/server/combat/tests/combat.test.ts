@@ -308,7 +308,7 @@ describe('4. Integração de Rede GameServer: Combate, Monstros e Drops (Opcodes
   const testPort = 8299;
 
   before(async () => {
-    server = new GameServer({ port: testPort });
+    server = new GameServer({ port: testPort, dbPath: ':memory:' });
     await server.start();
   });
 
