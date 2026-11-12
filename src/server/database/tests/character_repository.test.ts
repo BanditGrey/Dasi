@@ -140,6 +140,7 @@ describe('2. Orquestração de Kalima no GameServer (Kalima Portal & Lord Kundun
     session.character.level = 380;
     session.x = 130;
     session.y = 120;
+    session.inventory.clear();
 
     // Tenta spawnar sem Lost Map -> Erro
     (server as any).handleKalimaPortalSpawnReq(session, { lostMapDefId: 'lost_map_7' });

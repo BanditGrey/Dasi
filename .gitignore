@@ -56,3 +56,10 @@ conversions/
 scratch/
 reference/
 archive/
+
+# Bancos de dados locais / runtime SQLite
+data/
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
