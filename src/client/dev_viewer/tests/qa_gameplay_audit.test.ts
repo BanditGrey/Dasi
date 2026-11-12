@@ -150,8 +150,9 @@ describe('🎨 QA Gameplay - 2. Modelos Oficiais, Malhas 3D e Texturas Autêntic
       const binHeader = 20 + jsonLen;
       const binOffset = binHeader + 8;
 
-      // Validação das imagens embutidas
-      assert.ok(gltf.images && gltf.images.length >= 10, `${cls} deve conter ao menos 10 imagens embutidas`);
+      // Validação das imagens embutidas (MG canonicamente não utiliza elmo/helm, possuindo 8 texturas)
+      const minImages = cls === 'mg' ? 8 : 10;
+      assert.ok(gltf.images && gltf.images.length >= minImages, `${cls} deve conter ao menos ${minImages} imagens embutidas`);
       for (const img of gltf.images) {
         assert.strictEqual(img.uri, undefined, `${cls}/${img.name} deve ser embutida no buffer, sem URI externa quebrada`);
         assert.ok(typeof img.bufferView === 'number', `${cls}/${img.name} deve possuir bufferView válido`);

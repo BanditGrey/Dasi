@@ -292,7 +292,7 @@ export class AmbientLifeEngine {
         animController: null,
       };
 
-      if (typeof window !== 'undefined' && typeof loadAnimatedCreatureGLB === 'function') {
+      if (typeof window !== 'undefined' && window.location && typeof loadAnimatedCreatureGLB === 'function') {
         loadAnimatedCreatureGLB(
           glbPath,
           group,

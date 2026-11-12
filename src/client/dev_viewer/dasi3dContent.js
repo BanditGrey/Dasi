@@ -256,7 +256,7 @@ export function resolveMonsterAnimationClip(anims, requestAction) {
 }
 
 export function loadAnimatedCreatureGLB(glbPath, targetGroup, THREE, onComplete, preserve = []) {
-  if (!glbPath || typeof window === 'undefined' || !targetGroup) return;
+  if (!glbPath || typeof window === 'undefined' || !window.location || !targetGroup) return;
 
   try {
     const loader = new GLTFLoader();
