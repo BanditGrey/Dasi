@@ -492,6 +492,17 @@ export class Dasi3DRealtimeArena {
         }
       }
 
+      // 2.5 Checa se clicou em algum NPC Cidadão / Habitante 3D
+      if (this.ambientLife && Array.isArray(this.ambientLife.npcs)) {
+        for (const npc of this.ambientLife.npcs) {
+          const hits = this.raycaster.intersectObjects(npc.group.children, true);
+          if (hits.length > 0) {
+            this.onNpcClicked(npc);
+            return;
+          }
+        }
+      }
+
       // 3. Chefes chegam por um fluxo separado do MobSpawner.
       for (const [bossId, bossObj] of this.bosses3D.entries()) {
         const hits = this.raycaster.intersectObjects(bossObj.group.children, true);
@@ -570,6 +581,45 @@ export class Dasi3DRealtimeArena {
       playerX: this.app.playerX,
       playerY: this.app.playerY,
     });
+  }
+
+  onNpcClicked(npc) {
+    if (!npc) return;
+    const npcId = npc.npcId;
+    if (npcId === 'han_blacksmith') {
+      if (this.app) {
+        if (typeof this.app.renderNpcShopCatalog === 'function') {
+          this.app.renderNpcShopCatalog('han_blacksmith');
+        }
+        const modalShop = document.getElementById('modal-npc-shop');
+        if (modalShop) modalShop.style.display = 'flex';
+        this.harmonicAudio?.playItemPickupSound();
+        this.app.log('🔨 [FERREIRO HAN] "Bem-vindo à forja de Lorencia! Meu aço não quebra nem diante dos dragões!"', 'success');
+      }
+    } else if (npcId === 'pupa_potion_girl') {
+      if (this.app) {
+        if (typeof this.app.renderNpcShopCatalog === 'function') {
+          this.app.renderNpcShopCatalog('pupa_potion_girl');
+        }
+        const modalShop = document.getElementById('modal-npc-shop');
+        if (modalShop) modalShop.style.display = 'flex';
+        this.harmonicAudio?.playItemPickupSound();
+        this.app.log('🧪 [PUPA ALQUIMISTA] "Minhas poções de vida e vigor curam as mais profundas feridas da batalha."', 'info');
+      }
+    } else if (npcId === 'chaos_goblin') {
+      const modalChaos = document.getElementById('modal-chaos-machine');
+      if (modalChaos) {
+        modalChaos.style.display = 'flex';
+        if (this.app && typeof this.app.renderChaosInventory === 'function') {
+          this.app.renderChaosInventory();
+        }
+        this.harmonicAudio?.playLevelUpSound();
+        this.app?.log('⚡ [DUENDE DO CAOS] "Keke! Traga suas Joias do Caos e itens +9! O poder arcano te aguarda!"', 'warning');
+      }
+    } else if (npcId === 'sentinel_guard') {
+      this.harmonicAudio?.playDodgeSound();
+      this.app?.log('🛡️ [SENTINELA DA CIDADELA] "Mantenha a guarda alta além dos portões. Criaturas sanguinárias assolam as planícies!"', 'info');
+    }
   }
 
   spawnClickDecal(x, z) {

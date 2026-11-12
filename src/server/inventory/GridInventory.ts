@@ -484,6 +484,17 @@ export class GridInventory {
   }
 
   /**
+   * Limpa todos os itens do grid e slots equipados
+   */
+  public clear(): void {
+    this.placedItems.clear();
+    this.equippedSlots.clear();
+    this.grid = Array.from({ length: this.rows }, () =>
+      Array.from({ length: this.cols }, () => ({ occupied: false, itemUuid: null, isRoot: false }))
+    );
+  }
+
+  /**
    * Serialização para persistência em JSON ou banco de dados
    */
   public serialize(): {
