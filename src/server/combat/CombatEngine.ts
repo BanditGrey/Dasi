@@ -344,6 +344,29 @@ export class CombatEngine {
       }
     }
 
+    // Se for Twisting Slash (área 360°), aplica dano colateral aos demais monstros adjacentes no raio
+    const isTwisting = sId.includes('twist') || sId.includes('cyclone') || sId.includes('spin');
+    if (isTwisting) {
+      const aoeRadius = 180;
+      for (const otherMob of this.spawner.getMonsters()) {
+        if (otherMob.id !== mob.id && !otherMob.isDead) {
+          const dist = Math.hypot(otherMob.x - playerX, otherMob.y - playerY);
+          if (dist <= aoeRadius) {
+            const aoeDmg = Math.max(1, Math.floor(finalDamage * 0.85));
+            const aoeResult = otherMob.takeDamage(aoeDmg, 25, 12, otherMob.x - playerX, otherMob.y - playerY);
+            if (aoeResult.isDead) {
+              const aoeDrops = otherMob.rollDrops(session.sessionId, session.partyId);
+              dropsGenerated.push(...aoeDrops);
+              for (const drop of aoeDrops) {
+                this.groundDrops.set(drop.dropId, drop);
+              }
+              xpGained += otherMob.xpReward;
+            }
+          }
+        }
+      }
+    }
+
     const colorConfig = DAMAGE_COLORS[damageType];
 
     return {
@@ -512,6 +535,29 @@ export class CombatEngine {
       dropsGenerated = boss.generateBossDrops(session.sessionId);
       for (const drop of dropsGenerated) {
         this.groundDrops.set(drop.dropId, drop);
+      }
+    }
+
+    // Se for Twisting Slash (área 360°), aplica dano colateral aos demais monstros adjacentes no raio
+    const isTwisting = sId.includes('twist') || sId.includes('cyclone') || sId.includes('spin');
+    if (isTwisting) {
+      const aoeRadius = 180;
+      for (const otherMob of this.spawner.getMonsters()) {
+        if (otherMob.id !== mob.id && !otherMob.isDead) {
+          const dist = Math.hypot(otherMob.x - playerX, otherMob.y - playerY);
+          if (dist <= aoeRadius) {
+            const aoeDmg = Math.max(1, Math.floor(finalDamage * 0.85));
+            const aoeResult = otherMob.takeDamage(aoeDmg, 25, 12, otherMob.x - playerX, otherMob.y - playerY);
+            if (aoeResult.isDead) {
+              const aoeDrops = otherMob.rollDrops(session.sessionId, session.partyId);
+              dropsGenerated.push(...aoeDrops);
+              for (const drop of aoeDrops) {
+                this.groundDrops.set(drop.dropId, drop);
+              }
+              xpGained += otherMob.xpReward;
+            }
+          }
+        }
       }
     }
 
