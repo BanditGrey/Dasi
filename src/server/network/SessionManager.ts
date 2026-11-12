@@ -46,6 +46,8 @@ export interface ClientSession {
   x?: number;
   y?: number;
   currentMap?: number;
+  pkLevel?: number;
+  pkCount?: number;
 
   // Sistemas Orquestrados do Servidor
   resets?: number;

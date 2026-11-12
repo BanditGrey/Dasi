@@ -85,13 +85,6 @@ export const GLTF_BESTIARY_MAP = Object.freeze({
   GOLDEN_LIZARD_KING: 'models/bestiary/golden_lizard_king.glb',
   GOLDEN_TANTALOS: 'models/bestiary/golden_tantalos.glb',
   GOLDEN_DRAGON: 'models/bestiary/golden_dragon.glb',
-  SPIDER: 'models/bestiary/spider.glb',
-  BULL_FIGHTER: 'models/bestiary/bull_fighter.glb',
-  HOUND: 'models/bestiary/hound.glb',
-  SKELETON: 'models/bestiary/skeleton.glb',
-  LICH: 'models/bestiary/lich.glb',
-  DEATH_KNIGHT: 'models/bestiary/death_knight.glb',
-  BUDGE_DRAGON: 'models/bestiary/golden_budge_dragon.glb',
 });
 
 /**

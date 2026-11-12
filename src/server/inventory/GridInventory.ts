@@ -490,7 +490,7 @@ export class GridInventory {
     this.placedItems.clear();
     this.equippedSlots.clear();
     this.grid = Array.from({ length: this.rows }, () =>
-      Array.from({ length: this.cols }, () => ({ occupied: false, itemUuid: null, isRoot: false }))
+      Array.from({ length: this.cols }, () => null as string | null)
     );
   }
 

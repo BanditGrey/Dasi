@@ -1999,7 +1999,7 @@ export class GameServer {
       return;
     }
 
-    const isSpecialClass = session.character.class === 'MG' || session.character.class === 'DL';
+    const isSpecialClass = session.character.characterClass === 'MG' || session.character.characterClass === 'DL';
     const canEnter = KalimaInstance.canEnterKalima(kalimaLevel, session.character.level, isSpecialClass);
     if (!canEnter) {
       this.sendPacket(session, Opcodes.MSG_KALIMA_PORTAL_SPAWN_RES.opcode, Opcodes.MSG_KALIMA_PORTAL_SPAWN_RES.subcode, {
@@ -2013,14 +2013,19 @@ export class GameServer {
     const party = this.partyManager.getPartyBySession(session.sessionId);
     const portal = KalimaInstance.spawnKalimaPortal(
       session.sessionId,
-      party?.id ?? null,
+      party?.partyId ?? null,
       kalimaLevel,
-      payload.x ?? session.character.x ?? 125,
-      payload.y ?? session.character.y ?? 125
+      payload.x ?? session.x ?? 125,
+      payload.y ?? session.y ?? 125
     );
 
     this.activeKalimaPortals.set(portal.portalId, {
-      ...portal,
+      portalId: portal.portalId,
+      ownerId: session.sessionId,
+      partyId: party?.partyId ?? null,
+      kalimaLevel: portal.kalimaLevel,
+      x: portal.x,
+      y: portal.y,
       expiresAt: Date.now() + portal.durationSeconds * 1000,
     });
 
@@ -2048,7 +2053,7 @@ export class GameServer {
 
     const party = this.partyManager.getPartyBySession(session.sessionId);
     const isOwner = portal.ownerId === session.sessionId;
-    const isPartyMember = Boolean(portal.partyId && party && portal.partyId === party.id);
+    const isPartyMember = Boolean(portal.partyId && party && portal.partyId === party.partyId);
 
     if (!isOwner && !isPartyMember) {
       this.sendPacket(session, Opcodes.MSG_KALIMA_ENTER_RES.opcode, Opcodes.MSG_KALIMA_ENTER_RES.subcode, {
@@ -2058,7 +2063,7 @@ export class GameServer {
       return;
     }
 
-    const isSpecialClass = session.character.class === 'MG' || session.character.class === 'DL';
+    const isSpecialClass = session.character.characterClass === 'MG' || session.character.characterClass === 'DL';
     const canEnter = KalimaInstance.canEnterKalima(portal.kalimaLevel, session.character.level, isSpecialClass);
     if (!canEnter) {
       this.sendPacket(session, Opcodes.MSG_KALIMA_ENTER_RES.opcode, Opcodes.MSG_KALIMA_ENTER_RES.subcode, {
@@ -2068,14 +2073,14 @@ export class GameServer {
       return;
     }
 
-    session.currentMap = `KALIMA_${portal.kalimaLevel}`;
-    session.character.x = 20;
-    session.character.y = 20;
+    session.currentMap = 24 + (portal.kalimaLevel - 1);
+    session.x = 20;
+    session.y = 20;
 
     this.sendPacket(session, Opcodes.MSG_KALIMA_ENTER_RES.opcode, Opcodes.MSG_KALIMA_ENTER_RES.subcode, {
       success: true,
       kalimaLevel: portal.kalimaLevel,
-      targetMap: session.currentMap,
+      targetMap: `KALIMA_${portal.kalimaLevel}`,
       x: 20,
       y: 20,
     });

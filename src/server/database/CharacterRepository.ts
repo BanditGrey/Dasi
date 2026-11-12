@@ -6,8 +6,8 @@
 
 import type { ClientSession } from '../network/SessionManager.ts';
 import { BinaryItemSerializer } from './BinaryItemSerializer.ts';
-import type { CharacterProgressionState } from '../progression/QuestManager.ts';
-import type { MasterSkillTreeState } from '../progression/MasterSkillTree.ts';
+import { QuestManager, type CharacterProgressionState } from '../progression/QuestManager.ts';
+import { MasterSkillTree, type MasterSkillTreeState } from '../progression/MasterSkillTree.ts';
 import type { PlacedItem } from '../inventory/types.ts';
 
 export interface CharacterRecord {
@@ -34,7 +34,7 @@ export interface CharacterRecord {
   warehouseBinary: Buffer; // 3.840 bytes (240 slots * 16 bytes)
   progression: CharacterProgressionState;
   masterTree: MasterSkillTreeState;
-  gensFamily: string | null;
+  gensFamily: number | null;
   gensContribution: number;
   gensRank: number;
   updatedAt: number;
@@ -70,7 +70,7 @@ export class CharacterRepository {
     const record: CharacterRecord = {
       name: char.name,
       account: session.sessionId,
-      class: char.characterClass,
+      class: (char.characterClass || 'DK') as any,
       level: char.level,
       resets: session.resets ?? 0,
       masterResets: session.masterResets ?? 0,
@@ -85,22 +85,16 @@ export class CharacterRepository {
       currentMap: session.currentMap ?? 0,
       x: session.x ?? 125,
       y: session.y ?? 125,
-      pkLevel: char.pkLevel ?? 3,
-      pkCount: char.pkCount ?? 0,
+      pkLevel: session.pkLevel ?? 3,
+      pkCount: session.pkCount ?? 0,
       inventoryBinary,
       warehouseBinary,
-      progression: session.progressionState ? { ...session.progressionState } : {
-        sebinaPart1Completed: false,
-        sebinaChangeCompleted: false,
-        marlonHeroCompleted: false,
-        marlonComboCompleted: false,
-        thirdClassChangeCompleted: false,
-      },
-      masterTree: session.masterTreeState ? { ...session.masterTreeState } : {
-        masterLevel: 1,
-        masterPoints: 0,
-        allocatedSkills: {},
-      },
+      progression: session.progressionState
+        ? { ...session.progressionState }
+        : QuestManager.createDefaultState(char.name, char.name, 0, char.level),
+      masterTree: session.masterTreeState
+        ? { ...session.masterTreeState }
+        : MasterSkillTree.createDefaultTree(char.name),
       gensFamily: session.gensFamily ?? null,
       gensContribution: session.gensContribution ?? 0,
       gensRank: session.gensRank ?? 0,
@@ -129,16 +123,16 @@ export class CharacterRepository {
     session.character.energy = record.energy;
     session.character.command = record.command;
     session.character.statPoints = record.statPoints;
-    session.character.pkLevel = record.pkLevel;
-    session.character.pkCount = record.pkCount;
 
+    session.pkLevel = record.pkLevel;
+    session.pkCount = record.pkCount;
     session.x = record.x;
     session.y = record.y;
     session.resets = record.resets;
     session.masterResets = record.masterResets;
     session.wCoins = record.wCoins;
     session.currentMap = record.currentMap;
-    session.gensFamily = record.gensFamily as any;
+    session.gensFamily = record.gensFamily ?? undefined;
     session.gensContribution = record.gensContribution;
     session.gensRank = record.gensRank;
     session.progressionState = { ...record.progression };
