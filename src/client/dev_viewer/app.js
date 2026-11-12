@@ -1208,6 +1208,7 @@ class DevClientApp {
 
   updateActionBarForClass(className) {
     const isDw = className === 'DW' || className === 'SOUL_MASTER';
+    const isElf = className === 'ELF' || className === 'FAIRY_ELF' || className === 'MUSE_ELF';
     const slotCyclone = document.getElementById('slot-skill-cyclone');
     const slotDeathstab = document.getElementById('slot-skill-deathstab');
     const slotWeapon = document.getElementById('slot-skill-weapon');
@@ -1237,6 +1238,32 @@ class DevClientApp {
         if (icon) icon.textContent = '🔮';
         if (lbl) lbl.textContent = 'Energy Ball';
         slotWeapon.title = 'Energy Ball [Atalho: Botão Esquerdo] - Projétil Arcano Básico';
+      }
+    } else if (isElf) {
+      if (slotCyclone) {
+        const icon = slotCyclone.querySelector('.idle-skill-icon');
+        const lbl = slotCyclone.querySelector('.idle-skill-label');
+        const status = slotCyclone.querySelector('.idle-skill-status');
+        if (icon) icon.textContent = '🏹';
+        if (lbl) lbl.textContent = 'Triple Shot';
+        if (status) status.textContent = '[E / 2]';
+        slotCyclone.title = 'Triple Shot [Atalho: E / 2] - Disparo Tríplice em Cone';
+      }
+      if (slotDeathstab) {
+        const icon = slotDeathstab.querySelector('.idle-skill-icon');
+        const lbl = slotDeathstab.querySelector('.idle-skill-label');
+        const status = slotDeathstab.querySelector('.idle-skill-status');
+        if (icon) icon.textContent = '🎯';
+        if (lbl) lbl.textContent = 'Penetration';
+        if (status) status.textContent = '[R / 3 / RMB]';
+        slotDeathstab.title = 'Penetration [Atalho: R / 3 ou Botão Direito] - Disparo Perfurante Letal';
+      }
+      if (slotWeapon) {
+        const icon = slotWeapon.querySelector('.idle-skill-icon');
+        const lbl = slotWeapon.querySelector('.idle-skill-label');
+        if (icon) icon.textContent = '🏹';
+        if (lbl) lbl.textContent = 'Flecha Élfica';
+        slotWeapon.title = 'Disparo com Arco e Aljava [Atalho: Botão Esquerdo]';
       }
     } else {
       if (slotCyclone) {
@@ -2790,19 +2817,26 @@ class DevClientApp {
     // Cliques diretos nos slots da Action Bar
     document.querySelectorAll('.action-slot').forEach((slot) => {
       slot.addEventListener('click', () => {
-        const isDw = this.character?.characterClass === 'DW' || this.character?.characterClass === 'SOUL_MASTER';
+        const cls = this.character?.characterClass;
+        const isDw = cls === 'DW' || cls === 'SOUL_MASTER';
+        const isElf = cls === 'ELF' || cls === 'FAIRY_ELF' || cls === 'MUSE_ELF';
+        const skillE = isDw ? 'fireball' : isElf ? 'triple_shot' : 'cyclone';
+        const skillR = isDw ? 'evil_spirits' : isElf ? 'penetration' : 'death_stab';
+        const primaryAtk = isDw ? 'energy_ball' : isElf ? 'triple_shot' : 'ATTACK';
+        const secondaryAtk = isDw ? 'evil_spirits' : isElf ? 'penetration' : 'cyclone';
+
         const key = slot.getAttribute('data-key');
         if (key === 'Q') this.useHealthPotion();
         else if (key === 'W') this.useManaPotion();
-        else if (key === 'E') this.castSkill('E', isDw ? 'fireball' : 'cyclone');
-        else if (key === 'R') this.castSkill('R', isDw ? 'evil_spirits' : 'death_stab');
+        else if (key === 'E') this.castSkill('E', skillE);
+        else if (key === 'R') this.castSkill('R', skillR);
         else if (key === 'SPACE') this.performDodge();
         else if (key === 'LMB') {
           const btnBossAtk = document.getElementById('btn-boss-attack');
           if (btnBossAtk) btnBossAtk.click();
-          else if (this.arena3D) this.arena3D.triggerSkill(isDw ? 'energy_ball' : 'ATTACK');
+          else if (this.arena3D) this.arena3D.triggerSkill(primaryAtk);
         } else if (key === 'RMB') {
-          this.castSkill('E', isDw ? 'evil_spirits' : 'cyclone');
+          this.castSkill('E', secondaryAtk);
         }
       });
     });
@@ -3860,9 +3894,17 @@ class DevClientApp {
     } else if (code === 'KeyW') {
       this.useManaPotion();
     } else if (code === 'KeyE' || (code === 'Digit2' && (this.viewMode === 'combat' || this.viewMode === 'split'))) {
-      this.castSkill('E', 'cyclone');
+      const cls = this.character?.characterClass;
+      const isDw = cls === 'DW' || cls === 'SOUL_MASTER';
+      const isElf = cls === 'ELF' || cls === 'FAIRY_ELF' || cls === 'MUSE_ELF';
+      const skill = isDw ? 'fireball' : isElf ? 'triple_shot' : 'cyclone';
+      this.castSkill('E', skill);
     } else if (code === 'KeyR' || (code === 'Digit3' && (this.viewMode === 'combat' || this.viewMode === 'split'))) {
-      this.castSkill('R', 'death_stab');
+      const cls = this.character?.characterClass;
+      const isDw = cls === 'DW' || cls === 'SOUL_MASTER';
+      const isElf = cls === 'ELF' || cls === 'FAIRY_ELF' || cls === 'MUSE_ELF';
+      const skill = isDw ? 'evil_spirits' : isElf ? 'penetration' : 'death_stab';
+      this.castSkill('R', skill);
     } else if (code === 'Space') {
       if (e) e.preventDefault();
       this.performDodge();

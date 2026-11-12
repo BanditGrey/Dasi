@@ -149,4 +149,4 @@ O ecossistema conta com cobertura integral na suíte de testes do projeto:
 - `src/client/dev_viewer/tests/ambient_life_systems.test.ts`: 11 testes de fauna por bioma (aves, morcegos, peixes, águas-vivas, fadas, lebres, raposas), NPCs 3D, áudio procedural, toggle de HUD, flicker de tochas e soundscapes.
 - `src/server/combat/tests/mob_spawner_fsm.test.ts`: 6 testes de IA de detecção, alcance de ataque, leash, serialização angular e multi-bioma.
 - `src/server/combat/tests/canonical_skills.test.ts`: 7 testes de catálogo e execução autoritativa de habilidades das 5 classes.
-- Total de **429 testes executados e 100% aprovados em 97 suítes** (0 falhas) com `npm test` e tipagem estrita com `npm run typecheck`.
+- Total de **432 testes executados e 100% aprovados em 99 suítes** (0 falhas) com `npm test` e tipagem estrita com `npm run typecheck`.

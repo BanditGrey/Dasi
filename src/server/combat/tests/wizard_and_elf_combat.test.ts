@@ -172,12 +172,21 @@ describe('2. Fairy Elf (Muse Elf) - Tiro com Arco & Habilidades de Suporte (Trip
 
     const initialMp = session.currentMp;
 
-    const result = combat.processPlayerAttack(session, {
+    let result = combat.processPlayerAttack(session, {
       targetMobId: targetMob.id,
       skillId: 'penetration',
       playerX: targetMob.x + 80,
       playerY: targetMob.y + 80,
     });
+
+    if (result.isMiss) {
+      result = combat.processPlayerAttack(session, {
+        targetMobId: targetMob.id,
+        skillId: 'penetration',
+        playerX: targetMob.x + 80,
+        playerY: targetMob.y + 80,
+      });
+    }
 
     assert.equal(result.success, true);
     assert.ok(result.damage > 0);

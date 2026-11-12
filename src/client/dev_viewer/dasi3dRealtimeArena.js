@@ -550,11 +550,14 @@ export class Dasi3DRealtimeArena {
         }
       }
 
-      // Dispara o Twisting Slash
+      // Dispara a habilidade canônica da classe (Twisting Slash para DK, Evil Spirits para DW)
+      const isDw = this.app?.character?.characterClass === 'DW' || this.app?.character?.characterClass === 'SOUL_MASTER';
+      const skillName = isDw ? 'evil_spirits' : 'cyclone';
       if (this.app && typeof this.app.castSkill === 'function') {
-        this.app.castSkill('E', 'cyclone');
+        this.app.castSkill('E', skillName);
       } else {
-        this.triggerTwistingSlash();
+        if (isDw) this.triggerEvilSpirits();
+        else this.triggerTwistingSlash();
       }
     });
   }
@@ -695,6 +698,8 @@ export class Dasi3DRealtimeArena {
       this.triggerDeathStab();
     } else if (s.includes('evil') || s.includes('spirit')) {
       this.triggerEvilSpirits();
+    } else if (s.includes('triple') || s.includes('shot') || s.includes('penetration') || s.includes('arrow')) {
+      this.triggerArcherySkill(s);
     } else if (s.includes('fireball') || s.includes('lightning') || s.includes('energy')) {
       this.triggerSpellCast(s);
     } else if (s.includes('mana_shield') || s.includes('soul_barrier')) {
@@ -771,6 +776,45 @@ export class Dasi3DRealtimeArena {
       }
     };
     fadeOut();
+  }
+
+  triggerArcherySkill(skillName = 'triple_shot') {
+    this.harmonicAudio?.playSkillSound?.('triple_shot');
+    if (this.playerHero && this.playerHero.triggerAnimation) {
+      this.playerHero.triggerAnimation('ATTACK');
+    }
+    const isPenetration = skillName.includes('penetration');
+    const angles = isPenetration ? [0] : [-0.15, 0, 0.15];
+    const colorHex = isPenetration ? 0xfacc15 : 0x34d399; // Dourado penetrante ou esmeralda élfica
+
+    const baseDir = new THREE.Vector3(0, 0, -1).applyEuler(this.playerGroup.rotation);
+
+    for (const ang of angles) {
+      const arrowGeom = new THREE.ConeGeometry(0.08, 0.6, 6);
+      arrowGeom.rotateX(Math.PI / 2);
+      const arrowMat = new THREE.MeshBasicMaterial({ color: colorHex });
+      const arrowMesh = new THREE.Mesh(arrowGeom, arrowMat);
+      arrowMesh.position.set(this.playerGroup.position.x, 1.2, this.playerGroup.position.z);
+      this.scene.add(arrowMesh);
+
+      const dir = baseDir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), ang);
+      arrowMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), dir);
+
+      let step = 0;
+      const speed = isPenetration ? 0.6 : 0.42;
+      const maxSteps = isPenetration ? 25 : 20;
+
+      const moveArrow = () => {
+        step++;
+        arrowMesh.position.addScaledVector(dir, speed);
+        if (step < maxSteps) {
+          requestAnimationFrame(moveArrow);
+        } else {
+          this.scene.remove(arrowMesh);
+        }
+      };
+      moveArrow();
+    }
   }
 
   triggerSpellCast(spellName = 'fireball') {

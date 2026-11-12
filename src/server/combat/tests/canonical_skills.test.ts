@@ -276,3 +276,124 @@ describe('5. Execução de Habilidades do Magic Gladiator (Duel Master)', () => 
     assert.ok(secondMob.currentHp < initialHp2, 'Power Slash deve atingir alvos no arco frontal');
   });
 });
+
+describe('6. Execução de Habilidades da Summoner (Dimension Master)', () => {
+  it('executa Lightning Shock com dano mágico em área de 220 e consumo de 40 MP', () => {
+    const spawner = new MobSpawner();
+    const combat = new CombatEngine(spawner);
+    const sessionManager = new SessionManager();
+    const session = sessionManager.createSession({});
+
+    session.character.name = 'DimensionMasterSU';
+    session.character.characterClass = 'SU';
+    session.character.energy = 750;
+    session.currentMp = 500;
+
+    const mobs = spawner.getAllMonsters();
+    const targetMob = mobs[0];
+    const secondMob = mobs[1];
+
+    targetMob.x = 220;
+    targetMob.y = 220;
+    secondMob.x = 260;
+    secondMob.y = 240;
+
+    const initialMp = session.currentMp;
+    const initialHp2 = secondMob.currentHp;
+
+    let res = combat.processPlayerAttack(session, {
+      targetMobId: targetMob.id,
+      skillId: 'lightning_shock',
+      playerX: 210,
+      playerY: 210,
+    });
+
+    if (res.isMiss) {
+      res = combat.processPlayerAttack(session, {
+        targetMobId: targetMob.id,
+        skillId: 'lightning_shock',
+        playerX: 210,
+        playerY: 210,
+      });
+    }
+
+    assert.equal(res.success, true);
+    assert.ok(session.currentMp <= initialMp - 40, 'Deve deduzir 40 de Mana');
+    assert.ok(secondMob.currentHp < initialHp2, 'Lightning Shock deve atingir monstros no raio de 220');
+  });
+
+  it('conjura Damage Reflect e recebe buff de absorção/reflexão ativo', () => {
+    const spawner = new MobSpawner();
+    const combat = new CombatEngine(spawner);
+    const sessionManager = new SessionManager();
+    const session = sessionManager.createSession({});
+
+    session.character.name = 'BloodySummoner';
+    session.character.characterClass = 'SU';
+    session.character.energy = 500;
+    session.currentMp = 400;
+
+    const targetMob = spawner.getAllMonsters()[0];
+    const res = combat.processPlayerAttack(session, {
+      targetMobId: targetMob.id,
+      skillId: 'damage_reflect',
+      playerX: targetMob.x + 30,
+      playerY: targetMob.y + 30,
+    });
+
+    assert.equal(res.success, true);
+    assert.ok(session.activeBuffs?.has('DAMAGE_REFLECT'), 'Deve ativar buff de Damage Reflect');
+    const buff = session.activeBuffs?.get('DAMAGE_REFLECT');
+    assert.ok(buff);
+    assert.ok(buff.value >= 30, 'Reflect deve ser no mínimo 30%');
+    assert.ok(buff.expiresAt > Date.now());
+  });
+});
+
+describe('7. Execução de Habilidades do Rage Fighter (Fist Master)', () => {
+  it('executa Dragon Roar com impacto sônico 360° em raio 250 e consumo de 35 MP', () => {
+    const spawner = new MobSpawner();
+    const combat = new CombatEngine(spawner);
+    const sessionManager = new SessionManager();
+    const session = sessionManager.createSession({});
+
+    session.character.name = 'FistMasterRF';
+    session.character.characterClass = 'RF';
+    session.character.vitality = 600;
+    session.character.energy = 200;
+    session.character.strength = 500;
+    session.currentMp = 300;
+
+    const mobs = spawner.getAllMonsters();
+    const targetMob = mobs[0];
+    const secondMob = mobs[1];
+
+    targetMob.x = 300;
+    targetMob.y = 300;
+    secondMob.x = 340;
+    secondMob.y = 320;
+
+    const initialMp = session.currentMp;
+    const initialHp2 = secondMob.currentHp;
+
+    let res = combat.processPlayerAttack(session, {
+      targetMobId: targetMob.id,
+      skillId: 'dragon_roar',
+      playerX: 290,
+      playerY: 290,
+    });
+
+    if (res.isMiss) {
+      res = combat.processPlayerAttack(session, {
+        targetMobId: targetMob.id,
+        skillId: 'dragon_roar',
+        playerX: 290,
+        playerY: 290,
+      });
+    }
+
+    assert.equal(res.success, true);
+    assert.ok(session.currentMp <= initialMp - 35, 'Deve deduzir 35 de Mana');
+    assert.ok(secondMob.currentHp < initialHp2, 'Dragon Roar deve atingir monstros no raio de rugido de 250');
+  });
+});

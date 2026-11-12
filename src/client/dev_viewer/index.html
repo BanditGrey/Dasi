@@ -164,16 +164,19 @@
           <span class="levelup-banner-sub" id="levelup-banner-sub">Nível 251 Alcançado! Atributos e Vitais Elevados!</span>
         </div>
 
-        <!-- Overlay de Controles e Dicas Rápidas Lorencia 3D (Dark Knight) -->
-        <div class="arena-controls-hint-overlay" style="position: absolute; top: 12px; left: 14px; z-index: 25; pointer-events: none; background: rgba(10, 14, 23, 0.85); backdrop-filter: blur(8px); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 8px; padding: 8px 12px; font-family: 'Rajdhani', sans-serif; font-size: 12px; color: #cbd5e1; box-shadow: 0 4px 16px rgba(0,0,0,0.6);">
-          <div style="font-weight: 700; color: #fbbf24; font-size: 13px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-            <span>⚔️</span> <span>GUIA DE COMANDOS CANÔNICOS (DK / BLADE KNIGHT)</span>
+        <!-- Overlay de Controles e Dicas Rápidas Lorencia 3D (DK & DW) -->
+        <div class="arena-controls-hint-overlay" id="arena-controls-hint-overlay" style="position: absolute; top: 12px; left: 14px; z-index: 25; pointer-events: none; background: rgba(10, 14, 23, 0.88); backdrop-filter: blur(8px); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 8px; padding: 8px 12px; font-family: 'Rajdhani', sans-serif; font-size: 12px; color: #cbd5e1; box-shadow: 0 4px 16px rgba(0,0,0,0.6);">
+          <div style="font-weight: 700; color: #fbbf24; font-size: 13px; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span>⚔️</span> <span id="hint-class-title">GUIA DE COMANDOS CANÔNICOS (DK / DW)</span>
+            </div>
+            <span style="font-size: 10px; color: #94a3b8; background: rgba(255,255,255,0.08); padding: 1px 6px; border-radius: 4px;">[C] Trocar Classe / Ficha</span>
           </div>
           <div style="display: grid; grid-template-columns: auto auto; column-gap: 14px; row-gap: 2px;">
-            <div><strong style="color: #38bdf8;">[LMB / Clique Esq]:</strong> Mover / Atacar</div>
-            <div><strong style="color: #eab308;">[RMB / Clique Dir]:</strong> Twisting Slash (360° AoE)</div>
-            <div><strong style="color: #eab308;">[E / 2]:</strong> Twisting Slash (10 MP/AG)</div>
-            <div><strong style="color: #f43f5e;">[R / 3]:</strong> Death Stab (Estocada Perfurante)</div>
+            <div><strong style="color: #38bdf8;">[LMB / Clique Esq]:</strong> Mover / Golpe Básico</div>
+            <div><strong style="color: #eab308;">[RMB / Clique Dir]:</strong> Habilidade Secundária (Twisting / Evil Spirits)</div>
+            <div><strong style="color: #eab308;">[E / 2]:</strong> Skill 1 (Twisting Slash / Fireball)</div>
+            <div><strong style="color: #f43f5e;">[R / 3]:</strong> Skill 2 (Death Stab / Evil Spirits)</div>
             <div><strong style="color: #a855f7;">[Espaço]:</strong> Esquiva Tática (I-Frames)</div>
             <div><strong style="color: #4ade80;">[F / Clique]:</strong> Coletar Drops & Joias</div>
             <div><strong style="color: #ef4444;">[Q / 1]:</strong> Beber Poção de Vida</div>

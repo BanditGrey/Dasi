@@ -137,9 +137,19 @@ Grimório matemático da Webzen para todas as classes canônicas:
 - `public static calculateGreaterCriticalDamage(ene: number, cmd: number)`: Dano Crítico $= \lfloor\text{Ene}/25\rfloor + \lfloor\text{Cmd}/30\rfloor$.
 - `public addEffect(...)`, `public removeEffect(...)`, `public tick(deltaSeconds: number): ActiveEffect[]`: Aplica e gerencia a duração de buffs e debuffs ativos com expiração temporal.
 
-#### Classe `DarkSpiritManager` (`DarkSpiritManager.ts`)
-- `public static calculateDamage(command: number, energy: number, spiritLevel: number)`: Dano do Corvo Mágico $= \lfloor\text{Cmd}/10\rfloor + \lfloor\text{Ene}/50\rfloor + (\text{Level} \times 15) + 180$.
-- `public setMode(mode: DarkSpiritMode)`: Alterna entre os 4 modos de IA (Normal, Auto-Attack, Attack Together, Attack with Master).
+#### Classe `SkillCatalog` (`SkillCatalog.ts`)
+Catálogo mestre autoritativo de habilidades cobrindo todas as 7 classes jogáveis (DK, DW, ELF, MG, DL, SU, RF):
+- `public static register(skill: SkillDefinition): void`: Registra definições de habilidades com custo de Mana, AG, nível mínimo, tipo (Físico, Mágico, Híbrido, Buff), raio AoE, teto de alvos, empurrão e poise damage.
+- `public static findSkill(identifier: string | number): SkillDefinition | undefined`: Resgate indexado em $O(1)$ por ID ou slug.
+- `public static getAllSkills(): SkillDefinition[]`: Devolve todas as habilidades registradas no catálogo canônico.
+- **Classes Suportadas:**
+  - **Dark Knight:** *Twisting Slash*, *Rageful Blow*, *Greater Fortitude (Swell Life)*.
+  - **Dark Wizard:** *Energy Ball*, *Fireball*, *Lightning*, *Ice*, *Evil Spirits*, *Hellfire*, *Ice Storm*, *Mana Shield (Soul Barrier)*.
+  - **Fairy Elf:** *Triple Shot*, *Penetration*, *Ice Arrow*, *Healing Song*, *Greater Defense*, *Greater Damage*.
+  - **Magic Gladiator:** *Fire Slash*, *Power Slash*.
+  - **Dark Lord:** *Force*, *Fireburst*, *Earthquake*, *Electric Spark*, *Greater Critical Damage*.
+  - **Summoner:** *Sleep*, *Chain Lightning*, *Lightning Shock*, *Damage Reflect*, *Sword Power / Berserker*, *Weakness*, *Innovation*.
+  - **Rage Fighter:** *Killing Blow*, *Beast Uppercut*, *Chain Drive*, *Dark Side*, *Dragon Roar*.
 
 ---
 

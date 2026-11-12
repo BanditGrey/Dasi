@@ -32,8 +32,11 @@ const ANIMATED_ASSETS = [
   { id: 'yeti', file: 'src/client/dev_viewer/models/monsters/yeti_animated.glb', minAnims: 5 },
   { id: 'demon', file: 'src/client/dev_viewer/models/monsters/demon_animated.glb', minAnims: 5 },
   { id: 'dragon', file: 'src/client/dev_viewer/models/monsters/dragon_animated.glb', minAnims: 5 },
+  { id: 'dragon_evolved', file: 'src/client/dev_viewer/models/monsters/dragon_evolved.glb', minAnims: 5 },
   { id: 'ghost', file: 'src/client/dev_viewer/models/monsters/ghost_animated.glb', minAnims: 5 },
   { id: 'orc', file: 'src/client/dev_viewer/models/monsters/orc_animated.glb', minAnims: 5 },
+  { id: 'skeleton_warrior', file: 'src/client/dev_viewer/models/monsters/skeleton_warrior_animated.glb', minAnims: 20 },
+  { id: 'fox', file: 'src/client/dev_viewer/models/critters/fox_animated.glb', minAnims: 6 },
 ];
 
 describe('1. Integridade dos Modelos Animados do Bestiário', () => {

@@ -8,7 +8,7 @@ import { EffectId } from './EffectManager.ts';
 import { ComboSkillEngine } from './ComboSkillEngine.ts';
 import type { CharacterAttributes } from './CanonicalFormulas.ts';
 
-export type CharacterClassKey = 'DK' | 'DW' | 'ELF' | 'MG' | 'DL';
+export type CharacterClassKey = 'DK' | 'DW' | 'ELF' | 'MG' | 'DL' | 'SU' | 'RF';
 
 export interface SkillDefinition {
   id: number;
@@ -453,6 +453,204 @@ export class SkillCatalog {
       type: 'BUFF',
       effectId: EffectId.GREATER_CRITICAL_DAMAGE,
       calculateDamageMultiplier: () => 1.0,
+    });
+
+    // -------------------------------------------------------------
+    // 6. SUMMONER (BLOODY SUMMONER / DIMENSION MASTER)
+    // -------------------------------------------------------------
+    SkillCatalog.register({
+      id: 214,
+      slug: 'sleep',
+      name: 'Sleep (Sonolência Espiritual)',
+      classes: ['SU'],
+      manaCost: 20,
+      agCost: 0,
+      minLevel: 10,
+      type: 'BUFF',
+      effectId: EffectId.SLEEP,
+      calculateDamageMultiplier: () => 1.0,
+    });
+
+    SkillCatalog.register({
+      id: 215,
+      slug: 'chain_lightning',
+      name: 'Chain Lightning (Centelha em Cadeia)',
+      classes: ['SU'],
+      manaCost: 25,
+      agCost: 0,
+      minLevel: 30,
+      type: 'MAGICAL',
+      aoeRadius: 180,
+      maxAoeTargets: 3,
+      knockbackDistance: 12,
+      poiseDamage: 24,
+      calculateDamageMultiplier: (attrs) => {
+        const bonus = Math.floor(attrs.energy / 18);
+        return (180 + bonus) / 100;
+      },
+    });
+
+    SkillCatalog.register({
+      id: 216,
+      slug: 'lightning_shock',
+      name: 'Lightning Shock (Impacto Tempestuoso)',
+      classes: ['SU'],
+      manaCost: 40,
+      agCost: 10,
+      minLevel: 100,
+      type: 'MAGICAL',
+      aoeRadius: 220,
+      maxAoeTargets: 7,
+      knockbackDistance: 20,
+      poiseDamage: 38,
+      calculateDamageMultiplier: (attrs) => {
+        const bonus = Math.floor(attrs.energy / 12);
+        return (220 + bonus) / 100;
+      },
+    });
+
+    SkillCatalog.register({
+      id: 217,
+      slug: 'damage_reflect',
+      name: 'Damage Reflect (Espelho de Almas)',
+      classes: ['SU'],
+      manaCost: 35,
+      agCost: 0,
+      minLevel: 60,
+      type: 'BUFF',
+      effectId: EffectId.DAMAGE_REFLECT,
+      calculateDamageMultiplier: () => 1.0,
+    });
+
+    SkillCatalog.register({
+      id: 218,
+      slug: 'sword_power',
+      name: 'Sword Power / Berserker (Fúria Arcana)',
+      classes: ['SU'],
+      manaCost: 45,
+      agCost: 0,
+      minLevel: 120,
+      type: 'BUFF',
+      effectId: EffectId.SWORD_POWER,
+      calculateDamageMultiplier: () => 1.0,
+    });
+
+    SkillCatalog.register({
+      id: 219,
+      slug: 'weakness',
+      name: 'Weakness (Fraqueza Espectral)',
+      classes: ['SU'],
+      manaCost: 30,
+      agCost: 0,
+      minLevel: 80,
+      type: 'BUFF',
+      effectId: EffectId.LESSER_DAMAGE,
+      calculateDamageMultiplier: () => 1.0,
+    });
+
+    SkillCatalog.register({
+      id: 220,
+      slug: 'innovation',
+      name: 'Innovation (Inovação / Corrosão de Armadura)',
+      classes: ['SU'],
+      manaCost: 30,
+      agCost: 0,
+      minLevel: 80,
+      type: 'BUFF',
+      effectId: EffectId.LESSER_DEFENSE,
+      calculateDamageMultiplier: () => 1.0,
+    });
+
+    // -------------------------------------------------------------
+    // 7. RAGE FIGHTER (FIST MASTER)
+    // -------------------------------------------------------------
+    SkillCatalog.register({
+      id: 260,
+      slug: 'killing_blow',
+      name: 'Killing Blow (Golpe Fatal)',
+      classes: ['RF'],
+      manaCost: 10,
+      agCost: 5,
+      minLevel: 1,
+      type: 'PHYSICAL',
+      knockbackDistance: 15,
+      poiseDamage: 25,
+      calculateDamageMultiplier: (attrs) => {
+        const bonus = Math.floor(attrs.vitality / 10);
+        return (180 + bonus) / 100;
+      },
+    });
+
+    SkillCatalog.register({
+      id: 261,
+      slug: 'beast_uppercut',
+      name: 'Beast Uppercut (Gancho Feroz)',
+      classes: ['RF'],
+      manaCost: 15,
+      agCost: 8,
+      minLevel: 50,
+      type: 'PHYSICAL',
+      knockbackDistance: 25,
+      poiseDamage: 38,
+      calculateDamageMultiplier: (attrs) => {
+        const bonus = Math.floor(attrs.vitality / 8);
+        return (200 + bonus) / 100;
+      },
+    });
+
+    SkillCatalog.register({
+      id: 262,
+      slug: 'chain_drive',
+      name: 'Chain Drive (Investida em Cadeia)',
+      classes: ['RF'],
+      manaCost: 20,
+      agCost: 10,
+      minLevel: 100,
+      type: 'PHYSICAL',
+      knockbackDistance: 18,
+      poiseDamage: 42,
+      calculateDamageMultiplier: (attrs) => {
+        const bonus = Math.floor(attrs.vitality / 7);
+        return (220 + bonus) / 100;
+      },
+    });
+
+    SkillCatalog.register({
+      id: 263,
+      slug: 'dark_side',
+      name: 'Dark Side (Projeção Espectral)',
+      classes: ['RF'],
+      manaCost: 28,
+      agCost: 12,
+      minLevel: 150,
+      type: 'PHYSICAL',
+      aoeRadius: 200,
+      maxAoeTargets: 6,
+      knockbackDistance: 22,
+      poiseDamage: 45,
+      calculateDamageMultiplier: (attrs) => {
+        const bonus = Math.floor(attrs.vitality / 6 + attrs.agility / 10);
+        return (240 + bonus) / 100;
+      },
+    });
+
+    SkillCatalog.register({
+      id: 264,
+      slug: 'dragon_roar',
+      name: 'Dragon Roar (Rugido do Dragão)',
+      classes: ['RF'],
+      manaCost: 35,
+      agCost: 15,
+      minLevel: 220,
+      type: 'PHYSICAL',
+      aoeRadius: 250,
+      maxAoeTargets: 8,
+      knockbackDistance: 35,
+      poiseDamage: 55,
+      calculateDamageMultiplier: (attrs) => {
+        const bonus = Math.floor(attrs.vitality / 5 + attrs.energy / 10);
+        return (260 + bonus) / 100;
+      },
     });
   }
 

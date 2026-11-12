@@ -15,7 +15,7 @@ import { CanonicalFormulas, CharacterClassId, type CharacterAttributes } from '.
 import { DropManager, type HitDamageEntry } from './DropManager.ts';
 import { ComboSkillEngine } from './ComboSkillEngine.ts';
 import { SkillCatalog } from './SkillCatalog.ts';
-import { EffectId } from './EffectManager.ts';
+import { EffectId, EffectManager } from './EffectManager.ts';
 
 export type DamageType = 'NORMAL' | 'SKILL' | 'CRITICAL' | 'EXCELLENT' | 'IGNORE_DEFENSE' | 'MISS';
 
@@ -343,6 +343,56 @@ export class CombatEngine {
         skillMultiplier = skillDef.calculateDamageMultiplier(charAttrs);
         if (skillDef.poiseDamage) poiseDamage = skillDef.poiseDamage;
         if (skillDef.knockbackDistance) knockbackDistance = skillDef.knockbackDistance;
+
+        // Ativação autoritativa de Buffs
+        if (skillDef.type === 'BUFF' || sId.includes('mana_shield') || sId.includes('soul_barrier') || sId.includes('fortitude') || sId.includes('swell_life')) {
+          if (!session.activeBuffs) session.activeBuffs = new Map();
+          if (sId.includes('mana_shield') || sId.includes('soul_barrier') || skillDef.slug === 'mana_shield') {
+            const absorbPct = Math.min(50, 10 + Math.floor(session.character.energy / 50) + Math.floor(session.character.agility / 200));
+            session.activeBuffs.set('MANA_SHIELD', {
+              value: absorbPct,
+              durationMs: 60000,
+              expiresAt: Date.now() + 60000,
+            });
+            poiseDamage = 0;
+            knockbackDistance = 0;
+          } else if (sId.includes('fortitude') || sId.includes('greater_fortitude') || skillDef.slug === 'greater_fortitude') {
+            const { hpBonusPercent, durationSeconds } = CanonicalFormulas.calculateGreaterFortitude(session.character.vitality, session.character.energy);
+            session.activeBuffs.set('GREATER_FORTITUDE', {
+              value: hpBonusPercent,
+              durationMs: durationSeconds * 1000,
+              expiresAt: Date.now() + durationSeconds * 1000,
+            });
+          } else if (sId.includes('greater_defense') || skillDef.slug === 'greater_defense') {
+            const defBonus = 2 + Math.floor(session.character.energy / 8);
+            session.activeBuffs.set('GREATER_DEFENSE', {
+              value: defBonus,
+              durationMs: 60000,
+              expiresAt: Date.now() + 60000,
+            });
+          } else if (sId.includes('greater_damage') || skillDef.slug === 'greater_damage') {
+            const dmgBonus = 3 + Math.floor(session.character.energy / 7);
+            session.activeBuffs.set('GREATER_DAMAGE', {
+              value: dmgBonus,
+              durationMs: 60000,
+              expiresAt: Date.now() + 60000,
+            });
+          } else if (sId.includes('critical_damage') || skillDef.slug === 'critical_damage') {
+            const critBonus = Math.floor(session.character.energy / 25) + Math.floor((session.character.command || 0) / 30);
+            session.activeBuffs.set('CRITICAL_DAMAGE', {
+              value: critBonus,
+              durationMs: 60000,
+              expiresAt: Date.now() + 60000,
+            });
+          } else if (sId.includes('damage_reflect') || skillDef.slug === 'damage_reflect') {
+            const { reflectPercent, durationSeconds } = EffectManager.calculateReflectDamage(session.character.energy);
+            session.activeBuffs.set('DAMAGE_REFLECT', {
+              value: reflectPercent,
+              durationMs: durationSeconds * 1000,
+              expiresAt: Date.now() + durationSeconds * 1000,
+            });
+          }
+        }
       } else if (sId.includes('death') || sId.includes('stab')) {
         // Death Stab do Blade Knight: Fator 250% + (Energy / 10)%
         const rawMult = (ComboSkillEngine.calculateDKSkillMultiplier(session.character.energy) + 50) / 100;
@@ -1420,6 +1470,59 @@ export class CombatEngine {
         durationSeconds,
         currentHp: target.currentHp,
         maxHp: target.maxHp,
+        currentMp: session.currentMp,
+      };
+    }
+
+    // 6. DAMAGE_REFLECT (Summoner)
+    if (sId.includes('reflect') || sId.includes('damage_reflect')) {
+      const mpCost = 35;
+      if (session.currentMp < mpCost) {
+        return { success: false, skillId, casterId: session.sessionId, targetId: target.sessionId, error: 'Mana insuficiente' };
+      }
+      session.currentMp -= mpCost;
+      const { reflectPercent, durationSeconds } = EffectManager.calculateReflectDamage(energy);
+      target.activeBuffs.set('DAMAGE_REFLECT', {
+        value: reflectPercent,
+        durationMs: durationSeconds * 1000,
+        expiresAt: Date.now() + durationSeconds * 1000,
+      });
+
+      return {
+        success: true,
+        skillId: 'damage_reflect',
+        casterId: session.sessionId,
+        targetId: target.sessionId,
+        buffType: 'DAMAGE_REFLECT',
+        buffValue: reflectPercent,
+        durationSeconds,
+        currentMp: session.currentMp,
+      };
+    }
+
+    // 7. CRITICAL_DAMAGE (Dark Lord)
+    if (sId.includes('critical_damage') || sId.includes('crit_dmg') || sId.includes('focus')) {
+      const mpCost = 25;
+      if (session.currentMp < mpCost) {
+        return { success: false, skillId, casterId: session.sessionId, targetId: target.sessionId, error: 'Mana insuficiente' };
+      }
+      session.currentMp -= mpCost;
+      const cmd = session.character.command || 0;
+      const { criticalDamageBonus, durationSeconds } = EffectManager.calculateGreaterCriticalDamage(energy, cmd);
+      target.activeBuffs.set('CRITICAL_DAMAGE', {
+        value: criticalDamageBonus,
+        durationMs: durationSeconds * 1000,
+        expiresAt: Date.now() + durationSeconds * 1000,
+      });
+
+      return {
+        success: true,
+        skillId: 'critical_damage',
+        casterId: session.sessionId,
+        targetId: target.sessionId,
+        buffType: 'CRITICAL_DAMAGE',
+        buffValue: criticalDamageBonus,
+        durationSeconds,
         currentMp: session.currentMp,
       };
     }
