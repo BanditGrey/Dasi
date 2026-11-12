@@ -1,10 +1,24 @@
-/** Exporta blockouts modulares sem sobrescrever os GLBs de heróis existentes.
- * node tools/export_modular_heroes.mjs ALL | DK | DW | ELF | MG | DL
+/** Exporta modelos e módulos modulares oficiais canônicos.
+ * node tools/export_modular_heroes.mjs ALL | DK | DW | ELF | MG | DL [--canonical]
  */
 import * as THREE from 'three';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { mkdir, writeFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { HERO_CLASSES, ARMOR_SLOTS, ARMOR_VARIANTS, CLASS_WEAPONS, createModularHero, createArmorModule, createWeaponModule } from '../src/client/dev_viewer/modularHero.js';
+
+// Suporte para compilação oficial canônica completa via Blender 5.2 LTS
+const BLENDER_PATH = 'C:\\Program Files\\Blender Foundation\\Blender 5.2\\blender.exe';
+if (process.argv.includes('--canonical') || process.argv.includes('--blender')) {
+  if (existsSync(BLENDER_PATH)) {
+    console.log('[Canonical Asset Pipeline] Delegando compilação canônica em lote para Blender 5.2 LTS...');
+    const res = spawnSync(BLENDER_PATH, ['-b', '--python', 'tools/build_canonical_glbs.py'], { stdio: 'inherit' });
+    process.exit(res.status ?? 0);
+  } else {
+    console.warn('[Canonical Asset Pipeline] Blender 5.2 não encontrado em:', BLENDER_PATH);
+  }
+}
 
 const selection = process.argv[2];
 const ids = selection === 'ALL' ? Object.keys(HERO_CLASSES) : Object.hasOwn(HERO_CLASSES, selection ?? '') ? [selection] : [];
