@@ -94,7 +94,7 @@ d:\Dasi\
 
 ## ⚡ 3. COMO INICIALIZAR E TESTAR
 
-### 3.1 Executar a Suíte de Testes Automatizados (432 testes em 99 suítes)
+### 3.1 Executar a Suíte de Testes Automatizados (441 testes em 101 suítes)
 ```powershell
 npm test
 npm run typecheck   # tsc -p tsconfig.json — 0 erros
