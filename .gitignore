@@ -27,3 +27,32 @@ __pycache__/
 
 # Coverage / relatórios de teste
 coverage/
+
+# Pacotes brutos e arquivos pesados de referência / engenharia reversa
+*.zip
+*.rar
+*.7z
+reference/**/_archives/
+reference/**/client/
+!reference/**/client/.gitkeep
+reference/**/*.exe
+reference/**/*.dll
+reference/**/*.pdb
+reference/**/*.lib
+reference/**/*.obj
+reference/**/*.ilk
+reference/**/*.mdf
+reference/**/*.ldf
+reference/**/.vs/
+reference/**/Debug/
+reference/**/Release/
+reference/**/x64/
+reference/**/ipch/
+reference/**/Sound/
+reference/**/Music/
+
+# Conversões e temporários brutos
+conversions/
+scratch/
+reference/
+archive/
